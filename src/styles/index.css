@@ -1,0 +1,28 @@
+@import './fonts.css';
+@import './tailwind.css';
+@import './theme.css';
+
+/* Slick Slider Custom Styles */
+.slick-dots li button:before {
+  display: none;
+}
+
+.slick-dots li div {
+  transition: all 0.3s ease;
+}
+
+.slick-dots li.slick-active div {
+  background-color: white !important;
+  width: 24px;
+  border-radius: 4px;
+}
+
+/* Scrollbar Hide */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
