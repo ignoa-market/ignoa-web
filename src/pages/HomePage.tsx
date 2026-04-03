@@ -1,7 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { ProductCard } from "@/components/common/ProductCard";
-import { Link } from "react-router";
-import { motion, useInView } from "motion/react";
+import { motion, AnimatePresence, useInView } from "motion/react";
+import { Button } from "@/components/ui/button";
+import { ArrowRight } from "lucide-react";
+import bannerImage from "@/assets/banner-fashion.jpg";
+import bannerMainImage from "@/assets/banner-main.jpg";
+import bannerStone from "@/assets/banner-stone.jpg";
+import bannerHero from "@/assets/banner-hero.png";
+import bannerPuffer from "@/assets/banner-puffer.jpg";
 
 const mockProducts = [
   {
@@ -116,103 +122,67 @@ const mockProducts = [
   },
 ];
 
-// Generate more products for infinite scroll
+const allCategories = ["All", "Outerwear", "Tops", "Bottoms", "Shoes", "Bags", "Accessories"];
+const categoryList = ["Outerwear", "Tops", "Bottoms", "Shoes", "Bags", "Accessories"];
+
 const generateMoreProducts = (startId: number, count: number) => {
   const brands = ["CHROME HEARTS", "STONE ISLAND", "SUPREME", "RICK OWENS", "BAPE", "KAPITAL", "CARHARTT", "PRADA", "MARGIELA", "DIOR"];
-  const products = [];
-  for (let i = 0; i < count; i++) {
-    products.push({
-      id: `${startId + i}`,
-      title: `Product ${startId + i}`,
-      brand: brands[Math.floor(Math.random() * brands.length)],
-      currentPrice: Math.floor(Math.random() * 1000000) + 100000,
-      size: ["XS", "S", "M", "L", "XL"][Math.floor(Math.random() * 5)],
-      imageUrl: `https://images.unsplash.com/photo-${1549298916 + i}?w=600&q=80`,
-      timeLeft: `${Math.floor(Math.random() * 24)}h ${Math.floor(Math.random() * 60)}m`,
-      wishCount: Math.floor(Math.random() * 300),
-      location: ["Seoul", "Tokyo", "New York", "Paris", "London"][Math.floor(Math.random() * 5)],
-    });
-  }
-  return products;
+  return Array.from({ length: count }, (_, i) => ({
+    id: `${startId + i}`,
+    title: `Product ${startId + i}`,
+    brand: brands[(startId + i) % brands.length],
+    currentPrice: Math.floor(Math.random() * 1000000) + 100000,
+    size: ["XS", "S", "M", "L", "XL"][(startId + i) % 5],
+    imageUrl: `https://images.unsplash.com/photo-${1549298916 + i}?w=600&q=80`,
+    timeLeft: `${Math.floor(Math.random() * 24)}h ${Math.floor(Math.random() * 60)}m`,
+    wishCount: Math.floor(Math.random() * 300),
+    location: ["Seoul", "Tokyo", "New York", "Paris", "London"][(startId + i) % 5],
+    category: categoryList[(startId + i) % categoryList.length],
+  }));
 };
 
-const popularBrands = [
-  "CHROME HEARTS",
-  "STONE ISLAND",
-  "SUPREME",
-  "RICK OWENS",
-  "XLIM",
-  "BAPE",
-  "KAPITAL",
-  "PLASTICPRODUCT",
-  "CARHARTT",
-  "PRADA",
-];
-
-const categories = [
-  "전체",
-  "아우터",
-  "상의",
-  "하의",
-  "신발",
-  "가방",
-  "액세서리",
-  "시계",
-];
 
 export function HomePage() {
-  const [displayedProducts, setDisplayedProducts] = useState(mockProducts.slice(5)); // First 5 reserved for popular
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [allProducts, setAllProducts] = useState(generateMoreProducts(11, 10));
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [ctaSlide, setCtaSlide] = useState(0);
+  const [slideDir, setSlideDir] = useState(1);
+
+  const goToSlide = (next: number) => {
+    setSlideDir(next > ctaSlide ? 1 : -1);
+    setCtaSlide(next);
+  };
   const [hasMore, setHasMore] = useState(true);
   const observerRef = useRef<HTMLDivElement>(null);
-  const [scrollY, setScrollY] = useState(0);
 
-  // Refs for scroll animations
   const popularRef = useRef(null);
-  const endingSoonRef = useRef(null);
+  const promoRef = useRef(null);
   const allProductsRef = useRef(null);
 
   const popularInView = useInView(popularRef, { once: true, amount: 0.1 });
-  const endingSoonInView = useInView(endingSoonRef, { once: true, amount: 0.1 });
+  const promoInView = useInView(promoRef, { once: true, amount: 0.15 });
   const allProductsInView = useInView(allProductsRef, { once: true, amount: 0.1 });
-
-  // Parallax effect for banner
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrollY(window.scrollY);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && !loading && hasMore) {
-          loadMore();
+          setLoading(true);
+          setTimeout(() => {
+            setAllProducts((prev) => [...prev, ...generateMoreProducts(11 + page * 10, 10)]);
+            setPage((prev) => prev + 1);
+            setLoading(false);
+            if (page >= 4) setHasMore(false);
+          }, 800);
         }
       },
       { threshold: 0.1 }
     );
-
-    if (observerRef.current) {
-      observer.observe(observerRef.current);
-    }
-
+    if (observerRef.current) observer.observe(observerRef.current);
     return () => observer.disconnect();
-  }, [loading, hasMore]);
-
-  const loadMore = () => {
-    setLoading(true);
-    setTimeout(() => {
-      const newProducts = generateMoreProducts(11 + (page - 1) * 10, 10);
-      setDisplayedProducts((prev) => [...prev, ...newProducts]);
-      setPage((prev) => prev + 1);
-      setLoading(false);
-      if (page >= 5) setHasMore(false); // Limit to 5 pages for demo
-    }, 800);
-  };
+  }, [loading, hasMore, page]);
 
   return (
     <motion.div
@@ -221,138 +191,269 @@ export function HomePage() {
       transition={{ duration: 0.6 }}
       className="min-h-screen bg-white"
     >
-      {/* Banner with Parallax */}
-      <div className="relative w-full h-[280px] sm:h-[360px] md:h-[440px] lg:h-[520px] overflow-hidden bg-gray-100">
-        <motion.img
-          src="https://images.unsplash.com/photo-1653550148829-d99f843e2706?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtaW5pbWFsJTIwZmFzaGlvbiUyMGJhbm5lciUyMGxhbmRzY2FwZXxlbnwxfHx8fDE3NzUxMTY5MjF8MA&ixlib=rb-4.1.0&q=80&w=1920"
-          alt="Banner"
-          className="w-full h-full object-cover"
-          style={{ transform: `translateY(${scrollY * 0.5}px)` }}
+      {/* Banner */}
+      <div className="relative w-full h-[270px] sm:h-[350px] md:h-[430px] lg:h-[490px] overflow-hidden bg-white mt-10">
+        {/* 뒷배경 IGNOA 텍스트 */}
+        <div className="absolute inset-0 flex items-center justify-center select-none pointer-events-none">
+          <span
+            className="font-black text-black leading-none tracking-tighter"
+            style={{ fontSize: "clamp(100px, 22vw, 320px)", opacity: 0.07 }}
+          >
+            IGNOA
+          </span>
+        </div>
+        {/* 누끼 이미지 */}
+        <img
+          src={bannerHero}
+          alt=""
+          className="absolute inset-0 w-full h-full object-contain object-[center_60%]"
         />
-        {/* Overlay gradient */}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-white/30" />
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-[1400px] mx-auto px-6 py-12 md:py-16">
-        {/* Popular Products - 1 Row Only */}
+      {/* Section 1: Popular Listings */}
+      <div className="max-w-[1400px] mx-auto px-6 pt-4 pb-8">
         <motion.div
           ref={popularRef}
           initial={{ opacity: 0, y: 40 }}
-          animate={popularInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
+          animate={popularInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="mb-16"
         >
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={popularInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -20 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="mb-6"
-          >
-            <h2 className="text-lg md:text-xl font-bold text-black mb-1">Popular Listings</h2>
-            <p className="text-xs text-gray-600">인기 상품</p>
-          </motion.div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold text-black">Popular Listings</h2>
+            <p className="text-sm text-gray-500 mt-1">지금 가장 인기 있는 경매</p>
+          </div>
+
+          <div className="grid grid-cols-5 gap-3 md:gap-4">
             {mockProducts.slice(0, 5).map((product, index) => (
               <motion.div
                 key={product.id}
                 initial={{ opacity: 0, y: 30 }}
-                animate={popularInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-                transition={{ duration: 0.5, delay: 0.1 * index, ease: "easeOut" }}
+                animate={popularInView ? { opacity: 1, y: 0 } : {}}
+                transition={{ duration: 0.4, delay: 0.05 * index, ease: "easeOut" }}
               >
                 <ProductCard product={product} />
               </motion.div>
             ))}
           </div>
-        </motion.div>
 
-        {/* Ending Soon Products - 1 Row Only */}
+          <div className="text-center mt-10">
+            <Button
+              variant="outline"
+              className="px-10 h-11 border-black text-black hover:bg-black hover:text-white transition-all rounded-full font-medium"
+            >
+              See All
+            </Button>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Section 2: CTA 배너 슬라이더 */}
+      <div className="max-w-[1400px] mx-auto px-6 pb-20">
         <motion.div
-          ref={endingSoonRef}
+          ref={promoRef}
           initial={{ opacity: 0, y: 40 }}
-          animate={endingSoonInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
+          animate={promoInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="mb-16"
+          className="relative rounded-2xl overflow-hidden h-[560px]"
         >
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={endingSoonInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -20 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="mb-6"
-          >
-            <h2 className="text-lg md:text-xl font-bold text-black mb-1">Ending Soon</h2>
-            <p className="text-xs text-gray-600">마감 임박 상품</p>
-          </motion.div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
-            {mockProducts.slice(5, 10).map((product, index) => (
+          <AnimatePresence mode="sync" custom={slideDir}>
+            {ctaSlide === 0 && (
               <motion.div
-                key={product.id}
-                initial={{ opacity: 0, y: 30 }}
-                animate={endingSoonInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-                transition={{ duration: 0.5, delay: 0.1 * index, ease: "easeOut" }}
+                key="slide-0"
+                custom={slideDir}
+                initial={{ x: slideDir > 0 ? "100%" : "-100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: slideDir > 0 ? "-100%" : "100%" }}
+                transition={{ duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
+                className="absolute inset-0 bg-white grid grid-cols-1 md:grid-cols-[1fr_1fr]"
               >
-                <ProductCard product={product} />
+                <div className="flex flex-col px-12 py-12 order-2 md:order-1 h-full">
+                  <div>
+                    <p className="text-[11px] font-semibold tracking-[0.3em] text-gray-400 uppercase mb-5">
+                      IGNOA · Archive
+                    </p>
+                    <h2 className="text-4xl md:text-5xl font-black text-black leading-[1.1] mb-5">
+                      Avant-garde<br />Archive<br />Pieces
+                    </h2>
+                    <p className="text-sm text-gray-500 leading-relaxed">
+                      컬렉터들이 주목하는 아방가르드 아카이브 피스, 지금 경매에서 만나보세요.
+                    </p>
+                  </div>
+                  <div className="mt-auto flex flex-col gap-4">
+                    <div>
+                      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-1">아카이브 컬렉션</p>
+                      <p className="text-6xl font-black text-black leading-none tracking-tight">36+</p>
+                    </div>
+                    <button className="flex items-center gap-2 px-6 py-3 bg-black text-white text-sm font-semibold rounded-full hover:bg-gray-800 transition-colors group w-fit">
+                      컬렉션 보기
+                      <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                    </button>
+                  </div>
+                </div>
+                <div className="relative overflow-hidden order-1 md:order-2 h-full bg-white">
+                  <img src={bannerPuffer} alt="" className="w-full h-full object-contain object-[right_bottom]" />
+                  <div className="absolute inset-y-0 left-0 w-40 bg-gradient-to-r from-white to-transparent hidden md:block" />
+                </div>
               </motion.div>
-            ))}
-          </div>
-        </motion.div>
+            )}
+            {ctaSlide === 1 && (
+              <motion.div
+                key="slide-1"
+                custom={slideDir}
+                initial={{ x: slideDir > 0 ? "100%" : "-100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: slideDir > 0 ? "-100%" : "100%" }}
+                transition={{ duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
+                className="absolute inset-0 bg-[#f0eeea] grid grid-cols-1 md:grid-cols-[1fr_1fr]"
+              >
+                <div className="flex flex-col px-12 py-12 order-2 md:order-1 h-full">
+                  <div>
+                    <p className="text-[11px] font-semibold tracking-[0.3em] text-gray-400 uppercase mb-5">
+                      IGNOA · Fashion Auction
+                    </p>
+                    <h2 className="text-4xl md:text-5xl font-black text-black leading-[1.1] mb-5">
+                      Find Your<br />Perfect<br />Fashion Piece
+                    </h2>
+                    <p className="text-sm text-gray-500 leading-relaxed">
+                      희귀한 빈티지 아이템부터 최신 컬렉션까지, 매일 새로운 경매가 시작됩니다.
+                    </p>
+                  </div>
+                  <div className="mt-auto flex flex-col gap-4">
+                    <div>
+                      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-1">지금 진행 중인 경매</p>
+                      <p className="text-6xl font-black text-black leading-none tracking-tight">120+</p>
+                    </div>
+                    <button className="flex items-center gap-2 px-6 py-3 bg-black text-white text-sm font-semibold rounded-full hover:bg-gray-800 transition-colors group w-fit">
+                      경매 참여하기
+                      <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                    </button>
+                  </div>
+                </div>
+                <div className="relative overflow-hidden order-1 md:order-2 h-full bg-[#f0eeea]">
+                  <img src={bannerImage} alt="" className="w-full h-full object-contain object-[right_bottom]" />
+                  <div className="absolute inset-y-0 left-0 w-40 bg-gradient-to-r from-[#f0eeea] to-transparent hidden md:block" />
+                </div>
+              </motion.div>
+            )}
+            {ctaSlide === 1 && (
+              <motion.div
+                key="slide-1"
+                custom={slideDir}
+                initial={{ x: slideDir > 0 ? "100%" : "-100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: slideDir > 0 ? "-100%" : "100%" }}
+                transition={{ duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
+                className="absolute inset-0 bg-[#0e0e0e] grid grid-cols-1 md:grid-cols-[1fr_1fr]"
+              >
+                <div className="flex flex-col px-12 py-12 order-2 md:order-1 h-full">
+                  <div>
+                    <p className="text-[11px] font-semibold tracking-[0.3em] text-white/40 uppercase mb-5">
+                      IGNOA · New Arrivals
+                    </p>
+                    <h2 className="text-4xl md:text-5xl font-black text-white leading-[1.1] mb-5">
+                      Discover<br />Rare<br />Streetwear
+                    </h2>
+                    <p className="text-sm text-white/50 leading-relaxed">
+                      한정판 스트리트웨어부터 아카이브 피스까지, 지금 바로 입찰하세요.
+                    </p>
+                  </div>
+                  <div className="mt-auto flex flex-col gap-4">
+                    <div>
+                      <p className="text-[11px] font-semibold text-white/30 uppercase tracking-widest mb-1">새로 등록된 상품</p>
+                      <p className="text-6xl font-black text-white leading-none tracking-tight">48+</p>
+                    </div>
+                    <button className="flex items-center gap-2 px-6 py-3 bg-white text-black text-sm font-semibold rounded-full hover:bg-gray-100 transition-colors group w-fit">
+                      지금 둘러보기
+                      <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                    </button>
+                  </div>
+                </div>
+                <div className="relative overflow-hidden order-1 md:order-2 h-full bg-[#0e0e0e]">
+                  <img src={bannerStone} alt="" className="w-full h-full object-contain object-[right_bottom]" />
+                  <div className="absolute inset-y-0 left-0 w-40 bg-gradient-to-r from-[#0e0e0e] to-transparent hidden md:block" />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-        {/* All Products - Infinite Scroll */}
+          {/* 하단 네비게이션 dots */}
+          {(() => {
+            const isDark = ctaSlide === 2;
+            const dotActive = isDark ? "bg-white" : "bg-black";
+            const dotInactive = isDark ? "bg-white/30 hover:bg-white/60" : "bg-black/25 hover:bg-black/50";
+            return (
+              <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10">
+                {[0, 1, 2].map((i) => (
+                  <button key={i} onClick={() => goToSlide(i)} className={`rounded-full transition-all duration-300 ${ctaSlide === i ? `w-8 h-1.5 ${dotActive}` : `w-4 h-1.5 ${dotInactive}`}`} />
+                ))}
+              </div>
+            );
+          })()}
+        </motion.div>
+      </div>
+
+      {/* Section 4: All Products (Infinite Scroll) */}
+      <div className="max-w-[1400px] mx-auto px-6 pb-20">
         <motion.div
           ref={allProductsRef}
           initial={{ opacity: 0, y: 40 }}
-          animate={allProductsInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
+          animate={allProductsInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, ease: "easeOut" }}
         >
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={allProductsInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -20 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="mb-6"
-          >
-            <h2 className="text-lg md:text-xl font-bold text-black mb-1">All Products</h2>
-            <p className="text-xs text-gray-600">전체 상품</p>
-          </motion.div>
+          <div className="text-center mb-6">
+            <h2 className="text-2xl md:text-3xl font-bold text-black">All Products</h2>
+            <p className="text-sm text-gray-500 mt-1">전체 경매 상품</p>
+          </div>
+
+          {/* Category Filter */}
+          <div className="flex flex-wrap justify-center gap-2 mb-8">
+            {allCategories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
+                  selectedCategory === cat
+                    ? "bg-black text-white"
+                    : "bg-white border border-gray-200 text-gray-600 hover:border-gray-400 hover:text-black"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
-            {displayedProducts.map((product, index) => (
+            {(selectedCategory === "All" ? allProducts : allProducts.filter((p) => p.category === selectedCategory)).map((product, index) => (
               <motion.div
                 key={product.id}
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.3, delay: Math.min(index * 0.03, 0.5) }}
+                transition={{ duration: 0.3, delay: Math.min(index * 0.02, 0.3) }}
               >
                 <ProductCard product={product} />
               </motion.div>
             ))}
           </div>
 
-          {/* Loading Indicator */}
           {loading && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex justify-center items-center py-12"
-            >
-              <div className="relative">
-                <div className="w-12 h-12 border-3 border-gray-200 rounded-full"></div>
-                <div className="absolute inset-0 w-12 h-12 border-3 border-black border-t-transparent rounded-full animate-spin"></div>
+            <div className="flex justify-center py-12">
+              <div className="relative w-10 h-10">
+                <div className="absolute inset-0 border-2 border-gray-200 rounded-full" />
+                <div className="absolute inset-0 border-2 border-black border-t-transparent rounded-full animate-spin" />
               </div>
-            </motion.div>
+            </div>
           )}
 
-          {/* Observer Target */}
           {hasMore && <div ref={observerRef} className="h-20" />}
 
-          {/* End Message */}
           {!hasMore && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="text-center py-12 text-sm text-gray-500"
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-center py-12 text-sm text-gray-400"
             >
               모든 상품을 확인했습니다
-            </motion.div>
+            </motion.p>
           )}
         </motion.div>
       </div>

@@ -41,10 +41,10 @@ export function ProductRegistrationPage() {
   const [category, setCategory] = useState("");
   const [condition, setCondition] = useState("");
   const [size, setSize] = useState("");
+  const [tradeTypes, setTradeTypes] = useState<string[]>([]);
   const [description, setDescription] = useState("");
   const [startPrice, setStartPrice] = useState("");
   const [buyNowPrice, setBuyNowPrice] = useState("");
-  const [location, setLocation] = useState("");
   const [endDate, setEndDate] = useState("");
   const [endTime, setEndTime] = useState("");
   const [images, setImages] = useState<string[]>([]);
@@ -104,18 +104,16 @@ export function ProductRegistrationPage() {
   };
 
   const handleQuickDuration = (days: number) => {
-    const now = new Date();
-    now.setDate(now.getDate() + days);
+    const end = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
 
-    // Set to 21:00 (9 PM) for the selected date
-    const endDateTime = new Date(now);
-    endDateTime.setHours(21, 0, 0, 0);
+    const year = end.getFullYear();
+    const month = String(end.getMonth() + 1).padStart(2, '0');
+    const day = String(end.getDate()).padStart(2, '0');
+    const hours = String(end.getHours()).padStart(2, '0');
+    const minutes = String(end.getMinutes()).padStart(2, '0');
 
-    const dateStr = endDateTime.toISOString().split('T')[0];
-    const timeStr = "21:00";
-
-    setEndDate(dateStr);
-    setEndTime(timeStr);
+    setEndDate(`${year}-${month}-${day}`);
+    setEndTime(`${hours}:${minutes}`);
     setQuickDuration(days.toString());
   };
 
@@ -326,7 +324,7 @@ export function ProductRegistrationPage() {
               </div>
             </div>
 
-            {/* Size and Location Grid */}
+            {/* Size and Trade Type Grid */}
             <div className="grid sm:grid-cols-2 gap-5">
               {/* Size */}
               <div>
@@ -342,64 +340,79 @@ export function ProductRegistrationPage() {
                 />
               </div>
 
-              {/* Location */}
+              {/* Trade Type */}
               <div>
-                <Label htmlFor="location" className="text-sm font-semibold text-black mb-2 block">
-                  지역
+                <Label className="text-sm font-semibold text-black mb-2 block">
+                  거래 방식
                 </Label>
-                <Input
-                  id="location"
-                  placeholder="예) 서울 강남구"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  className="h-12 text-base focus-visible:ring-2 focus-visible:ring-black border-gray-300"
-                />
+                <div className="flex gap-2">
+                  {[
+                    { value: "direct", label: "직거래" },
+                    { value: "delivery", label: "택배" },
+                  ].map(({ value, label }) => {
+                    const selected = tradeTypes.includes(value);
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() =>
+                          setTradeTypes((prev) =>
+                            selected ? prev.filter((t) => t !== value) : [...prev, value]
+                          )
+                        }
+                        className={`flex-1 h-12 rounded-lg border-2 text-sm font-medium transition-all ${
+                          selected
+                            ? "border-black bg-black text-white"
+                            : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Description Section */}
-          <div className="bg-white rounded-lg p-6 sm:p-8 border border-gray-200">
-            <Label htmlFor="description" className="text-lg font-semibold text-black mb-2 block">
-              상품 설명 <span className="text-red-500">*</span>
-            </Label>
-            <p className="text-sm text-gray-500 mb-4">
-              상품의 상태, 구매 시기, 사용감 등을 자세히 작성해주세요
-            </p>
-            <Textarea
-              id="description"
-              placeholder={`릭오웬스 정품 빈티지 레더 자켓입니다.\n\n상세 정보:\n- 사이즈: Large\n- 색상: 블랙\n- 소재: 100% 램스킨 가죽\n- 상태: 최상, 미세한 사용감만 있음\n- 연도: 2018 컬렉션\n\n실측:\n- 어깨: 46cm\n- 가슴: 56cm\n- 총장: 66cm\n- 소매: 64cm\n\n비흡연, 반려동물 없는 환경에서 보관했습니다.`}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="min-h-[250px] text-base focus-visible:ring-2 focus-visible:ring-black border-gray-300 resize-none"
-              required
-            />
-            <div className="flex items-center justify-between mt-2">
-              <p className="text-xs text-gray-500">
-                {description.length}/1000자
+          {/* Description + Price Section */}
+          <div className="space-y-6">
+            {/* Left: Description */}
+            <div className="bg-white rounded-lg p-6 sm:p-8 border border-gray-200 flex flex-col">
+              <Label htmlFor="description" className="text-lg font-semibold text-black mb-2 block">
+                상품 설명 <span className="text-red-500">*</span>
+              </Label>
+              <p className="text-sm text-gray-500 mb-4">
+                상품의 상태, 구매 시기, 사용감 등을 자세히 작성해주세요
               </p>
-              <div className="flex items-center gap-1 text-xs text-gray-500">
-                <Info className="w-3 h-3" />
-                <span>자세한 설명일수록 입찰 확률이 높아집니다</span>
+              <Textarea
+                id="description"
+                placeholder={`릭오웬스 정품 빈티지 레더 자켓입니다.\n\n상세 정보:\n- 사이즈: Large\n- 색상: 블랙\n- 소재: 100% 램스킨 가죽\n- 상태: 최상, 미세한 사용감만 있음\n- 연도: 2018 컬렉션\n\n실측:\n- 어깨: 46cm\n- 가슴: 56cm\n- 총장: 66cm\n- 소매: 64cm\n\n비흡연, 반려동물 없는 환경에서 보관했습니다.`}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="flex-1 min-h-[220px] text-base focus-visible:ring-2 focus-visible:ring-black border-gray-300 resize-none"
+                required
+              />
+              <div className="flex items-center justify-between mt-2">
+                <p className="text-xs text-gray-500">{description.length}/1000자</p>
+                <div className="flex items-center gap-1 text-xs text-gray-500">
+                  <Info className="w-3 h-3" />
+                  <span>자세한 설명일수록 입찰 확률이 높아집니다.</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Auction Settings Section */}
-          <div className="bg-white rounded-lg p-6 sm:p-8 border border-gray-200 space-y-5">
-            <h3 className="text-lg font-semibold text-black mb-4">경매 설정</h3>
+            {/* Right: Prices */}
+            <div className="bg-white rounded-lg p-6 sm:p-8 border border-gray-200 space-y-5">
+              <h3 className="text-lg font-semibold text-black">가격 설정</h3>
 
-            {/* Price Grid */}
-            <div className="grid sm:grid-cols-2 gap-5">
               {/* Start Price */}
               <div>
                 <Label htmlFor="startPrice" className="text-sm font-semibold text-black mb-2 block">
                   시작가 <span className="text-red-500">*</span>
                 </Label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium text-base">
-                    ₩
-                  </span>
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium text-base">₩</span>
                   <Input
                     id="startPrice"
                     type="text"
@@ -413,9 +426,7 @@ export function ProductRegistrationPage() {
                     required
                   />
                 </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  입찰 시작 금액
-                </p>
+                <p className="text-xs text-gray-500 mt-2">입찰 시작 금액</p>
               </div>
 
               {/* Buy Now Price */}
@@ -424,9 +435,7 @@ export function ProductRegistrationPage() {
                   즉시 구매가
                 </Label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium text-base">
-                    ₩
-                  </span>
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium text-base">₩</span>
                   <Input
                     id="buyNowPrice"
                     type="text"
@@ -439,11 +448,14 @@ export function ProductRegistrationPage() {
                     className="pl-9 h-12 text-base font-semibold focus-visible:ring-2 focus-visible:ring-black border-gray-300"
                   />
                 </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  즉시 구매 가능 금액 (선택)
-                </p>
+                <p className="text-xs text-gray-500 mt-2">즉시 구매 가능 금액 (선택)</p>
               </div>
             </div>
+          </div>
+
+          {/* Auction Settings Section */}
+          <div className="bg-white rounded-lg p-6 sm:p-8 border border-gray-200 space-y-5">
+            <h3 className="text-lg font-semibold text-black mb-4">경매 설정</h3>
 
             {/* End Date & Time */}
             <div>
@@ -509,12 +521,14 @@ export function ProductRegistrationPage() {
                         id="endDate"
                         type="date"
                         value={endDate}
+                        min={new Date().toISOString().split('T')[0]}
+                        max={new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
                         onChange={(e) => setEndDate(e.target.value)}
                         className="pl-11 h-12 text-base focus-visible:ring-2 focus-visible:ring-black border-gray-300"
                         required
                       />
                     </div>
-                    <p className="text-xs text-gray-500 mt-2">종료 날짜</p>
+                    <p className="text-xs text-gray-500 mt-2">종료 날짜 (오늘 ~ 7일 이내)</p>
                   </div>
                   <div>
                     <div className="relative">

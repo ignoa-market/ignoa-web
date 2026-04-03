@@ -1,121 +1,67 @@
 import { useState } from "react";
-import { Package, Star, Mail, Phone, User, MapPin, Camera } from "lucide-react";
+import { Mail, Phone, User, MapPin, Camera, Search, X } from "lucide-react";
 import { ProductCard } from "@/components/common/ProductCard";
-import { Button } from "@/components/ui/button";
+import { AddressModal } from "@/components/common/AddressModal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
 
 const mockMyProducts = [
-  {
-    id: "1",
-    title: "MacBook Pro 16인치 M1 2021 실버",
-    category: "전자기기",
-    currentPrice: 1250000,
-    imageUrl: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=800&q=80",
-    timeLeft: "2시간 남음",
-    wishCount: 24,
-    bidderCount: 8,
-  },
-  {
-    id: "2",
-    title: "아이패드 에어 5세대 256GB 퍼플",
-    category: "전자기기",
-    currentPrice: 580000,
-    imageUrl: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=800&q=80",
-    timeLeft: "45분 남음",
-    wishCount: 32,
-    bidderCount: 12,
-  },
-  {
-    id: "101",
-    title: "소니 WH-1000XM4 헤드폰",
-    category: "전자기기",
-    currentPrice: 185000,
-    imageUrl: "https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzb255JTIwaGVhZHBob25lc3xlbnwxfHx8fDE3NzQ5NTQ1NzR8MA&ixlib=rb-4.1.0&q=80&w=1080",
-    timeLeft: "경매 종료",
-    wishCount: 15,
-    bidderCount: 6,
-    soldStatus: "판매완료",
-  },
-  {
-    id: "102",
-    title: "캐논 EOS M50 미러리스",
-    category: "전자기기",
-    currentPrice: 420000,
-    imageUrl: "https://images.unsplash.com/photo-1613235577937-9ac3eed992fc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjYW5vbiUyMGNhbWVyYXxlbnwxfHx8fDE3NzQ5NTQ1NzR8MA&ixlib=rb-4.1.0&q=80&w=1080",
-    timeLeft: "경매 종료",
-    wishCount: 28,
-    bidderCount: 9,
-    soldStatus: "판매완료",
-  },
-  {
-    id: "103",
-    title: "LED 스탠드 무드등",
-    category: "가구/인테리어",
-    currentPrice: 35000,
-    imageUrl: "https://images.unsplash.com/photo-1766411503488-f90eef1124bb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkZXNrJTIwbGFtcCUyMG1vZGVybnxlbnwxfHx8fDE3NzQ5MTExMDN8MA&ixlib=rb-4.1.0&q=80&w=1080",
-    timeLeft: "경매 종료",
-    wishCount: 8,
-    bidderCount: 3,
-    soldStatus: "유찰",
-  },
+  { id: "1", title: "MacBook Pro 16인치 M1 2021 실버", currentPrice: 1250000, imageUrl: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=800&q=80", timeLeft: "2시간 남음", wishCount: 24 },
+  { id: "2", title: "아이패드 에어 5세대 256GB 퍼플", currentPrice: 580000, imageUrl: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=800&q=80", timeLeft: "45분 남음", wishCount: 32 },
+  { id: "101", title: "소니 WH-1000XM4 헤드폰", currentPrice: 185000, imageUrl: "https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?w=1080&q=80", timeLeft: "경매 종료", wishCount: 15 },
+  { id: "102", title: "캐논 EOS M50 미러리스", currentPrice: 420000, imageUrl: "https://images.unsplash.com/photo-1613235577937-9ac3eed992fc?w=1080&q=80", timeLeft: "경매 종료", wishCount: 28 },
 ];
 
-// 입찰 참여중인 상품 데이터
 const mockBiddingProducts = [
-  {
-    id: "201",
-    title: "백팩 여행용 40L",
-    category: "패션/잡화",
-    currentPrice: 75000,
-    imageUrl: "https://images.unsplash.com/photo-1570630358718-4fb324824b3d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxiYWNrcGFjayUyMHRyYXZlbHxlbnwxfHx8fDE3NzQ5NTQyMDR8MA&ixlib=rb-4.1.0&q=80&w=1080",
-    timeLeft: "3시간 15분",
-    wishCount: 12,
-    bidderCount: 5,
-    myBid: 75000,
-    isWinning: true,
-  },
-  {
-    id: "202",
-    title: "게이밍 마우스 RGB",
-    category: "전자기기",
-    currentPrice: 65000,
-    imageUrl: "https://images.unsplash.com/photo-1628832307345-7404b47f1751?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxnYW1pbmclMjBtb3VzZXxlbnwxfHx8fDE3NzQ5MzI1ODJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
-    timeLeft: "1시간 40분",
-    wishCount: 18,
-    bidderCount: 7,
-    myBid: 60000,
-    isWinning: false,
-  },
+  { id: "201", title: "백팩 여행용 40L", currentPrice: 75000, imageUrl: "https://images.unsplash.com/photo-1570630358718-4fb324824b3d?w=1080&q=80", timeLeft: "3시간 15분", wishCount: 12 },
+  { id: "202", title: "게이밍 마우스 RGB", currentPrice: 65000, imageUrl: "https://images.unsplash.com/photo-1628832307345-7404b47f1751?w=1080&q=80", timeLeft: "1시간 40분", wishCount: 18 },
+  { id: "203", title: "빈티지 레더 재킷", currentPrice: 320000, imageUrl: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=600&q=80", timeLeft: "경매 종료", wishCount: 41 },
 ];
 
-// 찜한 상품 데이터
 const mockWishlistProducts = [
-  {
-    id: "301",
-    title: "Nike 에어포스 1 화이트",
-    category: "패션/잡화",
-    currentPrice: 89000,
-    imageUrl: "https://images.unsplash.com/photo-1600269452121-4f2416e55c28?w=800&q=80",
-    timeLeft: "5시간 20분",
-    wishCount: 45,
-    bidderCount: 15,
-  },
+  { id: "301", title: "Nike 에어포스 1 화이트", currentPrice: 89000, imageUrl: "https://images.unsplash.com/photo-1600269452121-4f2416e55c28?w=800&q=80", timeLeft: "5시간 20분", wishCount: 45 },
+];
+
+const mockFollowers = [
+  { id: "f1", name: "패션피플" },
+  { id: "f2", name: "빈티지러버" },
+  { id: "f3", name: "스트릿웨어킹" },
+  { id: "f4", name: "럭셔리헌터" },
+  { id: "f5", name: "데님마니아" },
+];
+
+const mockFollowing = [
+  { id: "g1", name: "릭오웬스팬" },
+  { id: "g2", name: "아크테릭스매니아" },
+  { id: "g3", name: "슈프림코리아" },
 ];
 
 export function ProfilePage() {
   const [activeTab, setActiveTab] = useState("products");
-  const [userName, setUserName] = useState("짜응잉");
-  const [address, setAddress] = useState("대전광역시 유성구 동서대로 125");
-  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [showFollowModal, setShowFollowModal] = useState<"followers" | "following" | null>(null);
 
-  // Read-only info
+  const savedUserName = "짜응잉";
+  const savedAddress = "대전광역시 유성구 동서대로 125";
+
+  const [userName, setUserName] = useState(savedUserName);
+  const [address, setAddress] = useState(savedAddress);
+  const [savedName, setSavedName] = useState(savedUserName);
+  const [savedAddr, setSavedAddr] = useState(savedAddress);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [showAddressModal, setShowAddressModal] = useState(false);
+
   const email = "user@hanbat.ac.kr";
   const phone = "010-1234-5678";
 
+  const isDirty = userName !== savedName || address !== savedAddr;
+
   const handleSaveProfile = () => {
+    setSavedName(userName);
+    setSavedAddr(address);
+    setIsEditing(false);
     toast.success("프로필이 업데이트되었습니다!");
   };
 
@@ -132,225 +78,269 @@ export function ProfilePage() {
   };
 
   const tabs = [
-    { id: "products", label: "상품", count: 5 },
-    { id: "wishlist", label: "찜", count: 1 },
-    { id: "bidding", label: "입찰", count: 2 },
+    { id: "products", label: "Selling", count: mockMyProducts.length },
+    { id: "bidding",  label: "Bidding", count: mockBiddingProducts.length },
+    { id: "wishlist", label: "Wishlist", count: mockWishlistProducts.length },
   ];
 
-  const renderContent = () => {
-    if (activeTab === "products") {
-      return (
-        <div>
-          {/* Filter Bar */}
-          <div className="mb-6">
-            <p className="text-sm text-gray-600">전체 <span className="font-semibold text-gray-900">5</span>개</p>
-          </div>
+  const currentProducts =
+    activeTab === "products" ? mockMyProducts :
+    activeTab === "bidding"  ? mockBiddingProducts :
+    mockWishlistProducts;
 
-          {/* Products Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {mockMyProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    if (activeTab === "wishlist") {
-      return (
-        <div>
-          {/* Filter Bar */}
-          <div className="mb-6">
-            <p className="text-sm text-gray-600">전체 <span className="font-semibold text-gray-900">1</span>개</p>
-          </div>
-
-          {/* Products Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {mockWishlistProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    if (activeTab === "bidding") {
-      return (
-        <div>
-          {/* Filter Bar */}
-          <div className="mb-6">
-            <p className="text-sm text-gray-600">전체 <span className="font-semibold text-gray-900">2</span>개</p>
-          </div>
-
-          {/* Products Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {mockBiddingProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    return null;
-  };
+  const followList = showFollowModal === "followers" ? mockFollowers : mockFollowing;
 
   return (
-    <div className="min-h-screen pt-20 pb-12 bg-gray-50">
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        {/* Profile Card - Toss Style */}
-        <div className="max-w-[1000px] mx-auto mb-8">
-          <div className="bg-white rounded-3xl p-8 sm:p-12 shadow-sm border border-gray-100">
-            {/* Profile Icon */}
-            <div className="relative w-24 h-24 mx-auto mb-5 group">
-              <input
-                type="file"
-                id="profileImageInput"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="hidden"
-              />
-              <label
-                htmlFor="profileImageInput"
-                className="cursor-pointer block w-full h-full rounded-full bg-gray-100 overflow-hidden relative"
-              >
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+      className="min-h-screen bg-white pt-32 pb-28"
+    >
+      {/* Profile Hero */}
+      <div className="max-w-[1400px] mx-auto px-8">
+        <div className="flex items-end justify-between pb-14">
+
+          {/* Left: Avatar + Name */}
+          <div className="flex items-end gap-10">
+            <div className="relative group flex-shrink-0">
+              <input type="file" id="profileImageInput" accept="image/*" onChange={handleImageChange} className="hidden" />
+              <label htmlFor="profileImageInput" className="cursor-pointer block w-24 h-24 rounded-full bg-gray-100 overflow-hidden relative">
                 {profileImage ? (
                   <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
-                    <Package className="w-11 h-11 text-gray-500" />
+                    <User className="w-8 h-8 text-gray-300" />
                   </div>
                 )}
-
-                {/* Hover Overlay */}
-                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
-                  <Camera className="w-8 h-8 text-white" />
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
+                  <Camera className="w-4 h-4 text-white" />
                 </div>
               </label>
             </div>
 
-            {/* User Name */}
-            <h2 className="text-2xl font-bold text-gray-900 mb-5 text-center">{userName}</h2>
-
-            {/* Star Rating */}
-            <div className="flex items-center justify-center gap-1 mb-10">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Star key={star} className="w-6 h-6 fill-yellow-400 text-yellow-400" />
-              ))}
+            <div>
+              <p className="text-[11px] font-semibold tracking-[0.3em] text-gray-400 uppercase mb-3">Member</p>
+              <h1 className="text-5xl font-black text-black tracking-tight leading-none">{savedName}</h1>
+              <p className="text-sm text-gray-400 mt-3">{email}</p>
             </div>
+          </div>
 
-            {/* User Info Edit Form - Horizontal Layout */}
-            <div className="max-w-3xl mx-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                {/* Left Column - Editable Fields */}
-                <div className="space-y-6">
-                  {/* Name */}
+          {/* Right: Stats */}
+          <div className="flex items-end gap-14">
+            <div>
+              <p className="text-[11px] font-semibold tracking-[0.3em] text-gray-400 uppercase mb-1">Selling</p>
+              <p className="text-4xl font-black text-black leading-none">{mockMyProducts.length}</p>
+            </div>
+            <button onClick={() => setShowFollowModal("followers")} className="text-left hover:opacity-60 transition-opacity">
+              <p className="text-[11px] font-semibold tracking-[0.3em] text-gray-400 uppercase mb-1">Followers</p>
+              <p className="text-4xl font-black text-black leading-none">{mockFollowers.length}</p>
+            </button>
+            <button onClick={() => setShowFollowModal("following")} className="text-left hover:opacity-60 transition-opacity">
+              <p className="text-[11px] font-semibold tracking-[0.3em] text-gray-400 uppercase mb-1">Following</p>
+              <p className="text-4xl font-black text-black leading-none">{mockFollowing.length}</p>
+            </button>
+            <button
+              onClick={() => {
+                if (isEditing) { setUserName(savedName); setAddress(savedAddr); }
+                setIsEditing(!isEditing);
+              }}
+              className="h-10 px-6 rounded-full border border-gray-200 text-sm font-medium text-gray-600 hover:border-black hover:text-black transition-all"
+            >
+              {isEditing ? "취소" : "Edit Profile"}
+            </button>
+          </div>
+        </div>
+
+        {/* Edit Form */}
+        <AnimatePresence>
+          {isEditing && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.25 }}
+              className="overflow-hidden"
+            >
+              <div className="py-10 border-b border-gray-100">
+                <p className="text-[11px] font-semibold tracking-[0.3em] text-gray-400 uppercase mb-6">Edit Profile</p>
+                <div className="grid grid-cols-2 gap-5 max-w-2xl mb-6">
                   <div>
-                    <Label htmlFor="userName" className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                      <User className="w-4 h-4 text-gray-500" />
-                      이름
+                    <Label htmlFor="userName" className="text-[11px] font-semibold tracking-[0.2em] text-gray-400 uppercase mb-2 flex items-center gap-1.5">
+                      <User className="w-3 h-3" /> Name
                     </Label>
                     <Input
                       id="userName"
                       value={userName}
                       onChange={(e) => setUserName(e.target.value)}
-                      className="h-11 border-gray-300 focus-visible:ring-[#6BCF7F] rounded-xl"
-                      placeholder="이름을 입력하세요"
+                      className="h-11 border-gray-200 focus-visible:ring-1 focus-visible:ring-black focus-visible:border-black rounded-none"
                     />
                   </div>
-
-                  {/* Address */}
                   <div>
-                    <Label htmlFor="address" className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-gray-500" />
-                      주소
+                    <Label className="text-[11px] font-semibold tracking-[0.2em] text-gray-400 uppercase mb-2 flex items-center gap-1.5">
+                      <MapPin className="w-3 h-3" /> Address
                     </Label>
-                    <Input
-                      id="address"
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      className="h-11 border-gray-300 focus-visible:ring-[#6BCF7F] rounded-xl"
-                      placeholder="주소를 입력하세요"
-                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowAddressModal(true)}
+                      className="w-full h-11 px-3 border border-gray-200 flex items-center justify-between text-sm hover:border-black transition-colors group rounded-none"
+                    >
+                      <span className={address ? "text-black" : "text-gray-400"}>
+                        {address || "주소를 검색해주세요"}
+                      </span>
+                      <Search className="w-4 h-4 text-gray-400 group-hover:text-black transition-colors flex-shrink-0" />
+                    </button>
                   </div>
-                </div>
-
-                {/* Right Column - Read-only Information */}
-                <div className="space-y-6">
-                  {/* Email - Read Only */}
                   <div>
-                    <Label className="text-sm font-medium text-gray-500 mb-2 flex items-center gap-2">
-                      <Mail className="w-4 h-4 text-gray-400" />
-                      이메일
+                    <Label className="text-[11px] font-semibold tracking-[0.2em] text-gray-400 uppercase mb-2 flex items-center gap-1.5">
+                      <Mail className="w-3 h-3" /> Email
                     </Label>
-                    <div className="h-11 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl flex items-center">
-                      <span className="text-gray-600 text-sm">{email}</span>
+                    <div className="h-11 px-3 bg-gray-50 border border-gray-200 flex items-center text-sm text-gray-400">
+                      {email}
                     </div>
                   </div>
-
-                  {/* Phone - Read Only */}
                   <div>
-                    <Label className="text-sm font-medium text-gray-500 mb-2 flex items-center gap-2">
-                      <Phone className="w-4 h-4 text-gray-400" />
-                      전화번호
+                    <Label className="text-[11px] font-semibold tracking-[0.2em] text-gray-400 uppercase mb-2 flex items-center gap-1.5">
+                      <Phone className="w-3 h-3" /> Phone
                     </Label>
-                    <div className="h-11 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl flex items-center">
-                      <span className="text-gray-600 text-sm">{phone}</span>
+                    <div className="h-11 px-3 bg-gray-50 border border-gray-200 flex items-center text-sm text-gray-400">
+                      {phone}
                     </div>
                   </div>
                 </div>
-              </div>
-
-              {/* Save Button */}
-              <div className="flex justify-center">
-                <Button
-                  onClick={handleSaveProfile}
-                  className="bg-[#6BCF7F] hover:bg-[#5ABD6D] text-white px-12 h-12 font-semibold rounded-xl shadow-sm"
+                <button
+                  onClick={isDirty ? handleSaveProfile : undefined}
+                  className={`h-10 px-8 rounded-full text-sm font-semibold transition-all ${
+                    isDirty
+                      ? "bg-black text-white hover:bg-gray-800 cursor-pointer"
+                      : "bg-white border border-gray-200 text-gray-300 cursor-default"
+                  }`}
                 >
-                  프로필 저장
-                </Button>
+                  Save
+                </button>
               </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Tabs Navigation */}
-        <div className="bg-white rounded-t-2xl border-b shadow-sm">
-          <div className="flex items-center justify-center">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-8 py-4 border-b-2 transition-colors ${
-                  activeTab === tab.id
-                    ? "border-[#6BCF7F] text-gray-900 font-semibold"
-                    : "border-transparent text-gray-500 hover:text-gray-900"
-                }`}
-              >
-                <span>{tab.label}</span>
-                <span className={activeTab === tab.id ? "text-[#6BCF7F]" : "text-gray-400"}>
-                  {tab.count}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Tab Content */}
-        <div className="bg-white rounded-b-2xl p-6 shadow-sm overflow-hidden">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2, ease: "easeInOut" }}
-            >
-              {renderContent()}
             </motion.div>
-          </AnimatePresence>
+          )}
+        </AnimatePresence>
+
+        {/* Tabs */}
+        <div className="flex items-center gap-10 mt-14 mb-10 border-b border-gray-100">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`pb-5 text-[11px] font-semibold tracking-[0.25em] uppercase transition-colors border-b-2 -mb-px ${
+                activeTab === tab.id
+                  ? "border-black text-black"
+                  : "border-transparent text-gray-400 hover:text-black"
+              }`}
+            >
+              {tab.label}
+              <span className="ml-2 font-normal">{tab.count}</span>
+            </button>
+          ))}
         </div>
+
+        {/* Product Grid */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+          >
+            {currentProducts.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {currentProducts.map((product, index) => {
+                  const isEnded = product.timeLeft === "경매 종료";
+                  return (
+                  <motion.div
+                    key={product.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.05 }}
+                    className="relative"
+                  >
+                    <div>
+                      <ProductCard product={product} />
+                    </div>
+                    {isEnded && (
+                      <div className="absolute top-0 left-0 right-0 aspect-square rounded-sm overflow-hidden pointer-events-none">
+                        <div className="absolute inset-0 bg-black/30" />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-2xl font-black text-white drop-shadow-md">
+                            {activeTab === "products" ? "SOLD" : "ENDED"}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="py-24 text-center">
+                <p className="text-[11px] font-semibold tracking-[0.3em] text-gray-300 uppercase">No items yet</p>
+              </div>
+            )}
+          </motion.div>
+        </AnimatePresence>
       </div>
-    </div>
+
+      {/* Follow Modal */}
+      <AnimatePresence>
+        {showFollowModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+            onClick={() => setShowFollowModal(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 12 }}
+              transition={{ duration: 0.2 }}
+              className="bg-white w-full max-w-sm mx-4 shadow-xl overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+                <p className="text-[11px] font-semibold tracking-[0.3em] text-black uppercase">
+                  {showFollowModal === "followers" ? "Followers" : "Following"}
+                </p>
+                <button
+                  onClick={() => setShowFollowModal(null)}
+                  className="w-7 h-7 flex items-center justify-center hover:bg-gray-100 transition-colors"
+                >
+                  <X className="w-4 h-4 text-gray-500" />
+                </button>
+              </div>
+              <ul className="max-h-80 overflow-y-auto divide-y divide-gray-50">
+                {followList.map((user) => (
+                  <li key={user.id} className="flex items-center gap-3 px-6 py-3.5 hover:bg-gray-50 transition-colors">
+                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                      <User className="w-4 h-4 text-gray-400" />
+                    </div>
+                    <span className="text-sm font-medium text-black">{user.name}</span>
+                  </li>
+                ))}
+              </ul>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Address Modal */}
+      <AnimatePresence>
+        {showAddressModal && (
+          <AddressModal
+            onSelect={(addr) => setAddress(addr)}
+            onClose={() => setShowAddressModal(false)}
+          />
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }

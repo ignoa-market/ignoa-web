@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router";
-import { Heart, MapPin, Eye, TrendingUp, Gavel, Share2, ShoppingCart, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -207,6 +207,30 @@ export function ProductDetailPage() {
   const [bidAmount, setBidAmount] = useState("");
   const [shippingOpen, setShippingOpen] = useState(false);
   const [returnOpen, setReturnOpen] = useState(false);
+  const [buyNowAgreed, setBuyNowAgreed] = useState(false);
+  const [countdown, setCountdown] = useState("");
+  const endTimeRef = useRef(new Date(Date.now() + (1 * 24 * 60 * 60 + 5 * 60 * 60) * 1000));
+
+  useEffect(() => {
+    const tick = () => {
+      const diff = endTimeRef.current.getTime() - Date.now();
+      if (diff <= 0) {
+        setCountdown("마감");
+        return;
+      }
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+      if (days > 0) setCountdown(`${days}일 ${hours}시간 ${minutes}분 ${seconds}초`);
+      else if (hours > 0) setCountdown(`${hours}시간 ${minutes}분 ${seconds}초`);
+      else setCountdown(`${minutes}분 ${seconds}초`);
+    };
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const handleBid = () => {
     const amount = parseInt(bidAmount.replace(/,/g, ""));
@@ -222,6 +246,7 @@ export function ProductDetailPage() {
   const handleBuyNow = () => {
     toast.success("구매가 완료되었습니다!");
     setBuyNowModalOpen(false);
+    setBuyNowAgreed(false);
   };
 
   const handlePreviousImage = () => {
@@ -309,27 +334,15 @@ export function ProductDetailPage() {
 
           {/* Right: Product Info */}
           <div>
-            <p className="text-[10px] font-bold text-black uppercase tracking-wider mb-1">
+            <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">
               {mockProduct.brand}
             </p>
-            <h1 className="text-xl sm:text-2xl font-bold text-black mb-4">
+            <h1 className="text-xl sm:text-2xl font-bold text-black mb-6">
               {mockProduct.title}
             </h1>
 
-            {/* Description Section - Moved below title */}
-            <div className="mb-8 pb-6 border-b border-gray-200">
-              <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-line mb-3">
-                {mockProduct.description}
-              </div>
-              <div className="flex justify-end">
-                <div className="text-xs text-gray-500">
-                  {mockProduct.postedAt}
-                </div>
-              </div>
-            </div>
-
-            {/* Compact Price Display */}
-            <div className="grid grid-cols-2 gap-6 mb-6">
+            {/* Price Display */}
+            <div className="grid grid-cols-2 gap-6 mb-8">
               <div>
                 <div className="text-xs text-gray-500 mb-2">현재 입찰가</div>
                 <div className="text-2xl font-bold text-black">
@@ -344,19 +357,14 @@ export function ProductDetailPage() {
               </div>
             </div>
 
-            {/* Details - Clean layout without borders */}
-            <div className="grid grid-cols-3 gap-6 mb-8">
-              <div>
-                <div className="text-xs text-gray-500 mb-1">시작가</div>
-                <div className="text-sm font-semibold text-black">{mockProduct.startPrice.toLocaleString()}원</div>
+            {/* Description */}
+            <div className="mb-8">
+              <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-line mb-5">
+                {mockProduct.description}
               </div>
-              <div>
-                <div className="text-xs text-gray-500 mb-1">남은 시간</div>
-                <div className="text-sm font-semibold text-red-600">{mockProduct.timeLeft}</div>
-              </div>
-              <div>
-                <div className="text-xs text-gray-500 mb-1">입찰수</div>
-                <div className="text-sm font-semibold text-black">{mockProduct.bidderCount}</div>
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-red-500 font-semibold">⏱ {countdown}</div>
+                <div className="text-sm text-gray-500">{mockProduct.postedAt}</div>
               </div>
             </div>
 
@@ -624,33 +632,46 @@ export function ProductDetailPage() {
       </Dialog>
 
       {/* Buy Now Modal */}
-      <Dialog open={buyNowModalOpen} onOpenChange={setBuyNowModalOpen}>
+      <Dialog open={buyNowModalOpen} onOpenChange={(open) => { setBuyNowModalOpen(open); if (!open) setBuyNowAgreed(false); }}>
         <DialogContent className="sm:max-w-md bg-white border-gray-200">
           <DialogHeader>
             <DialogTitle className="text-2xl text-black">즉시 구매하기</DialogTitle>
             <DialogDescription className="text-gray-600">
-              즉시 구매를 원하시면 아래 버튼을 클릭하세요
+              아래 내용을 확인 후 동의해주세요
             </DialogDescription>
           </DialogHeader>
 
-          <div className="bg-gray-50 p-5 mb-4 border border-gray-200">
+          <div className="bg-gray-50 p-5 border border-gray-200">
             <div className="text-sm text-gray-600 mb-2">즉시 구매가</div>
             <div className="text-4xl font-bold text-black">
               {mockProduct.buyNowPrice.toLocaleString()}원
             </div>
           </div>
 
-          <DialogFooter className="gap-3 sm:gap-3 mt-4">
+          <label className="flex items-start gap-3 cursor-pointer mt-1 p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+            <input
+              type="checkbox"
+              checked={buyNowAgreed}
+              onChange={(e) => setBuyNowAgreed(e.target.checked)}
+              className="mt-0.5 w-4 h-4 accent-black cursor-pointer"
+            />
+            <span className="text-sm text-gray-600 leading-relaxed">
+              위 금액으로 즉시 구매에 동의하며, 구매 후 취소 및 환불이 제한될 수 있음을 확인했습니다.
+            </span>
+          </label>
+
+          <DialogFooter className="gap-3 sm:gap-3 mt-2">
             <Button
               variant="outline"
-              onClick={() => setBuyNowModalOpen(false)}
+              onClick={() => { setBuyNowModalOpen(false); setBuyNowAgreed(false); }}
               className="flex-1 h-12 font-medium border-gray-300 bg-white text-black hover:bg-gray-100 active:scale-[0.98] transition-all rounded-lg"
             >
               취소
             </Button>
             <Button
               onClick={handleBuyNow}
-              className="flex-1 h-12 bg-black hover:bg-gray-800 text-white font-semibold active:scale-[0.98] transition-all rounded-lg"
+              disabled={!buyNowAgreed}
+              className="flex-1 h-12 bg-black hover:bg-gray-800 text-white font-semibold active:scale-[0.98] transition-all rounded-lg disabled:opacity-40 disabled:cursor-not-allowed"
             >
               즉시 구매하기
             </Button>
