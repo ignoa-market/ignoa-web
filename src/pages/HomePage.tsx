@@ -261,9 +261,10 @@ export function HomePage() {
               <motion.div
                 key="slide-0"
                 custom={slideDir}
-                initial={{ x: slideDir > 0 ? "100%" : "-100%" }}
-                animate={{ x: 0 }}
-                exit={{ x: slideDir > 0 ? "-100%" : "100%" }}
+                variants={{ enter: (d: number) => ({ x: d > 0 ? "100%" : "-100%" }), center: { x: 0 }, exit: (d: number) => ({ x: d > 0 ? "-100%" : "100%" }) }}
+                initial="enter"
+                animate="center"
+                exit="exit"
                 transition={{ duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
                 className="absolute inset-0 bg-white grid grid-cols-1 md:grid-cols-[1fr_1fr]"
               >
@@ -300,9 +301,10 @@ export function HomePage() {
               <motion.div
                 key="slide-1"
                 custom={slideDir}
-                initial={{ x: slideDir > 0 ? "100%" : "-100%" }}
-                animate={{ x: 0 }}
-                exit={{ x: slideDir > 0 ? "-100%" : "100%" }}
+                variants={{ enter: (d: number) => ({ x: d > 0 ? "100%" : "-100%" }), center: { x: 0 }, exit: (d: number) => ({ x: d > 0 ? "-100%" : "100%" }) }}
+                initial="enter"
+                animate="center"
+                exit="exit"
                 transition={{ duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
                 className="absolute inset-0 bg-[#f0eeea] grid grid-cols-1 md:grid-cols-[1fr_1fr]"
               >
@@ -335,13 +337,14 @@ export function HomePage() {
                 </div>
               </motion.div>
             )}
-            {ctaSlide === 1 && (
+            {ctaSlide === 2 && (
               <motion.div
-                key="slide-1"
+                key="slide-2"
                 custom={slideDir}
-                initial={{ x: slideDir > 0 ? "100%" : "-100%" }}
-                animate={{ x: 0 }}
-                exit={{ x: slideDir > 0 ? "-100%" : "100%" }}
+                variants={{ enter: (d: number) => ({ x: d > 0 ? "100%" : "-100%" }), center: { x: 0 }, exit: (d: number) => ({ x: d > 0 ? "-100%" : "100%" }) }}
+                initial="enter"
+                animate="center"
+                exit="exit"
                 transition={{ duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
                 className="absolute inset-0 bg-[#0e0e0e] grid grid-cols-1 md:grid-cols-[1fr_1fr]"
               >
@@ -384,7 +387,9 @@ export function HomePage() {
             return (
               <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10">
                 {[0, 1, 2].map((i) => (
-                  <button key={i} onClick={() => goToSlide(i)} className={`rounded-full transition-all duration-300 ${ctaSlide === i ? `w-8 h-1.5 ${dotActive}` : `w-4 h-1.5 ${dotInactive}`}`} />
+                  <button key={i} onClick={() => goToSlide(i)} className="p-2 -m-2 flex items-center justify-center">
+                    <span className={`block rounded-full transition-all duration-300 ${ctaSlide === i ? `w-8 h-1.5 ${dotActive}` : `w-4 h-1.5 ${dotInactive}`}`} />
+                  </button>
                 ))}
               </div>
             );
