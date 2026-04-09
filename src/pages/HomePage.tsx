@@ -8,6 +8,11 @@ import bannerMainImage from "@/assets/banner-main.jpg";
 import bannerStone from "@/assets/banner-stone.jpg";
 import bannerHero from "@/assets/banner-hero.png";
 import bannerPuffer from "@/assets/banner-puffer.jpg";
+import stussyFront from "@/assets/product-stussy-front.png";
+import ignotaTeal from "@/assets/product-ignota-teal.jpg";
+import bapeTee from "@/assets/product-bape-tee.webp";
+import channelOrange from "@/assets/product-channel-orange.jpg";
+import vinylBlue from "@/assets/product-vinyl-blue.jpg";
 
 const mockProducts = [
   {
@@ -16,7 +21,7 @@ const mockProducts = [
     brand: "CHROME HEARTS",
     currentPrice: 350000,
     size: "M",
-    imageUrl: "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=600&q=80",
+    imageUrl: stussyFront,
     timeLeft: "2h 34m",
     wishCount: 142,
     location: "New York",
@@ -27,7 +32,7 @@ const mockProducts = [
     brand: "RICK OWENS",
     currentPrice: 820000,
     size: "L",
-    imageUrl: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=600&q=80",
+    imageUrl: ignotaTeal,
     timeLeft: "1d 5h",
     wishCount: 89,
     location: "Los Angeles",
@@ -38,7 +43,7 @@ const mockProducts = [
     brand: "MARGIELA",
     currentPrice: 450000,
     size: "10",
-    imageUrl: "https://images.unsplash.com/photo-1625860191460-10a66c7384fb?w=600&q=80",
+    imageUrl: bapeTee,
     timeLeft: "4h 12m",
     wishCount: 234,
     location: "Paris",
@@ -49,7 +54,7 @@ const mockProducts = [
     brand: "STUSSY",
     currentPrice: 180000,
     size: "XL",
-    imageUrl: "https://images.unsplash.com/photo-1772311993942-872095c6a227?w=600&q=80",
+    imageUrl: channelOrange,
     timeLeft: "3d 8h",
     wishCount: 67,
     location: "Tokyo",
@@ -60,7 +65,7 @@ const mockProducts = [
     brand: "DIOR",
     currentPrice: 1200000,
     size: "OS",
-    imageUrl: "https://images.unsplash.com/photo-1605727450884-4b0e32a129af?w=600&q=80",
+    imageUrl: vinylBlue,
     timeLeft: "12h 45m",
     wishCount: 156,
     location: "Milan",

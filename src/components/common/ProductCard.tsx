@@ -23,13 +23,12 @@ export function ProductCard({ product }: ProductCardProps) {
   return (
     <div className="group bg-white overflow-hidden transition-all relative cursor-pointer">
       <Link to={`/app/product/${id}`}>
-        <div className="relative aspect-square overflow-hidden bg-gray-100 mb-2 rounded-sm">
+        <div className="relative aspect-square overflow-hidden bg-white mb-2 rounded-sm transition-shadow duration-300 group-hover:shadow-[0_0_20px_rgba(0,0,0,0.08)]">
           <img
             src={imageUrl}
             alt={title}
             className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
           />
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/8 transition-colors duration-300" />
         </div>
 
         <div className="space-y-1 transition-transform duration-300 group-hover:-translate-y-0.5">
