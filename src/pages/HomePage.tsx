@@ -1,74 +1,70 @@
 import { useState, useRef, useEffect } from "react";
 import { ProductCard } from "@/components/common/ProductCard";
-import { motion, AnimatePresence, useInView } from "motion/react";
+import { motion, useInView } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
-import bannerImage from "@/assets/banner-fashion.jpg";
-import bannerMainImage from "@/assets/banner-main.jpg";
-import bannerStone from "@/assets/banner-stone.jpg";
-import bannerHero from "@/assets/banner-hero.png";
-import bannerPuffer from "@/assets/banner-puffer.jpg";
-import stussyFront from "@/assets/product-stussy-front.png";
-import ignotaTeal from "@/assets/product-ignota-teal.jpg";
-import bapeTee from "@/assets/product-bape-tee.webp";
-import channelOrange from "@/assets/product-channel-orange.jpg";
-import vinylBlue from "@/assets/product-vinyl-blue.jpg";
+import vinylFrankOceanBlonde from "@/assets/lp-frank-ocean-blonde.png";
+import lpHyukohSunsetRollercoasterAAA from "@/assets/lp-hyukoh-sunset-rollercoaster-aaa.png";
+import lpTeamBaby from "@/assets/lp-team-baby.png";
+import lpWaveToEarth from "@/assets/lp-wave-to-earth.png";
+import channelOrange from "@/assets/lp-frank-ocean-channel-orange.png";
+import lpDanielCaesarNeverEnough from "@/assets/lp-daniel-caesar-never-enough.png";
 
 const mockProducts = [
   {
-    id: "1",
-    title: "PLUTO x PROJEXT",
-    brand: "CHROME HEARTS",
-    currentPrice: 350000,
-    size: "M",
-    imageUrl: stussyFront,
-    timeLeft: "2h 34m",
-    wishCount: 142,
-    location: "New York",
-  },
-  {
-    id: "2",
-    title: "Vintage Leather Jacket",
-    brand: "RICK OWENS",
-    currentPrice: 820000,
-    size: "L",
-    imageUrl: ignotaTeal,
-    timeLeft: "1d 5h",
-    wishCount: 89,
-    location: "Los Angeles",
-  },
-  {
     id: "3",
-    title: "Classic White Sneakers",
-    brand: "MARGIELA",
-    currentPrice: 450000,
-    size: "10",
-    imageUrl: bapeTee,
+    title: "Blonde",
+    brand: "FRANK OCEAN",
+    currentPrice: 600000,
+    size: "LP",
+    imageUrl: vinylFrankOceanBlonde,
     timeLeft: "4h 12m",
     wishCount: 234,
     location: "Paris",
   },
   {
+    id: "5",
+    title: "Never Enough",
+    brand: "DANIEL CAESAR",
+    currentPrice: 200000,
+    size: "LP",
+    imageUrl: lpDanielCaesarNeverEnough,
+    timeLeft: "12h 45m",
+    wishCount: 156,
+    location: "Milan",
+  },
+  {
+    id: "1",
+    title: "AAA",
+    brand: "HYUKOH & SUNSET ROLLERCOASTER",
+    currentPrice: 360000,
+    size: "LP",
+    imageUrl: lpHyukohSunsetRollercoasterAAA,
+    timeLeft: "2h 34m",
+    wishCount: 142,
+    location: "Seoul",
+  },
+  {
+    id: "2",
+    title: "Team Baby",
+    brand: "THE BLACK SKIRTS",
+    currentPrice: 660000,
+    size: "LP",
+    imageUrl: lpTeamBaby,
+    timeLeft: "1d 5h",
+    wishCount: 89,
+    location: "Los Angeles",
+  },
+  {
     id: "4",
-    title: "Oversized Hoodie",
-    brand: "STUSSY",
-    currentPrice: 180000,
-    size: "XL",
+    title: "channel ORANGE",
+    brand: "FRANK OCEAN",
+    currentPrice: 580000,
+    size: "LP",
     imageUrl: channelOrange,
     timeLeft: "3d 8h",
     wishCount: 67,
     location: "Tokyo",
-  },
-  {
-    id: "5",
-    title: "Designer Watch",
-    brand: "DIOR",
-    currentPrice: 1200000,
-    size: "OS",
-    imageUrl: vinylBlue,
-    timeLeft: "12h 45m",
-    wishCount: 156,
-    location: "Milan",
   },
   {
     id: "6",
@@ -127,7 +123,19 @@ const mockProducts = [
   },
 ];
 
-const allCategories = ["All", "Outerwear", "Tops", "Bottoms", "Shoes", "Bags", "Accessories"];
+const artists = [
+  "Frank Ocean",
+  "Daniel Caesar",
+  "Mac Miller",
+  "Justin Bieber",
+  "Tyler, The Creator",
+  "Oasis",
+  "Baek Yerin",
+  "Hyukoh",
+  "The Black Skirts",
+  "Jannabi",
+];
+
 const categoryList = ["Outerwear", "Tops", "Bottoms", "Shoes", "Bags", "Accessories"];
 
 const generateMoreProducts = (startId: number, count: number) => {
@@ -147,27 +155,40 @@ const generateMoreProducts = (startId: number, count: number) => {
 };
 
 
+const AUCTION_END = new Date(Date.now() + 4 * 3600 * 1000 + 23 * 60 * 1000 + 11 * 1000);
+
+function useCountdown(target: Date) {
+  const [timeLeft, setTimeLeft] = useState(() => Math.max(0, target.getTime() - Date.now()));
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setTimeLeft(Math.max(0, target.getTime() - Date.now()));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [target]);
+
+  const h = String(Math.floor(timeLeft / 3600000)).padStart(2, "0");
+  const m = String(Math.floor((timeLeft % 3600000) / 60000)).padStart(2, "0");
+  const s = String(Math.floor((timeLeft % 60000) / 1000)).padStart(2, "0");
+  return `${h}:${m}:${s}`;
+}
+
 export function HomePage() {
-  const [selectedCategory, setSelectedCategory] = useState("All");
   const [allProducts, setAllProducts] = useState(generateMoreProducts(11, 10));
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [ctaSlide, setCtaSlide] = useState(0);
-  const [slideDir, setSlideDir] = useState(1);
+  const [selectedArtist, setSelectedArtist] = useState("Frank Ocean");
+  const countdown = useCountdown(AUCTION_END);
 
-  const goToSlide = (next: number) => {
-    setSlideDir(next > ctaSlide ? 1 : -1);
-    setCtaSlide(next);
-  };
   const [hasMore, setHasMore] = useState(true);
   const observerRef = useRef<HTMLDivElement>(null);
 
   const popularRef = useRef(null);
-  const promoRef = useRef(null);
+  const interestsRef = useRef(null);
   const allProductsRef = useRef(null);
 
   const popularInView = useInView(popularRef, { once: true, amount: 0.1 });
-  const promoInView = useInView(promoRef, { once: true, amount: 0.15 });
+  const interestsInView = useInView(interestsRef, { once: true, amount: 0.1 });
   const allProductsInView = useInView(allProductsRef, { once: true, amount: 0.1 });
 
   useEffect(() => {
@@ -196,36 +217,69 @@ export function HomePage() {
       transition={{ duration: 0.6 }}
       className="min-h-screen bg-white"
     >
-      {/* Banner */}
-      <div className="relative w-full h-[270px] sm:h-[350px] md:h-[430px] lg:h-[490px] overflow-hidden bg-white mt-10">
-        {/* 뒷배경 IGNOA 텍스트 */}
-        <div className="absolute inset-0 flex items-center justify-center select-none pointer-events-none">
-          <span
-            className="font-black text-black leading-none tracking-tighter"
-            style={{ fontSize: "clamp(100px, 22vw, 320px)", opacity: 0.07 }}
-          >
-            IGNOA
-          </span>
-        </div>
-        {/* 누끼 이미지 */}
-        <img
-          src={bannerHero}
-          alt=""
-          className="absolute inset-0 w-full h-full object-contain object-[center_60%]"
-        />
-      </div>
+      {/* Top Banner: CTA 슬라이더 */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        className="max-w-[1400px] mx-auto px-6 pt-6 pb-8"
+      >
+        <div className="relative rounded-2xl overflow-hidden h-[430px]">
+          <div className="absolute inset-0 bg-white overflow-hidden grid grid-cols-1 md:grid-cols-[1fr_1fr]">
+            {/* 좌측 텍스트 */}
+            <div className="flex flex-col justify-start pt-10 pl-20 pr-12 h-full">
+              <p className="text-[11px] font-semibold tracking-[0.3em] text-black uppercase mb-4">
+                IGNOA · Limited Auction
+              </p>
+              <h2 className="text-3xl md:text-4xl font-black text-black leading-[1.1] tracking-tight mb-4">
+                wave to earth<br />
+                <span style={{ color: "#7070C8" }}>uncounted 0.00</span><br />
+                <span className="text-black/80">Periwinkle LP</span>
+              </h2>
+              <p className="text-xs text-black/40 leading-relaxed mb-8 whitespace-nowrap">
+                한정 페리윙클 컬러 바이닐. 국내 인디씬을 대표하는 wave to earth의 희귀 LP, 지금 입찰하세요.
+              </p>
+              <div className="flex items-end gap-8 mb-8">
+                <div>
+                  <p className="text-[10px] font-semibold text-black/40 uppercase tracking-widest mb-1">시작가</p>
+                  <p className="text-2xl font-black text-black leading-none">₩ 180,000</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold text-black/40 uppercase tracking-widest mb-1">남은 시간</p>
+                  <p className="text-2xl font-black text-black/40 leading-none tabular-nums">{countdown}</p>
+                </div>
+              </div>
+              <button className="flex items-center gap-2 px-6 py-3 bg-black text-white text-sm font-bold hover:bg-gray-800 transition-colors group w-fit">
+                지금 입찰하기
+                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+              </button>
+            </div>
 
-      {/* Section 1: Popular Listings */}
-      <div className="max-w-[1400px] mx-auto px-6 pt-4 pb-8">
+            {/* 우측 이미지 */}
+            <div className="relative h-full">
+              <img
+                src={lpWaveToEarth}
+                alt="Wave to Earth"
+                className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 h-[493px] w-auto object-contain"
+                style={{ top: "203px" }}
+              />
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Section 1: Trending Now */}
+      <div className="max-w-[1400px] mx-auto px-6 -mt-4 pb-8">
         <motion.div
           ref={popularRef}
           initial={{ opacity: 0, y: 40 }}
           animate={popularInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, ease: "easeOut" }}
+          className="p-6"
         >
-          <div className="text-center mb-8">
-            <h2 className="text-2xl md:text-3xl font-bold text-black">Popular Listings</h2>
-            <p className="text-sm text-gray-500 mt-1">지금 가장 인기 있는 경매</p>
+          <div className="text-center mb-0">
+            <h2 className="text-2xl md:text-3xl font-bold text-black">Trending Vinyl</h2>
+            <p className="text-sm text-gray-500 mt-1">컬렉터들이 주목하는 LP</p>
           </div>
 
           <div className="grid grid-cols-5 gap-3 md:gap-4">
@@ -236,174 +290,73 @@ export function HomePage() {
                 animate={popularInView ? { opacity: 1, y: 0 } : {}}
                 transition={{ duration: 0.4, delay: 0.05 * index, ease: "easeOut" }}
               >
-                <ProductCard product={product} />
+                <ProductCard product={product} objectFit={index === 0 ? "contain" : "cover"} disableHover />
               </motion.div>
             ))}
           </div>
 
-          <div className="text-center mt-10">
-            <Button
-              variant="outline"
-              className="px-10 h-11 border-black text-black hover:bg-black hover:text-white transition-all rounded-full font-medium"
-            >
-              See All
-            </Button>
+        </motion.div>
+      </div>
+
+      {/* Section 2: Recommend Listings */}
+      <div className="max-w-[1400px] mx-auto px-6 pt-4 pb-8">
+        <motion.div
+          ref={interestsRef}
+          initial={{ opacity: 0, y: 40 }}
+          animate={interestsInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          className="flex flex-col gap-6"
+        >
+          {/* 아티스트 카테고리 (여백과 나란히) */}
+          <div className="flex gap-12">
+            <div className="flex-shrink-0 w-[220px]">
+              <p className="text-[11px] font-bold text-gray-400 tracking-widest uppercase mb-2">Artist</p>
+              <div className="flex flex-col">
+                {artists.map((artist) => (
+                  <button
+                    key={artist}
+                    onClick={() => setSelectedArtist(artist)}
+                    className={`text-left font-black text-xl md:text-2xl leading-snug tracking-tight uppercase transition-all hover:opacity-100 whitespace-nowrap ${
+                      selectedArtist === artist
+                        ? "text-black underline underline-offset-4 opacity-100"
+                        : "text-black opacity-30 hover:opacity-60"
+                    }`}
+                  >
+                    {artist}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {/* 우측 여백 */}
+            <div className="flex-1" />
+          </div>
+
+          {/* Recommend Listings 타이틀 + 상품 */}
+          <div>
+            <div className="text-center mb-8 mt-10">
+              <h2 className="text-2xl md:text-3xl font-bold text-black">Recommend Listings</h2>
+              <p className="text-sm text-gray-500 mt-1">관심사 기반으로 선별된 경매</p>
+            </div>
+
+            <div className="grid grid-cols-5 gap-3 md:gap-4">
+              {mockProducts.slice(5, 10).map((product, index) => (
+                <motion.div
+                  key={product.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, delay: 0.05 * index, ease: "easeOut" }}
+                >
+                  <ProductCard product={product} />
+                </motion.div>
+              ))}
+            </div>
+
           </div>
         </motion.div>
       </div>
 
-      {/* Section 2: CTA 배너 슬라이더 */}
-      <div className="max-w-[1400px] mx-auto px-6 pb-20">
-        <motion.div
-          ref={promoRef}
-          initial={{ opacity: 0, y: 40 }}
-          animate={promoInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6, ease: "easeOut" }}
-          className="relative rounded-2xl overflow-hidden h-[560px]"
-        >
-          <AnimatePresence mode="sync" custom={slideDir}>
-            {ctaSlide === 0 && (
-              <motion.div
-                key="slide-0"
-                custom={slideDir}
-                variants={{ enter: (d: number) => ({ x: d > 0 ? "100%" : "-100%" }), center: { x: 0 }, exit: (d: number) => ({ x: d > 0 ? "-100%" : "100%" }) }}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                transition={{ duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
-                className="absolute inset-0 bg-white grid grid-cols-1 md:grid-cols-[1fr_1fr]"
-              >
-                <div className="flex flex-col px-12 py-12 order-2 md:order-1 h-full">
-                  <div>
-                    <p className="text-[11px] font-semibold tracking-[0.3em] text-gray-400 uppercase mb-5">
-                      IGNOA · Archive
-                    </p>
-                    <h2 className="text-4xl md:text-5xl font-black text-black leading-[1.1] mb-5">
-                      Avant-garde<br />Archive<br />Pieces
-                    </h2>
-                    <p className="text-sm text-gray-500 leading-relaxed">
-                      컬렉터들이 주목하는 아방가르드 아카이브 피스, 지금 경매에서 만나보세요.
-                    </p>
-                  </div>
-                  <div className="mt-auto flex flex-col gap-4">
-                    <div>
-                      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-1">아카이브 컬렉션</p>
-                      <p className="text-6xl font-black text-black leading-none tracking-tight">36+</p>
-                    </div>
-                    <button className="flex items-center gap-2 px-6 py-3 bg-black text-white text-sm font-semibold rounded-full hover:bg-gray-800 transition-colors group w-fit">
-                      컬렉션 보기
-                      <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
-                    </button>
-                  </div>
-                </div>
-                <div className="relative overflow-hidden order-1 md:order-2 h-full bg-white">
-                  <img src={bannerPuffer} alt="" className="w-full h-full object-contain object-[right_bottom]" />
-                  <div className="absolute inset-y-0 left-0 w-40 bg-gradient-to-r from-white to-transparent hidden md:block" />
-                </div>
-              </motion.div>
-            )}
-            {ctaSlide === 1 && (
-              <motion.div
-                key="slide-1"
-                custom={slideDir}
-                variants={{ enter: (d: number) => ({ x: d > 0 ? "100%" : "-100%" }), center: { x: 0 }, exit: (d: number) => ({ x: d > 0 ? "-100%" : "100%" }) }}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                transition={{ duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
-                className="absolute inset-0 bg-[#f0eeea] grid grid-cols-1 md:grid-cols-[1fr_1fr]"
-              >
-                <div className="flex flex-col px-12 py-12 order-2 md:order-1 h-full">
-                  <div>
-                    <p className="text-[11px] font-semibold tracking-[0.3em] text-gray-400 uppercase mb-5">
-                      IGNOA · Fashion Auction
-                    </p>
-                    <h2 className="text-4xl md:text-5xl font-black text-black leading-[1.1] mb-5">
-                      Find Your<br />Perfect<br />Fashion Piece
-                    </h2>
-                    <p className="text-sm text-gray-500 leading-relaxed">
-                      희귀한 빈티지 아이템부터 최신 컬렉션까지, 매일 새로운 경매가 시작됩니다.
-                    </p>
-                  </div>
-                  <div className="mt-auto flex flex-col gap-4">
-                    <div>
-                      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-1">지금 진행 중인 경매</p>
-                      <p className="text-6xl font-black text-black leading-none tracking-tight">120+</p>
-                    </div>
-                    <button className="flex items-center gap-2 px-6 py-3 bg-black text-white text-sm font-semibold rounded-full hover:bg-gray-800 transition-colors group w-fit">
-                      경매 참여하기
-                      <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
-                    </button>
-                  </div>
-                </div>
-                <div className="relative overflow-hidden order-1 md:order-2 h-full bg-[#f0eeea]">
-                  <img src={bannerImage} alt="" className="w-full h-full object-contain object-[right_bottom]" />
-                  <div className="absolute inset-y-0 left-0 w-40 bg-gradient-to-r from-[#f0eeea] to-transparent hidden md:block" />
-                </div>
-              </motion.div>
-            )}
-            {ctaSlide === 2 && (
-              <motion.div
-                key="slide-2"
-                custom={slideDir}
-                variants={{ enter: (d: number) => ({ x: d > 0 ? "100%" : "-100%" }), center: { x: 0 }, exit: (d: number) => ({ x: d > 0 ? "-100%" : "100%" }) }}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                transition={{ duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
-                className="absolute inset-0 bg-[#0e0e0e] grid grid-cols-1 md:grid-cols-[1fr_1fr]"
-              >
-                <div className="flex flex-col px-12 py-12 order-2 md:order-1 h-full">
-                  <div>
-                    <p className="text-[11px] font-semibold tracking-[0.3em] text-white/40 uppercase mb-5">
-                      IGNOA · New Arrivals
-                    </p>
-                    <h2 className="text-4xl md:text-5xl font-black text-white leading-[1.1] mb-5">
-                      Discover<br />Rare<br />Streetwear
-                    </h2>
-                    <p className="text-sm text-white/50 leading-relaxed">
-                      한정판 스트리트웨어부터 아카이브 피스까지, 지금 바로 입찰하세요.
-                    </p>
-                  </div>
-                  <div className="mt-auto flex flex-col gap-4">
-                    <div>
-                      <p className="text-[11px] font-semibold text-white/30 uppercase tracking-widest mb-1">새로 등록된 상품</p>
-                      <p className="text-6xl font-black text-white leading-none tracking-tight">48+</p>
-                    </div>
-                    <button className="flex items-center gap-2 px-6 py-3 bg-white text-black text-sm font-semibold rounded-full hover:bg-gray-100 transition-colors group w-fit">
-                      지금 둘러보기
-                      <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
-                    </button>
-                  </div>
-                </div>
-                <div className="relative overflow-hidden order-1 md:order-2 h-full bg-[#0e0e0e]">
-                  <img src={bannerStone} alt="" className="w-full h-full object-contain object-[right_bottom]" />
-                  <div className="absolute inset-y-0 left-0 w-40 bg-gradient-to-r from-[#0e0e0e] to-transparent hidden md:block" />
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* 하단 네비게이션 dots */}
-          {(() => {
-            const isDark = ctaSlide === 2;
-            const dotActive = isDark ? "bg-white" : "bg-black";
-            const dotInactive = isDark ? "bg-white/30 hover:bg-white/60" : "bg-black/25 hover:bg-black/50";
-            return (
-              <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10">
-                {[0, 1, 2].map((i) => (
-                  <button key={i} onClick={() => goToSlide(i)} className="p-2 -m-2 flex items-center justify-center">
-                    <span className={`block rounded-full transition-all duration-300 ${ctaSlide === i ? `w-8 h-1.5 ${dotActive}` : `w-4 h-1.5 ${dotInactive}`}`} />
-                  </button>
-                ))}
-              </div>
-            );
-          })()}
-        </motion.div>
-      </div>
-
       {/* Section 4: All Products (Infinite Scroll) */}
-      <div className="max-w-[1400px] mx-auto px-6 pb-20">
+      <div className="max-w-[1400px] mx-auto px-6 pt-16 pb-20">
         <motion.div
           ref={allProductsRef}
           initial={{ opacity: 0, y: 40 }}
@@ -415,25 +368,8 @@ export function HomePage() {
             <p className="text-sm text-gray-500 mt-1">전체 경매 상품</p>
           </div>
 
-          {/* Category Filter */}
-          <div className="flex flex-wrap justify-center gap-2 mb-8">
-            {allCategories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
-                  selectedCategory === cat
-                    ? "bg-black text-white"
-                    : "bg-white border border-gray-200 text-gray-600 hover:border-gray-400 hover:text-black"
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
-            {(selectedCategory === "All" ? allProducts : allProducts.filter((p) => p.category === selectedCategory)).map((product, index) => (
+            {allProducts.map((product, index) => (
               <motion.div
                 key={product.id}
                 initial={{ opacity: 0, scale: 0.95 }}

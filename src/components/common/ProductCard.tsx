@@ -14,9 +14,11 @@ interface ProductCardProps {
     wishCount?: number;
     location?: string;
   };
+  objectFit?: "cover" | "contain";
+  disableHover?: boolean;
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product, objectFit = "cover", disableHover = false }: ProductCardProps) {
   const [wished, setWished] = useState(false);
   const { id, title, brand, currentPrice, size, imageUrl, wishCount } = product;
 
@@ -27,11 +29,11 @@ export function ProductCard({ product }: ProductCardProps) {
           <img
             src={imageUrl}
             alt={title}
-            className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+            className={`w-full h-full transition-transform duration-500 ease-out ${!disableHover && "group-hover:scale-105"} ${objectFit === "contain" ? "object-contain" : "object-cover"}`}
           />
         </div>
 
-        <div className="space-y-1 transition-transform duration-300 group-hover:-translate-y-0.5">
+        <div className={`space-y-1 transition-transform duration-300 ${!disableHover && "group-hover:-translate-y-0.5"}`}>
           {brand && (
             <p className="text-[10px] font-bold text-black uppercase tracking-wide line-clamp-1">
               {brand}

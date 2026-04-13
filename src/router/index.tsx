@@ -11,7 +11,7 @@ import { Root } from "@/components/layout/RootLayout";
 export const router = createBrowserRouter([
   {
     path: "/",
-    element: <Navigate to="/login" replace />,
+    element: <Navigate to="/app" replace />,
   },
   {
     path: "/app",

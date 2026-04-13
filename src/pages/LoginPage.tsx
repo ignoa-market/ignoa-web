@@ -1,33 +1,9 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
-import { Mail, Lock, Eye, EyeOff, ChevronDown } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
-
-const MARQUEE_ROWS = [
-  { dir: 1,  duration: 14 },
-  { dir: -1, duration: 18 },
-  { dir: 1,  duration: 12 },
-  { dir: -1, duration: 16 },
-  { dir: 1,  duration: 20 },
-];
-
-function MarqueeRow({ dir, duration }: { dir: number; duration: number }) {
-  const text = "IGNOA · IGNOA · IGNOA · IGNOA · IGNOA · IGNOA · IGNOA · IGNOA · ";
-  return (
-    <div className="overflow-hidden whitespace-nowrap leading-none">
-      <motion.div
-        animate={{ x: dir > 0 ? ["0%", "-50%"] : ["-50%", "0%"] }}
-        transition={{ duration, repeat: Infinity, ease: "linear" }}
-        className="inline-block font-black text-black"
-        style={{ fontSize: 80, letterSpacing: "-0.02em", opacity: 0.08 }}
-      >
-        {text + text}
-      </motion.div>
-    </div>
-  );
-}
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -57,101 +33,11 @@ export function LoginPage() {
   };
 
   return (
-    <div className="h-screen overflow-y-scroll snap-y snap-mandatory">
-
-      {/* ── Section 1: 브랜드 애니메이션 ── */}
-      <section className="h-screen snap-start relative overflow-hidden bg-white flex flex-col justify-center">
-
-        {/* 배경 마퀴 */}
-        <div className="absolute inset-0 flex flex-col gap-0 select-none pointer-events-none">
-          {MARQUEE_ROWS.map((row, i) => (
-            <MarqueeRow key={i} {...row} />
-          ))}
-        </div>
-
-        {/* 고스트 텍스트 — 뒤에 크게 */}
-        <motion.div
-          initial={{ opacity: 0, rotate: -4 }}
-          animate={{ opacity: 0.035, rotate: -3 }}
-          transition={{ duration: 1.8, delay: 0.2 }}
-          className="absolute left-[-4vw] top-1/2 -translate-y-1/2 text-[28vw] font-black text-black leading-none tracking-tighter select-none pointer-events-none whitespace-nowrap"
-        >
-          IGNOA
-        </motion.div>
-
-        {/* 메인 포스터 타이포 */}
-        <div className="absolute inset-0 flex flex-col justify-center px-12 md:px-20 pointer-events-none">
-
-          {/* IGNOA — 클립 슬라이드업 */}
-          <div className="flex">
-            {["I", "G", "N", "O", "A"].map((char, i) => (
-              <div key={i} className="overflow-hidden">
-                <motion.span
-                  initial={{ y: "108%", rotate: 6 }}
-                  animate={{ y: "0%", rotate: 0 }}
-                  transition={{ delay: 0.35 + i * 0.07, duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
-                  className="block font-black text-black leading-[0.88] tracking-[-0.03em]"
-                  style={{ fontSize: "clamp(80px, 16vw, 220px)" }}
-                >
-                  {char}
-                </motion.span>
-              </div>
-            ))}
-          </div>
-
-          {/* 하단 구분선 + 서브텍스트 */}
-          <motion.div
-            initial={{ scaleX: 0, originX: 0 }}
-            animate={{ scaleX: 1 }}
-            transition={{ delay: 1.0, duration: 0.6, ease: "easeOut" }}
-            className="h-px bg-black/15 mt-6 mb-4 w-full"
-          />
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.2, duration: 0.5 }}
-            className="flex items-center justify-between"
-          >
-            <span className="text-[11px] tracking-[0.3em] uppercase text-black/35 font-medium">
-              Seoul · Korea
-            </span>
-            <span className="text-[11px] tracking-[0.3em] uppercase text-black/35 font-medium">
-              Est. 2026
-            </span>
-          </motion.div>
-        </div>
-
-        {/* 스크롤 유도 */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.6, duration: 0.6 }}
-          className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
-        >
-          <motion.span
-            animate={{ opacity: [0.3, 0.8, 0.3] }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-            className="text-[11px] tracking-[0.3em] uppercase text-black/40"
-          >
-            scroll
-          </motion.span>
-          <div className="w-px h-8 bg-black/10 relative overflow-hidden">
-            <motion.div
-              animate={{ y: ["-100%", "100%"] }}
-              transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
-              className="absolute inset-x-0 h-1/2 bg-black/40"
-            />
-          </div>
-        </motion.div>
-      </section>
-
-      {/* ── Section 2: 로그인 ── */}
-      <section className="h-screen snap-start flex items-center justify-center bg-white">
-        <motion.div
+    <div className="h-screen flex items-center justify-center bg-white">
+      <motion.div
           initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          viewport={{ once: false }}
           className="w-full max-w-sm px-4"
         >
           <div className="mb-8">
@@ -260,7 +146,6 @@ export function LoginPage() {
             </button>
           </div>
         </motion.div>
-      </section>
     </div>
   );
 }

@@ -12,7 +12,9 @@ export function Root() {
     <>
       <ScrollToTop />
       {shouldShowNavbar && <Navbar />}
-      <Outlet />
+      <main className={shouldShowNavbar ? "pt-[76px]" : ""}>
+        <Outlet />
+      </main>
       {shouldShowNavbar && <Footer />}
     </>
   );
