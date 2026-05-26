@@ -19,45 +19,6 @@ interface Conversation {
   messages: Message[];
 }
 
-const mockConversations: Conversation[] = [
-  {
-    id: "c1",
-    name: "빈티지러버",
-    product: "MacBook Pro 16인치 M1",
-    lastMessage: "혹시 직거래 가능하신가요?",
-    time: "2분 전",
-    unread: 2,
-    messages: [
-      { id: "m1", text: "안녕하세요! MacBook Pro 아직 판매 중인가요?", mine: false, time: "14:20" },
-      { id: "m2", text: "네, 아직 판매 중입니다.", mine: true, time: "14:21" },
-      { id: "m3", text: "혹시 직거래 가능하신가요?", mine: false, time: "14:23" },
-    ],
-  },
-  {
-    id: "c2",
-    name: "스트릿웨어킹",
-    product: "아이패드 에어 5세대",
-    lastMessage: "최저가 얼마까지 가능하세요?",
-    time: "1시간 전",
-    unread: 0,
-    messages: [
-      { id: "m1", text: "아이패드 상태 어떤가요?", mine: false, time: "13:10" },
-      { id: "m2", text: "개봉 후 한 달 사용, 흠집 없습니다.", mine: true, time: "13:12" },
-      { id: "m3", text: "최저가 얼마까지 가능하세요?", mine: false, time: "13:15" },
-    ],
-  },
-  {
-    id: "c3",
-    name: "럭셔리헌터",
-    product: "Nike 에어포스 1 화이트",
-    lastMessage: "사이즈 270 있나요?",
-    time: "어제",
-    unread: 0,
-    messages: [
-      { id: "m1", text: "사이즈 270 있나요?", mine: false, time: "어제" },
-    ],
-  },
-];
 
 interface ChatPanelProps {
   onClose: () => void;
@@ -66,7 +27,7 @@ interface ChatPanelProps {
 export function ChatPanel({ onClose }: ChatPanelProps) {
   const [activeConv, setActiveConv] = useState<Conversation | null>(null);
   const [input, setInput] = useState("");
-  const [conversations, setConversations] = useState(mockConversations);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

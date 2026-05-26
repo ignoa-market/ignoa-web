@@ -16,75 +16,15 @@ interface Chat {
   status: "waiting" | "inprogress" | "completed" | "archived";
 }
 
-const mockChats: Chat[] = [
-  {
-    id: "1",
-    name: "김철수",
-    avatar: "",
-    lastMessage: "네, 한밭대 정문에서 만나요!",
-    timestamp: "2분 전",
-    unread: 2,
-    productTitle: "MacBook Pro 16인치",
-    productImage: "https://images.unsplash.com/photo-1551533390-b80b6ffa7816?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtYWNib29rJTIwcHJvJTIwbGFwdG9wfGVufDF8fHx8MTc3NDkwOTI4MHww&ixlib=rb-4.1.0&q=80&w=1080",
-    status: "inprogress",
-  },
-  {
-    id: "2",
-    name: "이영희",
-    avatar: "",
-    lastMessage: "가격 조금 낮춰주실 수 있나요?",
-    timestamp: "1시간 전",
-    unread: 0,
-    productTitle: "Nike 에어포스 1",
-    productImage: "https://images.unsplash.com/photo-1637744360335-4df6d1d5ecf6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxuaWtlJTIwc2hvZXMlMjBzbmVha2Vyc3xlbnwxfHx8fDE3NzQ5NTM0Nzh8MA&ixlib=rb-4.1.0&q=80&w=1080",
-    status: "waiting",
-  },
-  {
-    id: "3",
-    name: "박민수",
-    avatar: "",
-    lastMessage: "사진 더 보내주실 수 있나요?",
-    timestamp: "3시간 전",
-    unread: 1,
-    productTitle: "아이패드 에어 5세대",
-    productImage: "https://images.unsplash.com/photo-1561154464-82e9adf32764?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxpcGFkJTIwdGFibGV0JTIwZGV2aWNlfGVufDF8fHx8MTc3NDkwOTI4MHww&ixlib=rb-4.1.0&q=80&w=1080",
-    status: "completed",
-  },
-];
+interface Message {
+  id: string;
+  senderId: string;
+  text?: string;
+  type?: "image";
+  imageUrl?: string;
+  timestamp: string;
+}
 
-const mockMessages = [
-  {
-    id: "1",
-    senderId: "other",
-    text: "안녕하세요, 이 제품 아직 판매 중이신가요?",
-    timestamp: "오후 2:30",
-  },
-  {
-    id: "2",
-    senderId: "me",
-    text: "네, 아직 판매 중입니다!",
-    timestamp: "오후 2:32",
-  },
-  {
-    id: "3",
-    senderId: "other",
-    text: "한밭대 정문에서 직거래 가능한가요?",
-    timestamp: "오후 2:33",
-  },
-  {
-    id: "4",
-    senderId: "me",
-    text: "네, 한밭대 정문에서 만나요!",
-    timestamp: "오후 2:35",
-  },
-  {
-    id: "5",
-    senderId: "other",
-    type: "image",
-    imageUrl: "https://images.unsplash.com/photo-1551533390-b80b6ffa7816?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtYWNib29rJTIwcHJvJTIwbGFwdG9wfGVufDF8fHx8MTc3NDkwOTI4MHww&ixlib=rb-4.1.0&q=80&w=1080",
-    timestamp: "오후 2:36",
-  },
-];
 
 export function MessagesPage() {
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
@@ -111,7 +51,9 @@ export function MessagesPage() {
     }
   };
 
-  const selectedChatData = mockChats.find((chat) => chat.id === selectedChat);
+  const chats: Chat[] = [];
+  const messages: Message[] = [];
+  const selectedChatData = chats.find((chat) => chat.id === selectedChat);
 
   return (
     <div className="min-h-screen bg-white pt-[80px]">
@@ -122,8 +64,8 @@ export function MessagesPage() {
 
             {/* Chat List */}
             <div className="overflow-y-auto h-full">
-              {mockChats.length > 0 ? (
-                mockChats.map((chat) => (
+              {chats.length > 0 ? (
+                chats.map((chat) => (
                   <button
                     key={chat.id}
                     onClick={() => setSelectedChat(chat.id)}
@@ -218,7 +160,7 @@ export function MessagesPage() {
 
               {/* Messages */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-                {mockMessages.map((msg) => (
+                {messages.map((msg) => (
                   <div
                     key={msg.id}
                     className={`flex ${

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { ProductCard } from "@/components/common/ProductCard";
 import { motion, AnimatePresence, useInView } from "motion/react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -141,37 +141,16 @@ const bannerSlides = [
 const allCategories = ["All", "Outerwear", "Tops", "Bottoms", "Shoes", "Bags", "Accessories"];
 const categoryList = ["Outerwear", "Tops", "Bottoms", "Shoes", "Bags", "Accessories"];
 
-const generateMoreProducts = (startId: number, count: number) => {
-  const brands = ["CHROME HEARTS", "STONE ISLAND", "SUPREME", "RICK OWENS", "BAPE", "KAPITAL", "CARHARTT", "PRADA", "MARGIELA", "DIOR"];
-  return Array.from({ length: count }, (_, i) => ({
-    id: `${startId + i}`,
-    title: `Product ${startId + i}`,
-    brand: brands[(startId + i) % brands.length],
-    currentPrice: Math.floor(Math.random() * 1000000) + 100000,
-    size: ["XS", "S", "M", "L", "XL"][(startId + i) % 5],
-    imageUrl: `https://images.unsplash.com/photo-${1549298916 + i}?w=600&q=80`,
-    timeLeft: `${Math.floor(Math.random() * 24)}h ${Math.floor(Math.random() * 60)}m`,
-    wishCount: Math.floor(Math.random() * 300),
-    location: ["Seoul", "Tokyo", "New York", "Paris", "London"][(startId + i) % 5],
-    category: categoryList[(startId + i) % categoryList.length],
-  }));
-};
-
 
 export function HomePage() {
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [allProducts, setAllProducts] = useState(generateMoreProducts(11, 10));
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
   const [ctaSlide, setCtaSlide] = useState(0);
   const [slideDir, setSlideDir] = useState(1);
+  const [selectedCategory, setSelectedCategory] = useState("All");
 
   const goToSlide = (next: number) => {
     setSlideDir(next > ctaSlide ? 1 : -1);
     setCtaSlide(next);
   };
-  const [hasMore, setHasMore] = useState(true);
-  const observerRef = useRef<HTMLDivElement>(null);
 
   const popularRef = useRef(null);
   const promoRef = useRef(null);
@@ -181,24 +160,7 @@ export function HomePage() {
   const promoInView = useInView(promoRef, { once: true, amount: 0.15 });
   const allProductsInView = useInView(allProductsRef, { once: true, amount: 0.1 });
 
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && !loading && hasMore) {
-          setLoading(true);
-          setTimeout(() => {
-            setAllProducts((prev) => [...prev, ...generateMoreProducts(11 + page * 10, 10)]);
-            setPage((prev) => prev + 1);
-            setLoading(false);
-            if (page >= 4) setHasMore(false);
-          }, 800);
-        }
-      },
-      { threshold: 0.1 }
-    );
-    if (observerRef.current) observer.observe(observerRef.current);
-    return () => observer.disconnect();
-  }, [loading, hasMore, page]);
+  const allProducts: typeof mockProducts = [];
 
   return (
     <motion.div
@@ -303,7 +265,57 @@ export function HomePage() {
         </motion.div>
       </div>
 
-      {/* Section 2: Popular Brands */}
+      {/* Section 3: All Products */}
+      <div className="max-w-[1400px] mx-auto px-6 pt-24 pb-24">
+        <motion.div
+          ref={allProductsRef}
+          initial={{ opacity: 0, y: 40 }}
+          animate={allProductsInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+        >
+          <div className="text-center mb-6">
+            <h2 className="text-2xl md:text-3xl font-bold text-black">All Products</h2>
+            <p className="text-sm text-gray-500 mt-1">전체 경매 상품</p>
+          </div>
+
+          <div className="flex flex-wrap justify-center gap-2 mb-8">
+            {allCategories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
+                  selectedCategory === cat
+                    ? "bg-black text-white"
+                    : "bg-white border border-gray-200 text-gray-600 hover:border-gray-400 hover:text-black"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+            {allProducts.map((product, index) => (
+              <motion.div
+                key={product.id}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3, delay: Math.min(index * 0.02, 0.3) }}
+              >
+                <ProductCard product={product} />
+              </motion.div>
+            ))}
+          </div>
+
+          {allProducts.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-24 text-gray-300">
+              <p className="text-sm font-medium">등록된 상품이 없습니다</p>
+            </div>
+          )}
+        </motion.div>
+      </div>
+
+      {/* Section: Popular Brands */}
       <div className="bg-[#f4f4f2] py-14 px-6 mt-20">
         <div className="max-w-[1400px] mx-auto">
           <p className="text-[11px] font-semibold tracking-[0.25em] text-gray-400 uppercase mb-2">Popular Brands</p>
@@ -323,71 +335,6 @@ export function HomePage() {
         </div>
       </div>
 
-      {/* Section 3: All Products (Infinite Scroll) */}
-      <div className="max-w-[1400px] mx-auto px-6 pt-24 pb-24">
-        <motion.div
-          ref={allProductsRef}
-          initial={{ opacity: 0, y: 40 }}
-          animate={allProductsInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6, ease: "easeOut" }}
-        >
-          <div className="text-center mb-6">
-            <h2 className="text-2xl md:text-3xl font-bold text-black">All Products</h2>
-            <p className="text-sm text-gray-500 mt-1">전체 경매 상품</p>
-          </div>
-
-          {/* Category Filter */}
-          <div className="flex flex-wrap justify-center gap-2 mb-8">
-            {allCategories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
-                  selectedCategory === cat
-                    ? "bg-black text-white"
-                    : "bg-white border border-gray-200 text-gray-600 hover:border-gray-400 hover:text-black"
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
-            {(selectedCategory === "All" ? allProducts : allProducts.filter((p) => p.category === selectedCategory)).map((product, index) => (
-              <motion.div
-                key={product.id}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.3, delay: Math.min(index * 0.02, 0.3) }}
-              >
-                <ProductCard product={product} />
-              </motion.div>
-            ))}
-          </div>
-
-          {loading && (
-            <div className="flex justify-center py-12">
-              <div className="relative w-10 h-10">
-                <div className="absolute inset-0 border-2 border-gray-200 rounded-full" />
-                <div className="absolute inset-0 border-2 border-black border-t-transparent rounded-full animate-spin" />
-              </div>
-            </div>
-          )}
-
-          {hasMore && <div ref={observerRef} className="h-20" />}
-
-          {!hasMore && (
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center py-12 text-sm text-gray-400"
-            >
-              모든 상품을 확인했습니다
-            </motion.p>
-          )}
-        </motion.div>
-      </div>
     </motion.div>
   );
 }

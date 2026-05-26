@@ -17,56 +17,7 @@ interface Notification {
   image?: string;
 }
 
-const mockNotifications: Notification[] = [
-  {
-    id: "1",
-    type: "bid",
-    title: "New Bid Received",
-    message: "Someone bid $12,500 on Vintage Rolex Submariner",
-    time: "5m ago",
-    isRead: false,
-  },
-  {
-    id: "2",
-    type: "message",
-    title: "New Message",
-    message: "John Smith sent you a message",
-    time: "10m ago",
-    isRead: false,
-  },
-  {
-    id: "3",
-    type: "like",
-    title: "Price Drop",
-    message: "An item in your wishlist dropped in price",
-    time: "1h ago",
-    isRead: true,
-  },
-  {
-    id: "4",
-    type: "sold",
-    title: "Auction Ended",
-    message: "Your MacBook Pro auction has ended",
-    time: "2h ago",
-    isRead: true,
-  },
-  {
-    id: "5",
-    type: "bid",
-    title: "Bid Placed",
-    message: "You successfully bid on Limited Edition Sneakers",
-    time: "3h ago",
-    isRead: true,
-  },
-  {
-    id: "6",
-    type: "system",
-    title: "System Notification",
-    message: "Check out the new features in BatChar!",
-    time: "1d ago",
-    isRead: true,
-  },
-];
+const notifications: Notification[] = [];
 
 export function NotificationSidebar({ isOpen, onClose }: NotificationSidebarProps) {
   const getNotificationIcon = (type: Notification["type"]) => {
@@ -117,7 +68,7 @@ export function NotificationSidebar({ isOpen, onClose }: NotificationSidebarProp
                 <Bell className="w-6 h-6 text-white" />
                 <h2 className="text-xl font-bold text-white">Notifications</h2>
                 <span className="bg-red-500 text-white text-xs font-bold px-2.5 py-1 rounded-full">
-                  {mockNotifications.filter((n) => !n.isRead).length}
+                  {notifications.filter((n) => !n.isRead).length}
                 </span>
               </div>
               <Button
@@ -132,14 +83,14 @@ export function NotificationSidebar({ isOpen, onClose }: NotificationSidebarProp
 
             {/* Notifications List */}
             <div className="flex-1 overflow-y-auto">
-              {mockNotifications.length === 0 ? (
+              {notifications.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-gray-400 p-8">
                   <Bell className="w-16 h-16 mb-4 opacity-20" />
                   <p className="text-lg font-medium">No notifications</p>
                 </div>
               ) : (
                 <div className="divide-y divide-[#2A2A2A]">
-                  {mockNotifications.map((notification, index) => (
+                  {notifications.map((notification, index) => (
                     <motion.div
                       key={notification.id}
                       initial={{ opacity: 0, x: 50 }}

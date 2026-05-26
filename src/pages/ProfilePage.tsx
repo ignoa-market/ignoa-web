@@ -9,36 +9,6 @@ import { motion, AnimatePresence } from "motion/react";
 import { userApi } from "@/api/auth";
 import type { ApiError } from "@/types/api";
 
-const mockMyProducts = [
-  { id: "1", title: "MacBook Pro 16인치 M1 2021 실버", currentPrice: 1250000, imageUrl: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=800&q=80", timeLeft: "2시간 남음", wishCount: 24 },
-  { id: "2", title: "아이패드 에어 5세대 256GB 퍼플", currentPrice: 580000, imageUrl: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=800&q=80", timeLeft: "45분 남음", wishCount: 32 },
-  { id: "101", title: "소니 WH-1000XM4 헤드폰", currentPrice: 185000, imageUrl: "https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?w=1080&q=80", timeLeft: "경매 종료", wishCount: 15 },
-  { id: "102", title: "캐논 EOS M50 미러리스", currentPrice: 420000, imageUrl: "https://images.unsplash.com/photo-1613235577937-9ac3eed992fc?w=1080&q=80", timeLeft: "경매 종료", wishCount: 28 },
-];
-
-const mockBiddingProducts = [
-  { id: "201", title: "백팩 여행용 40L", currentPrice: 75000, imageUrl: "https://images.unsplash.com/photo-1570630358718-4fb324824b3d?w=1080&q=80", timeLeft: "3시간 15분", wishCount: 12 },
-  { id: "202", title: "게이밍 마우스 RGB", currentPrice: 65000, imageUrl: "https://images.unsplash.com/photo-1628832307345-7404b47f1751?w=1080&q=80", timeLeft: "1시간 40분", wishCount: 18 },
-  { id: "203", title: "빈티지 레더 재킷", currentPrice: 320000, imageUrl: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=600&q=80", timeLeft: "경매 종료", wishCount: 41 },
-];
-
-const mockWishlistProducts = [
-  { id: "301", title: "Nike 에어포스 1 화이트", currentPrice: 89000, imageUrl: "https://images.unsplash.com/photo-1600269452121-4f2416e55c28?w=800&q=80", timeLeft: "5시간 20분", wishCount: 45 },
-];
-
-const mockFollowers = [
-  { id: "f1", name: "패션피플" },
-  { id: "f2", name: "빈티지러버" },
-  { id: "f3", name: "스트릿웨어킹" },
-  { id: "f4", name: "럭셔리헌터" },
-  { id: "f5", name: "데님마니아" },
-];
-
-const mockFollowing = [
-  { id: "g1", name: "릭오웬스팬" },
-  { id: "g2", name: "아크테릭스매니아" },
-  { id: "g3", name: "슈프림코리아" },
-];
 
 export function ProfilePage() {
   const [activeTab, setActiveTab] = useState("products");
@@ -94,18 +64,24 @@ export function ProfilePage() {
     }
   };
 
+  const myProducts: { id: string; title: string; currentPrice: number; imageUrl: string; timeLeft: string; wishCount: number }[] = [];
+  const biddingProducts = myProducts;
+  const wishlistProducts = myProducts;
+  const followers: { id: string; name: string }[] = [];
+  const following: { id: string; name: string }[] = [];
+
   const tabs = [
-    { id: "products", label: "Selling", count: mockMyProducts.length },
-    { id: "bidding",  label: "Bidding", count: mockBiddingProducts.length },
-    { id: "wishlist", label: "Wishlist", count: mockWishlistProducts.length },
+    { id: "products", label: "Selling",  count: myProducts.length },
+    { id: "bidding",  label: "Bidding",  count: biddingProducts.length },
+    { id: "wishlist", label: "Wishlist", count: wishlistProducts.length },
   ];
 
   const currentProducts =
-    activeTab === "products" ? mockMyProducts :
-    activeTab === "bidding"  ? mockBiddingProducts :
-    mockWishlistProducts;
+    activeTab === "products" ? myProducts :
+    activeTab === "bidding"  ? biddingProducts :
+    wishlistProducts;
 
-  const followList = showFollowModal === "followers" ? mockFollowers : mockFollowing;
+  const followList = showFollowModal === "followers" ? followers : following;
 
   return (
     <motion.div
@@ -147,15 +123,15 @@ export function ProfilePage() {
           <div className="flex items-end gap-14">
             <div>
               <p className="text-[11px] font-semibold tracking-[0.3em] text-gray-400 uppercase mb-1">Selling</p>
-              <p className="text-4xl font-black text-black leading-none">{mockMyProducts.length}</p>
+              <p className="text-4xl font-black text-black leading-none">{myProducts.length}</p>
             </div>
             <button onClick={() => setShowFollowModal("followers")} className="text-left hover:opacity-60 transition-opacity">
               <p className="text-[11px] font-semibold tracking-[0.3em] text-gray-400 uppercase mb-1">Followers</p>
-              <p className="text-4xl font-black text-black leading-none">{mockFollowers.length}</p>
+              <p className="text-4xl font-black text-black leading-none">{followers.length}</p>
             </button>
             <button onClick={() => setShowFollowModal("following")} className="text-left hover:opacity-60 transition-opacity">
               <p className="text-[11px] font-semibold tracking-[0.3em] text-gray-400 uppercase mb-1">Following</p>
-              <p className="text-4xl font-black text-black leading-none">{mockFollowing.length}</p>
+              <p className="text-4xl font-black text-black leading-none">{following.length}</p>
             </button>
             <button
               onClick={() => {

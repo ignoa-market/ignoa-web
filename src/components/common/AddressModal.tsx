@@ -2,18 +2,6 @@ import { useState, useRef, useEffect } from "react";
 import { Search, X, MapPin, ChevronRight } from "lucide-react";
 import { motion } from "motion/react";
 
-const mockAddresses = [
-  { zipCode: "34158", road: "대전광역시 유성구 동서대로 125", building: "한밭대학교" },
-  { zipCode: "34134", road: "대전광역시 유성구 대학로 291", building: "충남대학교" },
-  { zipCode: "34051", road: "대전광역시 유성구 과학로 169-84", building: "KAIST 본원" },
-  { zipCode: "35235", road: "대전광역시 서구 둔산대로 100", building: "대전시청" },
-  { zipCode: "34012", road: "대전광역시 유성구 엑스포로 107", building: "대전컨벤션센터" },
-  { zipCode: "04524", road: "서울특별시 중구 세종대로 110", building: "서울시청" },
-  { zipCode: "06241", road: "서울특별시 강남구 테헤란로 427", building: "위워크 강남" },
-  { zipCode: "03155", road: "서울특별시 종로구 세종대로 175", building: "광화문빌딩" },
-  { zipCode: "48058", road: "부산광역시 해운대구 해운대해변로 264", building: "해운대해수욕장" },
-  { zipCode: "21565", road: "인천광역시 남동구 인주대로 590", building: "인천시청" },
-];
 
 interface AddressModalProps {
   onSelect: (address: string) => void;
@@ -22,7 +10,7 @@ interface AddressModalProps {
 
 export function AddressModal({ onSelect, onClose }: AddressModalProps) {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<typeof mockAddresses>([]);
+  const [results, setResults] = useState<{ zipCode: string; road: string; building: string }[]>([]);
   const [searched, setSearched] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -32,13 +20,7 @@ export function AddressModal({ onSelect, onClose }: AddressModalProps) {
 
   const handleSearch = () => {
     if (!query.trim()) return;
-    const filtered = mockAddresses.filter(
-      (a) =>
-        a.road.includes(query) ||
-        a.building.includes(query) ||
-        a.zipCode.includes(query)
-    );
-    setResults(filtered);
+    setResults([]);
     setSearched(true);
   };
 

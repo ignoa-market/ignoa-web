@@ -11,14 +11,6 @@ interface Notification {
   read: boolean;
 }
 
-const mockNotifications: Notification[] = [
-  { id: "n1", type: "bid",     title: "새로운 입찰",       body: "MacBook Pro 16인치에 새 입찰가 1,300,000원이 등록됐습니다.",  time: "3분 전",   read: false },
-  { id: "n2", type: "ending",  title: "경매 마감 임박",    body: "아이패드 에어 5세대 경매가 30분 후 종료됩니다.",              time: "27분 전",  read: false },
-  { id: "n3", type: "message", title: "새 메시지",         body: "빈티지러버 님이 메시지를 보냈습니다.",                        time: "1시간 전", read: false },
-  { id: "n4", type: "wish",    title: "찜 알림",           body: "Nike 에어포스 1 화이트를 12명이 찜했습니다.",                 time: "3시간 전", read: true  },
-  { id: "n5", type: "sold",    title: "낙찰 완료",         body: "소니 WH-1000XM4 헤드폰이 185,000원에 낙찰됐습니다.",         time: "어제",     read: true  },
-  { id: "n6", type: "bid",     title: "입찰 경쟁",         body: "캐논 EOS M50에 다른 사용자가 입찰했습니다.",                  time: "어제",     read: true  },
-];
 
 const iconMap = {
   bid:     { icon: Gavel,         bg: "bg-black",      color: "text-white"     },
@@ -33,7 +25,7 @@ interface NotificationPanelProps {
 }
 
 export function NotificationPanel({ onClose }: NotificationPanelProps) {
-  const [notifications, setNotifications] = useState(mockNotifications);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
