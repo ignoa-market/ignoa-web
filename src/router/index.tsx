@@ -6,6 +6,7 @@ import { ProfilePage } from "@/pages/ProfilePage";
 import { MessagesPage } from "@/pages/MessagesPage";
 import { LoginPage } from "@/pages/LoginPage";
 import { SignUpPage } from "@/pages/SignUpPage";
+import { OAuthKakaoCallbackPage } from "@/pages/OAuthKakaoCallbackPage";
 import { Root } from "@/components/layout/RootLayout";
 
 export const router = createBrowserRouter([
@@ -32,5 +33,9 @@ export const router = createBrowserRouter([
   {
     path: "/signup",
     Component: SignUpPage,
+  },
+  {
+    path: "/oauth/kakao/callback",
+    Component: OAuthKakaoCallbackPage,
   },
 ]);

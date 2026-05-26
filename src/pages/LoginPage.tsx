@@ -39,6 +39,12 @@ export function LoginPage() {
     }
   };
 
+  const handleKakaoLogin = () => {
+    const clientId = import.meta.env.VITE_KAKAO_CLIENT_ID;
+    const redirectUri = import.meta.env.VITE_KAKAO_REDIRECT_URI;
+    window.location.href = `https://kauth.kakao.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code`;
+  };
+
   const handleOAuthLogin = (provider: string) => {
     toast.info(`${provider} 로그인은 준비중입니다`);
   };
@@ -128,7 +134,7 @@ export function LoginPage() {
             {/* OAuth */}
             <div className="space-y-2.5">
               <button
-                onClick={() => handleOAuthLogin("카카오")}
+                onClick={handleKakaoLogin}
                 className="w-full h-11 bg-[#FEE500] hover:bg-[#FDD835] text-black text-sm font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
