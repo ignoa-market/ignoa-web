@@ -2,7 +2,6 @@ import { useState, useRef } from "react";
 import { ProductCard } from "@/components/common/ProductCard";
 import { motion, AnimatePresence, useInView } from "motion/react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import bannerImage from "@/assets/banner-fashion.jpg";
 import bannerPuffer from "@/assets/banner-puffer.jpg";
 import stussyFront from "@/assets/product-stussy-front.png";
 import ignotaTeal from "@/assets/product-ignota-teal.jpg";
@@ -125,16 +124,16 @@ const mockProducts = [
 
 const bannerSlides = [
   {
-    image: bannerPuffer,
+    image: null,
+    label: "수수료 0원",
+    title: "영원히 0원",
+    subtitle: "판매 수수료 0원. 새로운 수수료 정책이 시작됩니다.",
+  },
+  {
+    image: bannerPuffer as string | null,
     label: "CURATED COLLECTION",
     title: "Avant-garde Archive Pieces",
     subtitle: "컬렉터들이 주목하는 아방가르드 아카이브 피스, 지금 경매에서 만나보세요.",
-  },
-  {
-    image: bannerImage,
-    label: "FASHION AUCTION",
-    title: "Find Your Perfect Fashion Piece",
-    subtitle: "희귀한 빈티지 아이템부터 최신 컬렉션까지, 매일 새로운 경매가 시작됩니다.",
   },
 ];
 
@@ -194,8 +193,19 @@ export function HomePage() {
                 transition={{ duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
                 className="absolute inset-0"
               >
-                <img src={slide.image} alt="" className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+                {slide.image ? (
+                  <>
+                    <img src={slide.image} alt="" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+                  </>
+                ) : (
+                  <div className="absolute inset-0 bg-black flex items-center justify-center overflow-hidden">
+                    <span className="absolute text-[22vw] font-black text-white select-none whitespace-nowrap"
+                      style={{ filter: "blur(60px)", opacity: 0.25 }}>
+                      수수료 0원
+                    </span>
+                  </div>
+                )}
                 <div className="absolute bottom-0 left-32 pb-9">
                   <div className="flex items-center gap-2 mb-4">
                     {bannerSlides.map((_, j) => (
@@ -315,25 +325,6 @@ export function HomePage() {
         </motion.div>
       </div>
 
-      {/* Section: Popular Brands */}
-      <div className="bg-[#f4f4f2] py-14 px-6 mt-20">
-        <div className="max-w-[1400px] mx-auto">
-          <p className="text-[11px] font-semibold tracking-[0.25em] text-gray-400 uppercase mb-2">Popular Brands</p>
-          <h2 className="text-2xl font-black text-black mb-10">인기 브랜드</h2>
-          <div className="overflow-x-auto scrollbar-none">
-            <div className="flex items-center gap-0 whitespace-nowrap">
-              {["Chrome Hearts", "PLASTICPRODUCT", "Bape", "Rick Owens", "XLIM", "Supreme", "RRL", "Comme des Garcons", "Stone Island", "Kapital"].map((brand, i) => (
-                <div key={brand} className="flex items-center">
-                  {i !== 0 && <span className="mx-5 text-gray-300 text-sm">·</span>}
-                  <button className="text-gray-400 hover:text-black transition-colors text-sm font-medium">
-                    {brand}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
 
     </motion.div>
   );
