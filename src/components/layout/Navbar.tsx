@@ -73,7 +73,6 @@ export function Navbar() {
                     title="알림"
                   >
                     <Bell className="w-6 h-6" />
-                    <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-black" />
                   </Button>
                   <Button
                     variant="ghost"
@@ -83,7 +82,6 @@ export function Navbar() {
                     title="채팅"
                   >
                     <MessageCircle className="w-6 h-6" />
-                    <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-black" />
                   </Button>
                   <Link to="/app/register-product">
                     <Button variant="ghost" size="icon" className="h-11 w-11 text-gray-700 hover:text-black hover:bg-gray-100" title="상품 등록">

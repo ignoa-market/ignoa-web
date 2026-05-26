@@ -64,6 +64,17 @@ export function ProfilePage() {
     }
   };
 
+  const handleImageDelete = async () => {
+    try {
+      await userApi.deleteProfileImage();
+      setProfileImage(null);
+      toast.success("프로필 사진이 삭제되었습니다");
+    } catch (err) {
+      const error = err as ApiError;
+      toast.error(error.message ?? "프로필 사진 삭제에 실패했습니다");
+    }
+  };
+
   const myProducts: { id: string; title: string; currentPrice: number; imageUrl: string; timeLeft: string; wishCount: number }[] = [];
   const biddingProducts = myProducts;
   const wishlistProducts = myProducts;
@@ -110,6 +121,15 @@ export function ProfilePage() {
                   <Camera className="w-4 h-4 text-white" />
                 </div>
               </label>
+              {profileImage && (
+                <button
+                  type="button"
+                  onClick={handleImageDelete}
+                  className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-black flex items-center justify-center hover:bg-gray-700 transition-colors"
+                >
+                  <X className="w-3 h-3 text-white" />
+                </button>
+              )}
             </div>
 
             <div>
@@ -266,7 +286,7 @@ export function ProfilePage() {
               </div>
             ) : (
               <div className="py-24 text-center">
-                <p className="text-[11px] font-semibold tracking-[0.3em] text-gray-300 uppercase">No items yet</p>
+                <p className="text-[11px] font-semibold tracking-[0.3em] text-gray-300 uppercase">등록된 상품이 없습니다</p>
               </div>
             )}
           </motion.div>
