@@ -82,9 +82,9 @@ export function ProfilePage() {
   const following: { id: string; name: string }[] = [];
 
   const tabs = [
-    { id: "products", label: "Selling",  count: myProducts.length },
-    { id: "bidding",  label: "Bidding",  count: biddingProducts.length },
-    { id: "wishlist", label: "Wishlist", count: wishlistProducts.length },
+    { id: "products", label: "판매중",  count: myProducts.length },
+    { id: "bidding",  label: "입찰중",  count: biddingProducts.length },
+    { id: "wishlist", label: "찜목록",  count: wishlistProducts.length },
   ];
 
   const currentProducts =
@@ -103,15 +103,20 @@ export function ProfilePage() {
     >
       {/* Profile Hero */}
       <div className="max-w-[1400px] mx-auto px-8">
-        <div className="flex items-end justify-between pb-14">
+        <div className="flex items-center justify-between py-8">
 
-          {/* Left: Avatar + Name */}
-          <div className="flex items-end gap-10">
+          {/* Left: Avatar + Info */}
+          <div className="flex items-center gap-5">
             <div className="relative group flex-shrink-0">
               <input type="file" id="profileImageInput" accept="image/*" onChange={handleImageChange} className="hidden" />
               <label htmlFor="profileImageInput" className="cursor-pointer block w-24 h-24 rounded-full bg-gray-100 overflow-hidden relative">
                 {profileImage ? (
-                  <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
+                  <img
+                    src={profileImage}
+                    alt=""
+                    className="w-full h-full object-cover"
+                    onError={() => setProfileImage(null)}
+                  />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <User className="w-8 h-8 text-gray-300" />
@@ -133,36 +138,35 @@ export function ProfilePage() {
             </div>
 
             <div>
-              <p className="text-[11px] font-semibold tracking-[0.3em] text-gray-400 uppercase mb-3">Member</p>
-              <h1 className="text-5xl font-black text-black tracking-tight leading-none">{savedName}</h1>
-              <p className="text-sm text-gray-400 mt-3">{email}</p>
+              <h1 className="text-4xl font-black text-black leading-tight">{savedName}</h1>
+              <p className="text-sm text-gray-400 mt-1">{email}</p>
+              <div className="flex items-center gap-5 mt-3">
+                <button onClick={() => setShowFollowModal("followers")} className="flex items-center gap-1.5 hover:opacity-60 transition-opacity">
+                  <span className="text-sm text-gray-400">팔로워</span>
+                  <span className="text-sm font-bold text-black">{followers.length}</span>
+                </button>
+                <button onClick={() => setShowFollowModal("following")} className="flex items-center gap-1.5 hover:opacity-60 transition-opacity">
+                  <span className="text-sm text-gray-400">팔로잉</span>
+                  <span className="text-sm font-bold text-black">{following.length}</span>
+                </button>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm text-gray-400">판매수</span>
+                  <span className="text-sm font-bold text-black">{myProducts.length}</span>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Right: Stats */}
-          <div className="flex items-end gap-14">
-            <div>
-              <p className="text-[11px] font-semibold tracking-[0.3em] text-gray-400 uppercase mb-1">Selling</p>
-              <p className="text-4xl font-black text-black leading-none">{myProducts.length}</p>
-            </div>
-            <button onClick={() => setShowFollowModal("followers")} className="text-left hover:opacity-60 transition-opacity">
-              <p className="text-[11px] font-semibold tracking-[0.3em] text-gray-400 uppercase mb-1">Followers</p>
-              <p className="text-4xl font-black text-black leading-none">{followers.length}</p>
-            </button>
-            <button onClick={() => setShowFollowModal("following")} className="text-left hover:opacity-60 transition-opacity">
-              <p className="text-[11px] font-semibold tracking-[0.3em] text-gray-400 uppercase mb-1">Following</p>
-              <p className="text-4xl font-black text-black leading-none">{following.length}</p>
-            </button>
-            <button
-              onClick={() => {
-                if (isEditing) { setUserName(savedName); setAddress(savedAddr); }
-                setIsEditing(!isEditing);
-              }}
-              className="h-10 px-6 rounded-full border border-gray-200 text-sm font-medium text-gray-600 hover:border-black hover:text-black transition-all"
-            >
-              {isEditing ? "취소" : "Edit Profile"}
-            </button>
-          </div>
+          {/* Right: Actions */}
+          <button
+            onClick={() => {
+              if (isEditing) { setUserName(savedName); setAddress(savedAddr); }
+              setIsEditing(!isEditing);
+            }}
+            className="h-9 px-5 rounded-full border border-gray-200 text-sm font-medium text-gray-600 hover:border-black hover:text-black transition-all"
+          >
+            {isEditing ? "취소" : "프로필 수정"}
+          </button>
         </div>
 
         {/* Edit Form */}
@@ -176,11 +180,11 @@ export function ProfilePage() {
               className="overflow-hidden"
             >
               <div className="py-10 border-b border-gray-100">
-                <p className="text-[11px] font-semibold tracking-[0.3em] text-gray-400 uppercase mb-6">Edit Profile</p>
+                <p className="text-[11px] font-semibold tracking-[0.3em] text-gray-400 uppercase mb-6">프로필 수정</p>
                 <div className="grid grid-cols-2 gap-5 max-w-2xl mb-6">
                   <div>
                     <Label htmlFor="userName" className="text-[11px] font-semibold tracking-[0.2em] text-gray-400 uppercase mb-2 flex items-center gap-1.5">
-                      <User className="w-3 h-3" /> Name
+                      <User className="w-3 h-3" /> 닉네임
                     </Label>
                     <Input
                       id="userName"
@@ -191,7 +195,7 @@ export function ProfilePage() {
                   </div>
                   <div>
                     <Label className="text-[11px] font-semibold tracking-[0.2em] text-gray-400 uppercase mb-2 flex items-center gap-1.5">
-                      <MapPin className="w-3 h-3" /> Address
+                      <MapPin className="w-3 h-3" /> 주소
                     </Label>
                     <button
                       type="button"
@@ -206,7 +210,7 @@ export function ProfilePage() {
                   </div>
                   <div>
                     <Label className="text-[11px] font-semibold tracking-[0.2em] text-gray-400 uppercase mb-2 flex items-center gap-1.5">
-                      <Mail className="w-3 h-3" /> Email
+                      <Mail className="w-3 h-3" /> 이메일
                     </Label>
                     <div className="h-11 px-3 bg-gray-50 border border-gray-200 flex items-center text-sm text-gray-400">
                       {email}
@@ -221,7 +225,7 @@ export function ProfilePage() {
                       : "bg-white border border-gray-200 text-gray-300 cursor-default"
                   }`}
                 >
-                  Save
+                  저장
                 </button>
               </div>
             </motion.div>
@@ -229,7 +233,7 @@ export function ProfilePage() {
         </AnimatePresence>
 
         {/* Tabs */}
-        <div className="flex items-center gap-10 mt-14 mb-10 border-b border-gray-100">
+        <div className="flex items-center gap-10 mt-16 mb-8 border-b border-gray-100">
           {tabs.map((tab) => (
             <button
               key={tab.id}

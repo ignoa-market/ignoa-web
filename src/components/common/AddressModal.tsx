@@ -1,7 +1,18 @@
-import { useState, useRef, useEffect } from "react";
-import { Search, X, MapPin, ChevronRight } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { X } from "lucide-react";
 import { motion } from "motion/react";
 
+declare global {
+  interface Window {
+    daum: {
+      Postcode: new (options: {
+        oncomplete: (data: { roadAddress: string; jibunAddress: string; zonecode: string }) => void;
+        width?: string | number;
+        height?: string | number;
+      }) => { embed: (element: HTMLElement | null) => void };
+    };
+  }
+}
 
 interface AddressModalProps {
   onSelect: (address: string) => void;
@@ -9,101 +20,38 @@ interface AddressModalProps {
 }
 
 export function AddressModal({ onSelect, onClose }: AddressModalProps) {
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<{ zipCode: string; road: string; building: string }[]>([]);
-  const [searched, setSearched] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const embedRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    inputRef.current?.focus();
+    new window.daum.Postcode({
+      oncomplete: (data) => {
+        onSelect(data.roadAddress);
+        onClose();
+      },
+      width: "100%",
+      height: "100%",
+    }).embed(embedRef.current);
   }, []);
 
-  const handleSearch = () => {
-    if (!query.trim()) return;
-    setResults([]);
-    setSearched(true);
-  };
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <motion.div
-        initial={{ opacity: 0, scale: 0.96, y: 8 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.96, y: 8 }}
-        transition={{ duration: 0.18 }}
-        className="bg-white w-full max-w-md mx-4 rounded-xl shadow-2xl overflow-hidden"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 12 }}
+        transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
+        className="bg-white w-full max-w-[500px] mx-4 shadow-2xl overflow-hidden"
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="text-base font-semibold text-black">주소 검색</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-black transition-colors">
-            <X className="w-5 h-5" />
+        <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+          <div>
+            <p className="text-[11px] font-semibold tracking-[0.3em] text-gray-400 uppercase mb-0.5">Address</p>
+            <p className="text-sm font-bold text-black">주소 검색</p>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 transition-colors">
+            <X className="w-4 h-4 text-gray-500" />
           </button>
         </div>
-
-        {/* Search */}
-        <div className="px-5 py-4 border-b border-gray-100">
-          <p className="text-xs text-gray-400 mb-3">도로명, 건물명, 지번을 입력하세요</p>
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                ref={inputRef}
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                placeholder="예) 동서대로 125, 한밭대학교"
-                className="w-full h-10 pl-9 pr-3 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-black focus:border-black"
-              />
-            </div>
-            <button
-              onClick={handleSearch}
-              className="h-10 px-4 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors"
-            >
-              검색
-            </button>
-          </div>
-        </div>
-
-        {/* Results */}
-        <div className="max-h-72 overflow-y-auto">
-          {!searched ? (
-            <div className="flex flex-col items-center justify-center py-12 text-gray-300">
-              <MapPin className="w-8 h-8 mb-2" />
-              <p className="text-sm">주소를 검색해주세요</p>
-            </div>
-          ) : results.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-gray-300">
-              <Search className="w-8 h-8 mb-2" />
-              <p className="text-sm">검색 결과가 없습니다</p>
-            </div>
-          ) : (
-            results.map((item) => (
-              <button
-                key={item.zipCode}
-                onClick={() => {
-                  onSelect(item.road);
-                  onClose();
-                }}
-                className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-gray-50 transition-colors text-left border-b border-gray-50 last:border-0"
-              >
-                <div>
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-medium">
-                      {item.zipCode}
-                    </span>
-                    {item.building && (
-                      <span className="text-xs text-gray-400">{item.building}</span>
-                    )}
-                  </div>
-                  <p className="text-sm text-black">{item.road}</p>
-                </div>
-                <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
-              </button>
-            ))
-          )}
-        </div>
+        <div ref={embedRef} style={{ height: "500px" }} />
       </motion.div>
     </div>
   );
