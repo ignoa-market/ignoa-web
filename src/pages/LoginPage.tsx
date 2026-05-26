@@ -4,6 +4,8 @@ import { useNavigate } from "react-router";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
+import { authApi } from "@/api/auth";
+import type { ApiError } from "@/types/api";
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -15,17 +17,26 @@ export function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     setErrors({});
     if (!email) { setErrors((p) => ({ ...p, email: "이메일을 입력해주세요" })); return; }
     if (!password) { setErrors((p) => ({ ...p, password: "비밀번호를 입력해주세요" })); return; }
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      login();
+    try {
+      const res = await authApi.login(email, password);
+      login(res.user_id, res.access_token);
       toast.success("환영합니다!");
       navigate("/app");
-    }, 1500);
+    } catch (err) {
+      const error = err as ApiError;
+      if (error.code === "INVALID_CREDENTIALS") {
+        setErrors({ email: "이메일 또는 비밀번호가 올바르지 않습니다" });
+      } else {
+        toast.error(error.message ?? "로그인에 실패했습니다");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleOAuthLogin = (provider: string) => {

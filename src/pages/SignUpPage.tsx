@@ -6,6 +6,8 @@ import logoImage from "@/assets/logo.png";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { AddressModal } from "@/components/common/AddressModal";
+import { authApi, userApi } from "@/api/auth";
+import type { ApiError } from "@/types/api";
 
 type FormStep = 1 | 2 | 3 | "complete";
 
@@ -42,51 +44,69 @@ export function SignUpPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
-  const checkEmailDuplicate = () => {
+  const checkEmailDuplicate = async () => {
     if (!email.trim()) { setErrors({ email: "이메일을 입력해주세요" }); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setErrors({ email: "올바른 이메일 형식이 아닙니다" }); return; }
     setIsEmailChecking(true);
-    setTimeout(() => {
-      const ok = Math.random() > 0.3;
-      setIsEmailAvailable(ok);
-      setIsEmailChecking(false);
-      if (ok) { toast.success("사용 가능한 이메일입니다"); setErrors({}); }
-      else setErrors({ email: "이미 사용중인 이메일입니다" });
-    }, 800);
-  };
-
-  const sendVerificationCode = () => {
-    if (!isEmailAvailable) { toast.error("이메일 중복 확인을 먼저 해주세요"); return; }
-    setIsCodeSent(true);
-    setTimeRemaining(300);
-    setVerificationCode("");
-    toast.success("인증 코드가 전송되었습니다");
-    const timer = setInterval(() => {
-      setTimeRemaining((prev) => { if (prev <= 1) { clearInterval(timer); return 0; } return prev - 1; });
-    }, 1000);
-  };
-
-  const verifyCode = () => {
-    if (verificationCode.length !== 6) { setErrors({ verificationCode: "6자리 코드를 입력해주세요" }); return; }
-    if (verificationCode === "123456") {
-      setIsCodeVerified(true);
-      toast.success("인증 완료");
+    try {
+      await userApi.checkEmailDuplicate(email);
+      setIsEmailAvailable(true);
+      toast.success("사용 가능한 이메일입니다");
       setErrors({});
-    } else {
-      setErrors({ verificationCode: "올바르지 않은 코드입니다" });
+    } catch (err) {
+      const error = err as ApiError;
+      setIsEmailAvailable(false);
+      setErrors({ email: error.message ?? "이미 사용중인 이메일입니다" });
+    } finally {
+      setIsEmailChecking(false);
     }
   };
 
-  const checkNameDuplicate = () => {
+  const sendVerificationCode = async () => {
+    if (!isEmailAvailable) { toast.error("이메일 중복 확인을 먼저 해주세요"); return; }
+    try {
+      await authApi.sendEmailCode(email);
+      setIsCodeSent(true);
+      setTimeRemaining(300);
+      setVerificationCode("");
+      toast.success("인증 코드가 전송되었습니다");
+      const timer = setInterval(() => {
+        setTimeRemaining((prev) => { if (prev <= 1) { clearInterval(timer); return 0; } return prev - 1; });
+      }, 1000);
+    } catch (err) {
+      const error = err as ApiError;
+      toast.error(error.message ?? "인증 코드 전송에 실패했습니다");
+    }
+  };
+
+  const verifyCode = async () => {
+    if (verificationCode.length !== 6) { setErrors({ verificationCode: "6자리 코드를 입력해주세요" }); return; }
+    try {
+      await authApi.verifyEmailCode(email, verificationCode);
+      setIsCodeVerified(true);
+      toast.success("인증 완료");
+      setErrors({});
+    } catch (err) {
+      const error = err as ApiError;
+      setErrors({ verificationCode: error.message ?? "올바르지 않은 코드입니다" });
+    }
+  };
+
+  const checkNameDuplicate = async () => {
     if (!name.trim()) { setErrors({ name: "이름을 입력해주세요" }); return; }
     setIsNameChecking(true);
-    setTimeout(() => {
-      const ok = Math.random() > 0.3;
-      setIsNameAvailable(ok);
+    try {
+      await userApi.checkNicknameDuplicate(name);
+      setIsNameAvailable(true);
+      toast.success("사용 가능한 이름입니다");
+      setErrors({});
+    } catch (err) {
+      const error = err as ApiError;
+      setIsNameAvailable(false);
+      setErrors({ name: error.message ?? "이미 사용중인 이름입니다" });
+    } finally {
       setIsNameChecking(false);
-      if (ok) { toast.success("사용 가능한 이름입니다"); setErrors({}); }
-      else setErrors({ name: "이미 사용중인 이름입니다" });
-    }, 800);
+    }
   };
 
   const goNext = () => {
@@ -104,16 +124,21 @@ export function SignUpPage() {
     }
   };
 
-  const handleSignUp = () => {
+  const handleSignUp = async () => {
     if (!isNameAvailable) { setErrors({ name: "이름 중복 확인을 완료해주세요" }); return; }
     if (!address.trim()) { setErrors({ address: "주소를 입력해주세요" }); return; }
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      login();
+    try {
+      const res = await authApi.signup({ email, password, nickname: name, address });
+      login(res.user_id, res.access_token);
       setStep("complete");
       setTimeout(() => navigate("/app"), 4000);
-    }, 1500);
+    } catch (err) {
+      const error = err as ApiError;
+      toast.error(error.message ?? "회원가입에 실패했습니다");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;

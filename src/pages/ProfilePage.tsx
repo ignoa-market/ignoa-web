@@ -1,11 +1,13 @@
-import { useState } from "react";
-import { Mail, Phone, User, MapPin, Camera, Search, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Mail, User, MapPin, Camera, Search, X } from "lucide-react";
 import { ProductCard } from "@/components/common/ProductCard";
 import { AddressModal } from "@/components/common/AddressModal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
+import { userApi } from "@/api/auth";
+import type { ApiError } from "@/types/api";
 
 const mockMyProducts = [
   { id: "1", title: "MacBook Pro 16인치 M1 2021 실버", currentPrice: 1250000, imageUrl: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=800&q=80", timeLeft: "2시간 남음", wishCount: 24 },
@@ -43,37 +45,52 @@ export function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [showFollowModal, setShowFollowModal] = useState<"followers" | "following" | null>(null);
 
-  const savedUserName = "짜응잉";
-  const savedAddress = "대전광역시 유성구 동서대로 125";
-
-  const [userName, setUserName] = useState(savedUserName);
-  const [address, setAddress] = useState(savedAddress);
-  const [savedName, setSavedName] = useState(savedUserName);
-  const [savedAddr, setSavedAddr] = useState(savedAddress);
+  const [email, setEmail] = useState("");
+  const [userName, setUserName] = useState("");
+  const [address, setAddress] = useState("");
+  const [savedName, setSavedName] = useState("");
+  const [savedAddr, setSavedAddr] = useState("");
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [showAddressModal, setShowAddressModal] = useState(false);
 
-  const email = "user@hanbat.ac.kr";
-  const phone = "010-1234-5678";
-
   const isDirty = userName !== savedName || address !== savedAddr;
 
-  const handleSaveProfile = () => {
-    setSavedName(userName);
-    setSavedAddr(address);
-    setIsEditing(false);
-    toast.success("프로필이 업데이트되었습니다!");
+  useEffect(() => {
+    userApi.getMe().then((res) => {
+      setEmail(res.email);
+      setUserName(res.nickname);
+      setSavedName(res.nickname);
+      setAddress(res.address);
+      setSavedAddr(res.address);
+      setProfileImage(res.profile_image_url);
+    }).catch(() => {
+      toast.error("유저 정보를 불러오지 못했습니다");
+    });
+  }, []);
+
+  const handleSaveProfile = async () => {
+    try {
+      const res = await userApi.updateProfile(userName, address);
+      setSavedName(res.nickname);
+      setSavedAddr(res.address);
+      setIsEditing(false);
+      toast.success("프로필이 업데이트되었습니다!");
+    } catch (err) {
+      const error = err as ApiError;
+      toast.error(error.message ?? "프로필 업데이트에 실패했습니다");
+    }
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfileImage(reader.result as string);
-        toast.success("프로필 사진이 변경되었습니다!");
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+    try {
+      const res = await userApi.updateProfileImage(file);
+      setProfileImage(res.profile_image_url);
+      toast.success("프로필 사진이 변경되었습니다!");
+    } catch (err) {
+      const error = err as ApiError;
+      toast.error(error.message ?? "프로필 사진 변경에 실패했습니다");
     }
   };
 
@@ -197,14 +214,6 @@ export function ProfilePage() {
                     </Label>
                     <div className="h-11 px-3 bg-gray-50 border border-gray-200 flex items-center text-sm text-gray-400">
                       {email}
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-[11px] font-semibold tracking-[0.2em] text-gray-400 uppercase mb-2 flex items-center gap-1.5">
-                      <Phone className="w-3 h-3" /> Phone
-                    </Label>
-                    <div className="h-11 px-3 bg-gray-50 border border-gray-200 flex items-center text-sm text-gray-400">
-                      {phone}
                     </div>
                   </div>
                 </div>

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import logoImage from "@/assets/logo.png";
 import { useAuth } from "@/context/AuthContext";
+import { authApi } from "@/api/auth";
 import { ChatPanel } from "@/components/common/ChatPanel";
 import { NotificationPanel } from "@/components/common/NotificationPanel";
 import { motion, AnimatePresence } from "motion/react";
@@ -16,10 +17,15 @@ export function Navbar() {
   const [notiOpen, setNotiOpen] = useState(false);
   const { isAuthenticated, logout } = useAuth();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await authApi.logout();
+    } catch {
+      // 서버 오류여도 로컬 로그아웃은 진행
+    }
     logout();
     toast.success("로그아웃되었습니다");
-    setTimeout(() => navigate("/login"), 500);
+    navigate("/login");
   };
 
   return (
