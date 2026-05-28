@@ -7,18 +7,18 @@ import type { ItemSummary } from "@/types/api";
 
 const bannerSlides = [
   {
-    type: "typography" as const,
-    image: null as string | null,
-    label: "BID ON YOUR STYLE",
-    title: "취향을 낙찰받다",
-    subtitle: "단 한 번의 입찰로 완성되는 컬렉션.",
-  },
-  {
     type: "fee" as const,
     image: null as string | null,
     label: "수수료 0원",
     title: "영원히 0원",
     subtitle: "판매 수수료 0원. 새로운 수수료 정책이 시작됩니다.",
+  },
+  {
+    type: "typography" as const,
+    image: null as string | null,
+    label: "BID ON YOUR STYLE",
+    title: "취향을 낙찰받다",
+    subtitle: "단 한 번의 입찰로 완성되는 컬렉션.",
   },
 ];
 
