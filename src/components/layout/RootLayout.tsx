@@ -2,6 +2,7 @@ import { Outlet, useLocation } from "react-router";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { ScrollToTop } from "@/components/common/ScrollToTop";
+import { AnnouncementBanner } from "@/components/layout/AnnouncementBanner";
 
 export function Root() {
   const location = useLocation();
@@ -11,6 +12,7 @@ export function Root() {
   return (
     <>
       <ScrollToTop />
+      {shouldShowNavbar && <AnnouncementBanner />}
       {shouldShowNavbar && <Navbar />}
       <Outlet />
       {shouldShowNavbar && <Footer />}

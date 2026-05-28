@@ -1,91 +1,75 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router";
-import { ChevronDown, ChevronLeft, Check, Eye, ShieldCheck, MessageCircle } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Check, ShieldCheck, MessageCircle, Heart, Share2, Eye } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import stussyFront from "@/assets/product-stussy-front.png";
-import stussyBack from "@/assets/product-stussy-back.png";
-import avatarOleoleo from "@/assets/avatar-oleoleo.jpg";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { motion, AnimatePresence } from "motion/react";
-import { ProductCard } from "@/components/common/ProductCard";
 import { ChatPanel } from "@/components/common/ChatPanel";
-
-const mockProduct = {
-  id: "1",
-  title: "SURF SIZE ZIP HOODIE",
-  brand: "STUSSY",
-  currentPrice: 150000,
-  startPrice: 130000,
-  buyNowPrice: 200000,
-  images: [stussyFront, stussyBack],
-  timeLeft: "1일 5시간",
-  wishCount: 89,
-  bidderCount: 15,
-  location: "서울, 강남구",
-  views: 542,
-  createdAt: "2026.04.07",
-  size: "L",
-  condition: "최상",
-  postedAt: "1 week ago",
-  description: `스투시 후드집업 판매합니다.\n\n사용감 있고, 모자 부분에 색빠짐 있습니다.\n사진 참고 부탁드려요.\n\n구매전 연락부탁드립니다!`,
-  seller: {
-    name: "oleoleo",
-    avatar: avatarOleoleo,
-    rating: 4.9,
-    sales: 87,
-  },
-  myBid: 800000,
-};
-
-// Mock bid history data
-const bidHistory = [
-  { id: "bid-1", time: "09:00", price: 500000 },
-  { id: "bid-2", time: "09:30", price: 550000 },
-  { id: "bid-3", time: "10:15", price: 620000 },
-  { id: "bid-4", time: "11:20", price: 680000 },
-  { id: "bid-5", time: "12:00", price: 750000 },
-  { id: "bid-6", time: "13:15", price: 800000 },
-  { id: "bid-7", time: "14:30", price: 820000 },
-];
-
-// Detailed bid history for list
-const detailedBidHistory = [
-  { id: "detail-1", time: "14:30", price: 820000, bidder: "user***5" },
-  { id: "detail-2", time: "13:15", price: 800000, bidder: "user***4" },
-  { id: "detail-3", time: "12:00", price: 750000, bidder: "user***1" },
-  { id: "detail-4", time: "11:20", price: 680000, bidder: "user***3" },
-  { id: "detail-5", time: "10:15", price: 620000, bidder: "user***2" },
-  { id: "detail-6", time: "09:30", price: 550000, bidder: "user***1" },
-  { id: "detail-7", time: "09:00", price: 500000, bidder: "시작가" },
-];
-
-const relatedProducts: { id: string; title: string; currentPrice: number; imageUrl: string }[] = [];
+import { itemApi, bidApi, wishApi } from "@/api/item";
+import { wishStore } from "@/store/wishStore";
+import type { ItemDetailResponse, BidSummary } from "@/types/api";
 
 export function ProductDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+
+  const [item, setItem] = useState<ItemDetailResponse | null>(null);
+  const [bids, setBids] = useState<BidSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [msgOpen, setMsgOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [wished, setWished] = useState(false);
+  const [slideDir, setSlideDir] = useState(1);
+  const [isSliding, setIsSliding] = useState(false);
   const [bidModalOpen, setBidModalOpen] = useState(false);
   const [bidStep, setBidStep] = useState<"input" | "confirm">("input");
   const [buyNowModalOpen, setBuyNowModalOpen] = useState(false);
+  const [buyNowAgreed, setBuyNowAgreed] = useState(false);
   const [bidAmount, setBidAmount] = useState("");
-  const [displayPrice, setDisplayPrice] = useState(mockProduct.currentPrice);
+  const [displayPrice, setDisplayPrice] = useState(0);
   const [priceAnimKey, setPriceAnimKey] = useState(0);
   const [shippingOpen, setShippingOpen] = useState(false);
   const [returnOpen, setReturnOpen] = useState(false);
-  const [buyNowAgreed, setBuyNowAgreed] = useState(false);
   const [countdown, setCountdown] = useState("");
-  const [viewers, setViewers] = useState(12);
-  const endTimeRef = useRef(new Date(Date.now() + (1 * 24 * 60 * 60 + 5 * 60 * 60) * 1000));
+  const endTimeRef = useRef<Date | null>(null);
+  const [wished, setWished] = useState(false);
+  const [wishCount, setWishCount] = useState(0);
 
+  // 상품 상세 조회
+  useEffect(() => {
+    if (!id) return;
+    setLoading(true);
+    itemApi
+      .getItem(Number(id))
+      .then((data) => {
+        setItem(data);
+        setDisplayPrice(data.current_price);
+        endTimeRef.current = new Date(data.end_at);
+        const initialWished = wishStore.isWished(data.item_id) || data.is_wished;
+        setWished(initialWished);
+        setWishCount(data.wish_count);
+      })
+      .catch(() => toast.error("상품 정보를 불러오지 못했습니다."))
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  // 입찰 내역 조회
+  useEffect(() => {
+    if (!id) return;
+    bidApi
+      .getBids(Number(id))
+      .then((res) => setBids(res.content))
+      .catch(() => setBids([]));
+  }, [id]);
+
+  // 카운트다운 타이머
   useEffect(() => {
     const tick = () => {
+      if (!endTimeRef.current) return;
       const diff = endTimeRef.current.getTime() - Date.now();
       if (diff <= 0) {
         setCountdown("마감");
@@ -96,40 +80,67 @@ export function ProductDetailPage() {
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
-      if (days > 0) setCountdown(`${days}일 ${hours}시간 ${minutes}분 ${seconds}초`);
-      else if (hours > 0) setCountdown(`${hours}시간 ${minutes}분 ${seconds}초`);
-      else setCountdown(`${minutes}분 ${seconds}초`);
+      const hh = String(hours).padStart(2, "0");
+      const mm = String(minutes).padStart(2, "0");
+      const ss = String(seconds).padStart(2, "0");
+      if (days > 0) setCountdown(`${days}일 ${hh}시간 ${mm}분 ${ss}초`);
+      else if (hours > 0) setCountdown(`${hh}시간 ${mm}분 ${ss}초`);
+      else setCountdown(`${mm}분 ${ss}초`);
     };
     tick();
     const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
   }, []);
 
-  useEffect(() => {
-    const fluctuate = () => {
-      setViewers((prev) => Math.max(1, prev + Math.floor(Math.random() * 3) - 1));
-    };
-    const timer = setInterval(fluctuate, 3000);
-    return () => clearInterval(timer);
-  }, []);
+  const handleWishToggle = async () => {
+    if (!isAuthenticated) { navigate("/login"); return; }
+    if (!item) return;
+    const prevWished = wished;
+    const prevCount = wishCount;
+    setWished(!prevWished);
+    setWishCount(prevWished ? prevCount - 1 : prevCount + 1);
+    if (!prevWished) wishStore.add(item.item_id);
+    else wishStore.remove(item.item_id);
+    try {
+      if (!prevWished) await wishApi.addWish(item.item_id);
+      else await wishApi.removeWish(item.item_id);
+    } catch {
+      setWished(prevWished);
+      setWishCount(prevCount);
+      if (prevWished) wishStore.add(item.item_id);
+      else wishStore.remove(item.item_id);
+    }
+  };
+
+  const handleShare = async () => {
+    const url = window.location.href;
+    if (navigator.share) {
+      await navigator.share({ title: item?.title ?? "", url }).catch(() => {});
+    } else {
+      await navigator.clipboard.writeText(url);
+      toast.success("링크가 복사되었습니다.");
+    }
+  };
+
+  const handleCancelAuction = async () => {
+    if (!window.confirm("경매를 종료하시겠습니까?\n입찰 내역은 유지되며 낙찰자는 선정되지 않습니다.")) return;
+    try {
+      await itemApi.cancelItem(Number(id));
+      toast.success("경매가 종료되었습니다.");
+      setItem((prev) => prev ? { ...prev, status: "CANCELED" } : prev);
+    } catch (err: unknown) {
+      const error = err as { message?: string };
+      toast.error(error?.message ?? "경매 종료에 실패했습니다.");
+    }
+  };
 
   const handleBidNext = () => {
     const amount = parseInt(bidAmount.replace(/,/g, ""));
-    if (!bidAmount || isNaN(amount) || amount <= mockProduct.currentPrice) {
+    if (!bidAmount || isNaN(amount) || amount <= (item?.current_price ?? 0)) {
       toast.error("현재가보다 높은 금액을 입력하세요.");
       return;
     }
     setBidStep("confirm");
-  };
-
-  const handleBidConfirm = () => {
-    const amount = parseInt(bidAmount.replace(/,/g, ""));
-    toast.success(`입찰 완료: ${amount.toLocaleString()}원`);
-    setDisplayPrice(amount);
-    setPriceAnimKey((k) => k + 1);
-    setBidModalOpen(false);
-    setBidStep("input");
-    setBidAmount("");
   };
 
   const handleBuyNow = () => {
@@ -138,79 +149,170 @@ export function ProductDetailPage() {
     setBuyNowAgreed(false);
   };
 
-  const handleDotClick = (idx: number) => {
-    setCurrentImageIndex(idx);
+  const handleBidConfirm = async () => {
+    const amount = parseInt(bidAmount.replace(/,/g, ""));
+    try {
+      await bidApi.placeBid(Number(id), amount);
+      toast.success(`입찰 완료: ${amount.toLocaleString()}원`);
+      setDisplayPrice(amount);
+      setPriceAnimKey((k) => k + 1);
+      setBidModalOpen(false);
+      setBidStep("input");
+      setBidAmount("");
+      // 입찰 내역 갱신
+      bidApi.getBids(Number(id)).then((res) => setBids(res.content));
+    } catch (err: unknown) {
+      const error = err as { message?: string };
+      toast.error(error?.message ?? "입찰에 실패했습니다.");
+    }
   };
 
-  return (
-    <div className="min-h-screen bg-white pt-[30px] sm:pt-[32px]">
-      <div className="max-w-[1400px] mx-auto px-6 pt-0 pb-8 sm:pb-12">
-        {/* Back button */}
-        <button
-          onClick={() => window.history.back()}
-          className="flex items-center gap-0.5 text-sm text-gray-400 hover:text-gray-700 transition-colors mb-8"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          Back
-        </button>
+  // 입찰 내역을 차트용 데이터로 변환
+  const chartData = [...bids].reverse().map((bid) => ({
+    time: new Date(bid.created_at).toLocaleTimeString("ko-KR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+    price: bid.price,
+  }));
 
-        {/* 2-column layout: image | info+actions */}
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-black border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!item) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <p className="text-gray-400">상품을 찾을 수 없습니다.</p>
+      </div>
+    );
+  }
+
+  const images = item.media_urls.map((m) => m.url);
+
+  const goToImage = (idx: number) => {
+    setSlideDir(idx > currentImageIndex ? 1 : -1);
+    setCurrentImageIndex(idx);
+    setIsSliding(true);
+  };
+  const prevImage = () => goToImage(currentImageIndex === 0 ? images.length - 1 : currentImageIndex - 1);
+  const nextImage = () => goToImage(currentImageIndex === images.length - 1 ? 0 : currentImageIndex + 1);
+
+  return (
+    <div className="min-h-screen bg-white pt-[156px]">
+      <div className="max-w-[1400px] mx-auto px-6 pt-0 pb-8 sm:pb-12">
+
+        {/* 2-column layout */}
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
 
           {/* Column 1: Image */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.97, y: 12 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-            className="relative overflow-hidden rounded-2xl w-full select-none"
+          <div
+            className="group relative overflow-hidden w-full select-none mt-8"
             style={{ aspectRatio: "1/1" }}
           >
-            <AnimatePresence mode="wait">
+            <AnimatePresence mode="wait" custom={slideDir} initial={false}>
               <motion.img
                 key={currentImageIndex}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.25, ease: "easeInOut" }}
-                src={mockProduct.images[currentImageIndex]}
-                alt={mockProduct.title}
-                className="absolute inset-0 w-full h-full object-contain p-8"
+                custom={slideDir}
+                variants={{
+                  enter: (d: number) => ({ x: d > 0 ? "40%" : "-40%", opacity: 0, scale: 0.96 }),
+                  center: { x: 0, opacity: 1, scale: 1 },
+                  exit: (d: number) => ({ x: d > 0 ? "-40%" : "40%", opacity: 0, scale: 0.96 }),
+                }}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] }}
+                onAnimationComplete={() => setIsSliding(false)}
+                src={images[currentImageIndex]}
+                alt={item.title}
+                className="absolute inset-0 w-full h-full object-cover"
               />
             </AnimatePresence>
 
-            {/* dot indicators */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-row gap-1.5 z-10">
-              {mockProduct.images.map((_, idx) => (
+            {images.length > 1 && (
+              <>
+                {/* 화살표 버튼 */}
                 <button
-                  key={idx}
-                  onClick={() => handleDotClick(idx)}
-                  className="p-2 -m-2 flex items-center justify-center"
+                  onClick={prevImage}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 backdrop-blur-sm shadow-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-white z-10"
                 >
-                  <span className={`block rounded-full transition-all duration-300 ${
-                    currentImageIndex === idx ? "w-8 h-1 bg-gray-400" : "w-5 h-1 bg-gray-300"
-                  }`} />
+                  <ChevronLeft className="w-4 h-4 text-stone-600" />
                 </button>
-              ))}
-            </div>
-          </motion.div>
+                <button
+                  onClick={nextImage}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 backdrop-blur-sm shadow-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-white z-10"
+                >
+                  <ChevronRight className="w-4 h-4 text-stone-600" />
+                </button>
+
+                {/* 인디케이터 점 */}
+                <div className={`absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10 transition-opacity duration-150 ${isSliding ? "opacity-0" : "opacity-100"}`}>
+                  {images.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => goToImage(idx)}
+                      className="p-1.5 -m-1.5"
+                    >
+                      <motion.span
+                        animate={{ opacity: currentImageIndex === idx ? 1 : 0.35, scale: currentImageIndex === idx ? 1 : 0.8 }}
+                        transition={{ duration: 0.2 }}
+                        className="block w-1.5 h-1.5 rounded-full bg-white shadow-sm"
+                      />
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
 
           {/* Column 2: Info + Actions */}
-          <div className="sticky top-24 flex flex-col mt-[100px]">
-
-            {/* Brand */}
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-gray-400 mb-2">
-              {mockProduct.brand}
-            </p>
-
-            {/* Title */}
-            <h1 className="text-3xl font-semibold text-stone-800 leading-tight mb-5 -ml-[3px]">
-              {mockProduct.title}
-            </h1>
+          <div className="flex flex-col relative">
+            {item.brand && (
+              <p className="text-sm font-semibold uppercase tracking-widest text-stone-500 mb-2 mt-8">
+                {item.brand}
+              </p>
+            )}
+            <div className="flex items-start justify-between gap-4 mb-5">
+              <h1 className="text-2xl font-semibold text-stone-800 leading-tight -ml-[3px]">
+                {item.title}
+              </h1>
+              <div className="flex items-center gap-2 flex-shrink-0 -mt-[3px]">
+                {!item.is_seller && (
+                  <motion.button
+                    onClick={handleWishToggle}
+                    whileTap={{ scale: 0.88 }}
+                    className="flex items-center gap-1.5 px-3.5 h-10 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+                  >
+                    <motion.span
+                      key={String(wished)}
+                      initial={{ scale: 0.6 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", stiffness: 450, damping: 14 }}
+                    >
+                      <Heart className={`w-4 h-4 ${wished ? "fill-rose-400 text-rose-400" : "text-stone-500"}`} />
+                    </motion.span>
+                    <span className="text-sm text-stone-600 font-medium tabular-nums">{wishCount}</span>
+                  </motion.button>
+                )}
+                <motion.button
+                  onClick={handleShare}
+                  whileTap={{ scale: 0.88 }}
+                  className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center"
+                >
+                  <Share2 className="w-4 h-4 text-stone-500" />
+                </motion.button>
+              </div>
+            </div>
 
             {/* Price */}
-            <div className="mb-2">
-              <p className="text-sm text-gray-400 mb-1">현재가</p>
-              <div className="text-2xl font-semibold text-stone-800 mb-3" style={{ perspective: "400px" }}>
+            <div className="mb-5">
+              <p className="text-xs text-stone-400 mb-1">현재가</p>
+              <div className="text-2xl font-semibold text-stone-800" style={{ perspective: "400px" }}>
                 {(displayPrice.toLocaleString() + "원").split("").map((char, i, arr) => (
                   <motion.span
                     key={`${priceAnimKey}-${i}`}
@@ -231,45 +333,75 @@ export function ProductDetailPage() {
 
             {/* Description */}
             <p className="text-sm text-stone-600 leading-relaxed whitespace-pre-line mb-5">
-              {mockProduct.description}
+              {item.description}
             </p>
 
-            {/* Timer + Views + Share */}
-            <div className="flex items-center justify-between mb-5 w-full">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-1.5 text-sm text-rose-400 font-medium">
-                  <span className="w-3.5 text-center text-sm">⏱</span>
-                  {countdown}
-                </div>
-                <div className="flex items-center gap-1.5 text-[13px] text-gray-400 font-medium">
-                  <Eye className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                  {viewers}명 보는 중
-                </div>
+            {/* 조회수 + Timer */}
+            <div className="flex items-end justify-between mb-5">
+              <div className="flex items-center gap-1 h-5">
+                <Eye className="w-3.5 h-3.5 text-stone-400" />
+                <p className="text-xs text-stone-400 tabular-nums">{item.view_count.toLocaleString()}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-stone-400 mb-1">남은 시간</p>
+                <p className="text-xs text-blue-300 tabular-nums h-5">{countdown}</p>
               </div>
             </div>
 
             {/* Buttons */}
-            <div className="flex gap-2">
-              <Button
-                onClick={() => setBidModalOpen(true)}
-                className="flex-1 bg-stone-800 hover:bg-stone-700 text-white h-11 text-sm font-medium rounded transition-colors"
-              >
-                입찰하기
-              </Button>
-              <Button
-                onClick={() => setBuyNowModalOpen(true)}
-                variant="outline"
-                className="flex-1 border-stone-200 text-stone-600 h-11 text-sm font-medium rounded hover:bg-stone-50 hover:border-stone-300 transition-colors"
-              >
-                즉시 구매
-              </Button>
-            </div>
+            {item.is_seller ? (
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => navigate(`/app/products/${id}/edit`)}
+                  className="flex-1 bg-stone-800 hover:bg-stone-700 text-white h-11 text-sm font-medium rounded transition-colors"
+                >
+                  상품 수정
+                </Button>
+                <Button
+                  onClick={handleCancelAuction}
+                  disabled={item.status !== "ACTIVE"}
+                  variant="outline"
+                  className="flex-1 border-red-200 text-red-500 h-11 text-sm font-medium rounded hover:bg-red-50 hover:border-red-300 transition-colors disabled:opacity-40"
+                >
+                  {item.status === "ACTIVE" ? "경매 종료" : "종료됨"}
+                </Button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => {
+                    if (!isAuthenticated) {
+                      navigate("/login");
+                      return;
+                    }
+                    setBidModalOpen(true);
+                  }}
+                  disabled={item.status !== "ACTIVE"}
+                  className="flex-1 bg-stone-800 hover:bg-stone-700 text-white h-11 text-sm font-medium rounded transition-colors disabled:opacity-50"
+                >
+                  {item.status !== "ACTIVE" ? "경매 종료" : "입찰하기"}
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (!isAuthenticated) {
+                      navigate("/login");
+                      return;
+                    }
+                    setBuyNowModalOpen(true);
+                  }}
+                  disabled={item.status !== "ACTIVE"}
+                  variant="outline"
+                  className="flex-1 border-stone-200 text-stone-600 h-11 text-sm font-medium rounded hover:bg-stone-50 hover:border-stone-300 transition-colors disabled:opacity-50"
+                >
+                  즉시 구매
+                </Button>
+              </div>
+            )}
 
             <div className="w-full flex items-center justify-center gap-2 text-xs text-stone-700 bg-gray-100 px-4 h-11 rounded-full mt-4">
               <ShieldCheck className="w-4 h-4 flex-shrink-0 text-sky-400" />
               <span>이그노아 안전결제로 걱정없이 거래하세요.</span>
             </div>
-
           </div>
         </div>
 
@@ -277,24 +409,31 @@ export function ProductDetailPage() {
         <div className="mt-12 pb-10">
           <h2 className="text-lg font-semibold text-black mb-4">판매자 정보</h2>
           <div className="flex items-center gap-5">
-            <Avatar className="w-16 h-16 transition-shadow duration-300 hover:shadow-lg cursor-pointer">
-              <AvatarImage src={mockProduct.seller.avatar} />
+            <Avatar className="w-16 h-16 transition-shadow duration-300 hover:shadow-lg cursor-pointer flex-shrink-0">
+              <AvatarImage src={item.seller.profile_image_url ?? undefined} alt={item.seller.nickname} />
               <AvatarFallback className="bg-stone-100 text-stone-500 text-sm">
-                {mockProduct.seller.name.charAt(0)}
+                {item.seller.nickname.charAt(0)}
               </AvatarFallback>
             </Avatar>
             <div className="flex flex-col gap-1">
-              <p className="text-base font-semibold text-stone-800">{mockProduct.seller.name}</p>
-              <div className="flex items-center gap-3 text-sm text-gray-400">
-                <span>매너 {mockProduct.seller.rating}</span>
-                <span>·</span>
-                <span>거래 {mockProduct.seller.sales}회</span>
-                <span>·</span>
-                <span>서울, 강남구</span>
+              <p className="text-base font-semibold text-stone-800">{item.seller.nickname}</p>
+              <div className="flex items-center gap-2 text-xs text-gray-400">
+                <span>매너 <span className="font-semibold text-stone-600">4.5</span></span>
+                <span className="text-gray-200">·</span>
+                <span>팔로워 <span className="text-stone-600 font-semibold">5</span></span>
+                {item.seller.address && (
+                  <>
+                    <span className="text-gray-200">·</span>
+                    <span>{item.seller.address}</span>
+                  </>
+                )}
               </div>
             </div>
             <div className="ml-6 flex items-center gap-3 self-center">
-              <button className="text-xs text-white bg-stone-800 hover:bg-stone-700 transition-colors px-4 h-8 rounded-full">
+              <button
+                onClick={() => !isAuthenticated && navigate("/login")}
+                className="text-xs text-white bg-stone-800 hover:bg-stone-700 transition-colors px-4 h-8 rounded-full"
+              >
                 팔로우
               </button>
               <button
@@ -310,88 +449,93 @@ export function ProductDetailPage() {
 
         {/* Bid History Section */}
         <div className="mt-2 pt-2">
-          <h2 className="text-lg font-semibold text-black mb-8">입찰 이력</h2>
+          <h2 className="text-lg font-semibold text-black mb-8">
+            입찰 이력 <span className="text-sm text-gray-400 font-normal">({bids.length}건)</span>
+          </h2>
 
           <div className="grid lg:grid-cols-5 gap-8">
-            {/* Left: Chart - Horizontal Scroll */}
-            <div className="lg:col-span-3 overflow-x-auto">
-              <div className="min-w-[600px]">
-                <ResponsiveContainer width="100%" height={280}>
-                  <LineChart data={bidHistory}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-                    <XAxis
-                      dataKey="time"
-                      stroke="#9ca3af"
-                      style={{ fontSize: '11px' }}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis
-                      stroke="#9ca3af"
-                      style={{ fontSize: '11px' }}
-                      tickFormatter={(value) => `${(value / 1000).toFixed(0)}K`}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'white',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '4px',
-                        fontSize: '12px',
-                        padding: '8px 12px'
-                      }}
-                      formatter={(value: number) => [`${value.toLocaleString()}원`, '입찰가']}
-                      labelStyle={{ fontWeight: '600', marginBottom: '4px', fontSize: '11px' }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="price"
-                      stroke="#000"
-                      strokeWidth={2}
-                      dot={false}
-                      activeDot={{ r: 5 }}
-                      isAnimationActive={false}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+              {/* Chart */}
+              <div className="lg:col-span-3 overflow-x-auto">
+                <div className="min-w-[600px]">
+                  <ResponsiveContainer width="100%" height={280}>
+                    <LineChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                      <XAxis
+                        dataKey="time"
+                        stroke="#9ca3af"
+                        style={{ fontSize: "11px" }}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis
+                        stroke="#9ca3af"
+                        style={{ fontSize: "11px" }}
+                        tickFormatter={(value) => `${(value / 1000).toFixed(0)}K`}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "white",
+                          border: "1px solid #e5e7eb",
+                          borderRadius: "4px",
+                          fontSize: "12px",
+                          padding: "8px 12px",
+                        }}
+                        formatter={(value: number) => [`${value.toLocaleString()}원`, "입찰가"]}
+                        labelStyle={{ fontWeight: "600", marginBottom: "4px", fontSize: "11px" }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="price"
+                        stroke="#000"
+                        strokeWidth={2}
+                        dot={false}
+                        activeDot={{ r: 5 }}
+                        isAnimationActive={false}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
-            </div>
 
-            {/* Right: Recent Bids - Vertical Scroll */}
-            <div className="lg:col-span-2">
-              <div className="overflow-y-auto max-h-[280px] space-y-3 pr-2">
-                {detailedBidHistory.map((bid, index) => (
-                  <div
-                    key={bid.id}
-                    className="flex items-center justify-between py-2.5 border-b border-gray-100 last:border-0"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="text-xs text-gray-400 font-medium w-8">
-                        #{detailedBidHistory.length - index}
-                      </div>
-                      <div>
-                        <div className="text-sm font-semibold text-black">
-                          {bid.price.toLocaleString()}원
+              {/* Recent Bids */}
+              <div className="lg:col-span-2">
+                <div className="overflow-y-auto max-h-[280px] space-y-3 pr-2">
+                  {bids.map((bid, index) => (
+                    <div
+                      key={bid.bid_id}
+                      className="flex items-center justify-between py-2.5 border-b border-gray-100 last:border-0"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="text-xs text-gray-400 font-medium w-8">
+                          #{bids.length - index}
                         </div>
-                        <div className="text-[11px] text-gray-500">
-                          {bid.bidder} · {bid.time}
+                        <div>
+                          <div className="text-sm font-semibold text-black">
+                            {bid.price.toLocaleString()}원
+                          </div>
+                          <div className="text-[11px] text-gray-500">
+                            {bid.bidder_nickname} ·{" "}
+                            {new Date(bid.created_at).toLocaleTimeString("ko-KR", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </div>
                         </div>
                       </div>
+                      {index === 0 && (
+                        <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                      )}
                     </div>
-                    {index === 0 && (
-                      <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
-                    )}
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
         </div>
 
-        {/* IGNOA Policy Sections - Toggle */}
+        {/* Policy Sections */}
         <div className="mt-16">
-          {/* Shipping Info */}
           <div className="border-b border-gray-200">
             <button
               onClick={() => setShippingOpen(!shippingOpen)}
@@ -400,7 +544,7 @@ export function ProductDetailPage() {
               <span className="text-base font-semibold text-black">배송정보</span>
               <ChevronDown
                 className={`w-5 h-5 text-gray-600 transition-transform ${
-                  shippingOpen ? 'rotate-180' : ''
+                  shippingOpen ? "rotate-180" : ""
                 }`}
               />
             </button>
@@ -415,7 +559,6 @@ export function ProductDetailPage() {
             )}
           </div>
 
-          {/* Return & Refund Policy */}
           <div>
             <button
               onClick={() => setReturnOpen(!returnOpen)}
@@ -424,7 +567,7 @@ export function ProductDetailPage() {
               <span className="text-base font-semibold text-black">반품 및 환불 정책</span>
               <ChevronDown
                 className={`w-5 h-5 text-gray-600 transition-transform ${
-                  returnOpen ? 'rotate-180' : ''
+                  returnOpen ? "rotate-180" : ""
                 }`}
               />
             </button>
@@ -440,22 +583,9 @@ export function ProductDetailPage() {
                   <li>받은 상품이 설명과 다른 경우</li>
                   <li>구매한 상품이 배송되지 않은 경우</li>
                 </ul>
-                <p className="text-xs text-gray-600">
-                  외부(계좌) 거래 시, 이그노아 고객센터 이용이 불가합니다.
-                </p>
+                <p className="text-xs text-gray-600">외부(계좌) 거래 시, 이그노아 고객센터 이용이 불가합니다.</p>
               </div>
             )}
-          </div>
-        </div>
-
-        {/* Related Products Section */}
-        <div className="mt-8 pt-12">
-          <h2 className="text-lg font-semibold text-black mb-8">관련 상품</h2>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {relatedProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
           </div>
         </div>
       </div>
@@ -470,7 +600,11 @@ export function ProductDetailPage() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
               className="absolute inset-0 bg-black/30"
-              onClick={() => { setBidModalOpen(false); setBidStep("input"); setBidAmount(""); }}
+              onClick={() => {
+                setBidModalOpen(false);
+                setBidStep("input");
+                setBidAmount("");
+              }}
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.96, y: 16 }}
@@ -500,7 +634,9 @@ export function ProductDetailPage() {
                         }}
                         className="w-full text-2xl font-semibold text-stone-800 border-0 border-b border-gray-200 pb-2 bg-transparent outline-none focus:border-stone-600 transition-colors placeholder:text-gray-200"
                       />
-                      <p className="text-xs text-gray-400 mt-2.5">최소 {(mockProduct.currentPrice + 50000).toLocaleString()}원 이상</p>
+                      <p className="text-xs text-gray-400 mt-2.5">
+                        최소 {(item.current_price + 1).toLocaleString()}원 이상
+                      </p>
                     </div>
                     <div className="flex gap-3">
                       <button
@@ -510,7 +646,10 @@ export function ProductDetailPage() {
                         입찰하기
                       </button>
                       <button
-                        onClick={() => { setBidModalOpen(false); setBidAmount(""); }}
+                        onClick={() => {
+                          setBidModalOpen(false);
+                          setBidAmount("");
+                        }}
                         className="flex-1 h-11 text-sm text-gray-500 border border-gray-200 hover:border-gray-400 hover:text-gray-700 rounded-full transition-colors"
                       >
                         취소
@@ -571,7 +710,7 @@ export function ProductDetailPage() {
             >
               <div className="mb-8">
                 <p className="text-xs text-gray-400 mb-1.5">즉시 구매가</p>
-                <p className="text-3xl font-semibold text-stone-800">{mockProduct.buyNowPrice.toLocaleString()}원</p>
+                <p className="text-3xl font-semibold text-stone-800">문의 후 결정</p>
               </div>
 
               <label className="flex items-center gap-3 cursor-pointer mb-8">

@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate } from "react-router";
 import { HomePage } from "@/pages/HomePage";
 import { ProductDetailPage } from "@/pages/ProductDetailPage";
 import { ProductRegistrationPage } from "@/pages/ProductRegistrationPage";
+import { ProductEditPage } from "@/pages/ProductEditPage";
 import { ProfilePage } from "@/pages/ProfilePage";
 import { MessagesPage } from "@/pages/MessagesPage";
 import { LoginPage } from "@/pages/LoginPage";
@@ -22,6 +23,7 @@ export const router = createBrowserRouter([
       { path: "product/:id", Component: ProductDetailPage },
       { path: "products/:id", Component: ProductDetailPage },
       { path: "register-product", Component: ProductRegistrationPage },
+      { path: "products/:id/edit", Component: ProductEditPage },
       { path: "profile", Component: ProfilePage },
       { path: "messages", Component: MessagesPage },
     ],

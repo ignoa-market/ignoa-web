@@ -1,13 +1,13 @@
 import { Link, useNavigate } from "react-router";
-import { Search, User, PackagePlus, LogIn, LogOut, X, MessageCircle, Bell } from "lucide-react";
+import { Search, X, User, MessageSquare, Bell } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import logoImage from "@/assets/logo.png";
 import { useAuth } from "@/context/AuthContext";
 import { authApi } from "@/api/auth";
 import { ChatPanel } from "@/components/common/ChatPanel";
 import { NotificationPanel } from "@/components/common/NotificationPanel";
+import { WithdrawalModal } from "@/components/common/WithdrawalModal";
 import { motion, AnimatePresence } from "motion/react";
 
 const POPULAR_SEARCHES = [
@@ -31,6 +31,19 @@ export function Navbar() {
   const [notiOpen, setNotiOpen] = useState(false);
   const { isAuthenticated, logout } = useAuth();
   const searchContainerRef = useRef<HTMLDivElement>(null);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [withdrawalOpen, setWithdrawalOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
+        setProfileMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -40,12 +53,12 @@ export function Navbar() {
     }
     logout();
     toast.success("로그아웃되었습니다");
-    navigate("/login");
+    navigate("/app");
   };
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200">
+      <nav className="fixed top-20 left-0 right-0 z-50 bg-white border-b border-gray-200">
         <div className="max-w-[1400px] mx-auto px-8 py-5">
           <div className="flex items-center gap-8">
             {/* Logo + Logo Name */}
@@ -113,43 +126,99 @@ export function Navbar() {
             {/* Right Actions */}
             <div className="flex items-center gap-2 ml-auto">
               {isAuthenticated ? (
-                <>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => { setNotiOpen((v) => !v); setChatOpen(false); }}
-                    className="h-11 w-11 text-gray-700 hover:text-black hover:bg-gray-100 relative"
-                    title="알림"
-                  >
-                    <Bell className="w-6 h-6" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => { setChatOpen((v) => !v); setNotiOpen(false); }}
-                    className="h-11 w-11 text-gray-700 hover:text-black hover:bg-gray-100 relative"
-                    title="채팅"
-                  >
-                    <MessageCircle className="w-6 h-6" />
-                  </Button>
+                <div className="flex items-center gap-5">
                   <Link to="/app/register-product">
-                    <Button variant="ghost" size="icon" className="h-11 w-11 text-gray-700 hover:text-black hover:bg-gray-100" title="상품 등록">
-                      <PackagePlus className="w-6 h-6" />
-                    </Button>
+                    <button className="h-9 px-4 text-sm font-semibold bg-black text-white rounded-full hover:bg-gray-800 transition-colors">
+                      상품 등록
+                    </button>
                   </Link>
-                  <Link to="/app/profile">
-                    <Button variant="ghost" size="icon" className="h-11 w-11 text-gray-700 hover:text-black hover:bg-gray-100" title="내 정보">
-                      <User className="w-6 h-6" />
-                    </Button>
-                  </Link>
-                  <Button variant="ghost" size="icon" onClick={handleLogout} className="h-11 w-11 text-gray-700 hover:text-red-500 hover:bg-gray-100" title="로그아웃">
-                    <LogOut className="w-6 h-6" />
-                  </Button>
-                </>
+
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => { setNotiOpen((v) => !v); setChatOpen(false); }}
+                      className={`w-9 h-9 flex items-center justify-center rounded-full transition-colors ${
+                        notiOpen ? "bg-gray-200 text-black" : "bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-black"
+                      }`}
+                      title="알림"
+                    >
+                      <Bell className="w-[18px] h-[18px]" />
+                    </button>
+                    <button
+                      onClick={() => { setChatOpen((v) => !v); setNotiOpen(false); }}
+                      className={`w-9 h-9 flex items-center justify-center rounded-full transition-colors ${
+                        chatOpen ? "bg-gray-200 text-black" : "bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-black"
+                      }`}
+                      title="채팅"
+                    >
+                      <MessageSquare className="w-[18px] h-[18px]" />
+                    </button>
+
+                  {/* 프로필 드롭다운 */}
+                  <div className="relative" ref={profileMenuRef}>
+                    <button
+                      onClick={() => setProfileMenuOpen((v) => !v)}
+                      className={`w-9 h-9 flex items-center justify-center rounded-full transition-colors ${
+                        profileMenuOpen ? "bg-gray-200 text-black" : "bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-black"
+                      }`}
+                    >
+                      <User className="w-[18px] h-[18px]" />
+                    </button>
+
+                    <AnimatePresence>
+                      {profileMenuOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 4 }}
+                          transition={{ duration: 0.12 }}
+                          className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-36 bg-white border border-gray-100 rounded-2xl shadow-lg overflow-hidden z-50"
+                        >
+                          <Link
+                            to="/app/profile"
+                            onClick={() => setProfileMenuOpen(false)}
+                            className="block text-center py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                          >
+                            마이페이지
+                          </Link>
+                          <button
+                            onClick={() => setProfileMenuOpen(false)}
+                            className="w-full text-center py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                          >
+                            고객센터
+                          </button>
+                          <button
+                            onClick={() => { handleLogout(); setProfileMenuOpen(false); }}
+                            className="w-full text-center py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                          >
+                            로그아웃
+                          </button>
+                          <button
+                            onClick={() => { setProfileMenuOpen(false); setWithdrawalOpen(true); }}
+                            className="w-full text-center py-2.5 text-sm text-gray-300 hover:bg-red-50 hover:text-red-400 transition-colors"
+                          >
+                            회원탈퇴
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                  </div>
+                </div>
               ) : (
-                <Button variant="ghost" size="icon" onClick={() => navigate("/login")} className="h-11 w-11 text-gray-700 hover:text-black hover:bg-gray-100" title="로그인">
-                  <LogIn className="w-6 h-6" />
-                </Button>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => navigate("/login")}
+                    className="h-9 px-4 text-sm font-medium text-gray-600 hover:text-black transition-colors"
+                  >
+                    로그인
+                  </button>
+                  <button
+                    onClick={() => navigate("/signup")}
+                    className="h-9 px-4 text-sm font-semibold bg-black text-white rounded-full hover:bg-gray-800 transition-colors"
+                  >
+                    회원가입
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -164,6 +233,16 @@ export function Navbar() {
       {/* Chat Panel */}
       <AnimatePresence>
         {chatOpen && <ChatPanel onClose={() => setChatOpen(false)} />}
+      </AnimatePresence>
+
+      {/* Withdrawal Modal */}
+      <AnimatePresence>
+        {withdrawalOpen && (
+          <WithdrawalModal
+            onClose={() => setWithdrawalOpen(false)}
+            onWithdrawn={() => { setWithdrawalOpen(false); logout(); navigate("/app"); }}
+          />
+        )}
       </AnimatePresence>
 
       {/* Backdrop */}

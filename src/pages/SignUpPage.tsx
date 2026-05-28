@@ -24,6 +24,7 @@ export function SignUpPage() {
   const [isEmailAvailable, setIsEmailAvailable] = useState<boolean | null>(null);
   const [verificationCode, setVerificationCode] = useState("");
   const [isCodeSent, setIsCodeSent] = useState(false);
+  const [isSendingCode, setIsSendingCode] = useState(false);
   const [isCodeVerified, setIsCodeVerified] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(0);
 
@@ -64,6 +65,7 @@ export function SignUpPage() {
 
   const sendVerificationCode = async () => {
     if (!isEmailAvailable) { toast.error("이메일 중복 확인을 먼저 해주세요"); return; }
+    setIsSendingCode(true);
     try {
       await authApi.sendEmailCode(email);
       setIsCodeSent(true);
@@ -76,6 +78,8 @@ export function SignUpPage() {
     } catch (err) {
       const error = err as ApiError;
       toast.error(error.message ?? "인증 코드 전송에 실패했습니다");
+    } finally {
+      setIsSendingCode(false);
     }
   };
 
@@ -268,9 +272,11 @@ export function SignUpPage() {
               <AnimatePresence>
                 {isEmailAvailable && !isCodeSent && (
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-                    <button onClick={sendVerificationCode}
-                      className="w-full h-11 border border-gray-300 text-sm font-medium text-gray-700 hover:border-black hover:text-black transition-all">
-                      인증 코드 전송
+                    <button onClick={sendVerificationCode} disabled={isSendingCode}
+                      className="w-full h-11 border border-gray-300 text-sm font-medium text-gray-700 hover:border-black hover:text-black transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                      {isSendingCode
+                        ? <span className="flex items-center justify-center gap-2"><span className="w-3.5 h-3.5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin inline-block" />전송 중...</span>
+                        : "인증 코드 전송"}
                     </button>
                   </motion.div>
                 )}
@@ -302,12 +308,12 @@ export function SignUpPage() {
                             ? <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
                                 <span className="text-xs text-gray-400 tabular-nums">{formatTime(timeRemaining)}</span>
                                 <span className="text-gray-300">·</span>
-                                <button type="button" onClick={sendVerificationCode} className="text-xs text-gray-500 hover:text-black transition-colors">재전송</button>
+                                <button type="button" onClick={sendVerificationCode} disabled={isSendingCode} className="text-xs text-gray-500 hover:text-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed">{isSendingCode ? "전송 중" : "재전송"}</button>
                               </div>
                             : <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
                                 <span className="text-xs text-red-400">만료</span>
                                 <span className="text-gray-300">·</span>
-                                <button type="button" onClick={sendVerificationCode} className="text-xs text-gray-500 hover:text-black transition-colors">재전송</button>
+                                <button type="button" onClick={sendVerificationCode} disabled={isSendingCode} className="text-xs text-gray-500 hover:text-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed">{isSendingCode ? "전송 중" : "재전송"}</button>
                               </div>
                           }
                         </div>

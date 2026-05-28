@@ -39,7 +39,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     credentials: "include",
   });
 
-  if (res.status === 401 && path !== "/api/auth/refresh") {
+  if (res.status === 401 && path !== "/api/auth/refresh" && path !== "/api/auth/login") {
     const refreshed = await tryRefresh();
     if (refreshed) {
       headers["Authorization"] = `Bearer ${accessToken}`;
