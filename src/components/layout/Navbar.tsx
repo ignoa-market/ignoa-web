@@ -223,6 +223,22 @@ export function Navbar() {
             </div>
           </div>
         </div>
+
+        {/* Category Bar */}
+        <div className="border-t border-gray-100">
+          <div className="max-w-[1400px] mx-auto px-8">
+            <div className="flex items-center gap-7">
+              {["한정판", "빈티지", "콜라보", "라이프", "브랜드", "기획전"].map((cat) => (
+                <button
+                  key={cat}
+                  className="py-2.5 text-sm font-light text-gray-800 hover:text-black transition-colors whitespace-nowrap"
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       </nav>
 
       {/* Notification Panel */}

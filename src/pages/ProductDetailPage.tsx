@@ -203,7 +203,7 @@ export function ProductDetailPage() {
   const nextImage = () => goToImage(currentImageIndex === images.length - 1 ? 0 : currentImageIndex + 1);
 
   return (
-    <div className="min-h-screen bg-white pt-[156px]">
+    <div className="min-h-screen bg-white pt-[196px]">
       <div className="max-w-[1400px] mx-auto px-6 pt-0 pb-8 sm:pb-12">
 
         {/* 2-column layout */}

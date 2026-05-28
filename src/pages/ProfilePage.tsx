@@ -173,7 +173,7 @@ export function ProfilePage() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="min-h-screen bg-white pt-[156px] pb-28"
+      className="min-h-screen bg-white pt-[196px] pb-28"
     >
       {/* Profile Hero */}
       <div className="max-w-[1400px] mx-auto px-8">
