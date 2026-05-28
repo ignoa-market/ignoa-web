@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router";
-import { ChevronDown, ChevronLeft, ChevronRight, Check, ShieldCheck, MessageCircle, Heart, Share2, Eye } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Check, ShieldCheck, MessageCircle, Heart, Share2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -273,7 +273,7 @@ export function ProductDetailPage() {
           {/* Column 2: Info + Actions */}
           <div className="flex flex-col relative">
             {item.brand && (
-              <p className="text-sm font-semibold uppercase tracking-widest text-stone-500 mb-2 mt-8">
+              <p className="text-sm font-semibold uppercase tracking-widest text-stone-600 mb-2 mt-8">
                 {item.brand}
               </p>
             )}
@@ -331,21 +331,18 @@ export function ProductDetailPage() {
               </div>
             </div>
 
+            <hr className="border-t border-stone-100 mb-5" />
+
             {/* Description */}
-            <p className="text-sm text-stone-600 leading-relaxed whitespace-pre-line mb-5">
+            <p className="text-sm font-light text-stone-600 leading-relaxed whitespace-pre-line mb-5">
               {item.description}
             </p>
 
             {/* 조회수 + Timer */}
-            <div className="flex items-end justify-between mb-5">
-              <div className="flex items-center gap-1 h-5">
-                <Eye className="w-3.5 h-3.5 text-stone-400" />
-                <p className="text-xs text-stone-400 tabular-nums">{item.view_count.toLocaleString()}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-stone-400 mb-1">남은 시간</p>
-                <p className="text-xs text-blue-300 tabular-nums h-5">{countdown}</p>
-              </div>
+            <div className="flex items-center flex-nowrap gap-1.5 mb-5">
+              <p className="text-xs text-stone-500 tabular-nums whitespace-nowrap">조회수: {item.view_count.toLocaleString()}</p>
+              <span className="text-stone-500 flex-shrink-0">·</span>
+              <p className="text-xs text-stone-500 whitespace-nowrap">경매종료:{" "}<span className="text-stone-500 tabular-nums">{countdown}</span></p>
             </div>
 
             {/* Buttons */}
@@ -377,7 +374,7 @@ export function ProductDetailPage() {
                     setBidModalOpen(true);
                   }}
                   disabled={item.status !== "ACTIVE"}
-                  className="flex-1 bg-stone-800 hover:bg-stone-700 text-white h-11 text-sm font-medium rounded transition-colors disabled:opacity-50"
+                  className="flex-1 bg-black hover:bg-stone-900 text-white h-11 text-sm font-medium rounded transition-colors disabled:opacity-50"
                 >
                   {item.status !== "ACTIVE" ? "경매 종료" : "입찰하기"}
                 </Button>
@@ -398,7 +395,7 @@ export function ProductDetailPage() {
               </div>
             )}
 
-            <div className="w-full flex items-center justify-center gap-2 text-xs text-stone-700 bg-gray-100 px-4 h-11 rounded-full mt-4">
+            <div className="w-full flex items-center justify-center gap-2 text-xs text-stone-700 bg-gray-100 px-4 h-11 rounded mt-4">
               <ShieldCheck className="w-4 h-4 flex-shrink-0 text-sky-400" />
               <span>이그노아 안전결제로 걱정없이 거래하세요.</span>
             </div>

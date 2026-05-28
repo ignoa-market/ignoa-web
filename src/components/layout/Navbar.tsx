@@ -59,7 +59,7 @@ export function Navbar() {
   return (
     <>
       <nav className="fixed top-20 left-0 right-0 z-50 bg-white border-b border-gray-200">
-        <div className="max-w-[1400px] mx-auto px-8 py-5">
+        <div className="max-w-[1400px] mx-auto px-8 py-3.5">
           <div className="flex items-center gap-8">
             {/* Logo + Logo Name */}
             <Link to="/app" className="flex items-center gap-3 flex-shrink-0">
@@ -70,7 +70,7 @@ export function Navbar() {
             {/* Search Bar */}
             <div className="flex-1 max-w-[500px] relative" ref={searchContainerRef}>
               <div className="relative group">
-                <Search className="absolute left-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 transition-colors group-focus-within:text-black pointer-events-none" />
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 transition-colors group-focus-within:text-black pointer-events-none" />
                 <input
                   type="text"
                   placeholder="브랜드, 상품명 검색"
@@ -82,7 +82,7 @@ export function Navbar() {
                       setSearchFocused(false);
                     }
                   }}
-                  className="w-full h-9 pl-6 pr-6 bg-transparent border-0 border-b border-gray-200 text-sm text-black placeholder:text-gray-400 outline-none transition-all duration-200 focus:border-black"
+                  className="w-full h-12 pl-9 pr-8 bg-white rounded-full text-sm font-medium text-black placeholder:text-gray-400 placeholder:font-light outline-none border border-gray-200 transition-all duration-200 focus:border-gray-400"
                 />
                 {searchQuery && (
                   <button
