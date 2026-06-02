@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
 import { userApi } from "@/api/auth";
-import { itemApi, wishApi } from "@/api/item";
+import { wishApi } from "@/api/item";
 import type { ApiError, ItemSummary, WishSummary } from "@/types/api";
 
 
@@ -52,13 +52,13 @@ export function ProfilePage() {
   useEffect(() => {
     setTabLoading(true);
     Promise.all([
-      itemApi.getItems({ view: "MY_ITEMS", size: 20 }),
-      itemApi.getItems({ view: "MY_BIDS", size: 20 }),
+      userApi.getMyItems(),
+      userApi.getMyBids(),
       wishApi.getWishes(0, 20),
     ])
       .then(([items, bids, wishes]) => {
-        setMyItems(items.content);
-        setBiddingItems(bids.content);
+        setMyItems(items);
+        setBiddingItems(bids);
         setWishItems(wishes.content);
       })
       .catch(() => toast.error("목록을 불러오지 못했습니다"))

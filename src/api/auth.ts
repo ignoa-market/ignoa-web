@@ -1,6 +1,7 @@
 import { api } from "@/lib/api";
 import type {
   EmailVerifyResponse,
+  ItemSummary,
   LoginResponse,
   RefreshResponse,
   SignupResponse,
@@ -61,4 +62,10 @@ export const userApi = {
 
   deleteMe: () =>
     api.delete<void>("/api/users/me"),
+
+  getMyItems: () =>
+    api.get<ItemSummary[]>("/api/users/me/items"),
+
+  getMyBids: () =>
+    api.get<ItemSummary[]>("/api/users/me/bids"),
 };

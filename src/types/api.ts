@@ -46,7 +46,7 @@ export interface UserMeResponse {
 
 export type ItemStatus = "ACTIVE" | "CLOSED" | "NO_BID_CLOSED" | "BUY_NOW_CLOSED" | "CANCELED";
 export type ItemCondition = "NEW" | "LIKE_NEW" | "GOOD" | "FAIR";
-export type ItemViewType = "ALL" | "POPULAR" | "ENDING_SOON" | "LATEST" | "MY_ITEMS" | "MY_BIDS";
+export type ItemViewType = "ALL" | "POPULAR" | "ENDING_SOON" | "LATEST";
 
 export interface ItemSummary {
   item_id: number;
@@ -60,8 +60,8 @@ export interface ItemSummary {
   end_at: string;
 }
 
-export interface ItemMediaInfo {
-  id: number;
+export interface ItemMediaResponse {
+  item_media_id: number;
   url: string;
 }
 
@@ -82,6 +82,7 @@ export interface ItemDetailResponse {
   item_condition: ItemCondition;
   start_price: number;
   current_price: number;
+  buy_now_price: number | null;
   is_top_bidder: boolean;
   is_bidder: boolean;
   is_seller: boolean;
@@ -92,11 +93,18 @@ export interface ItemDetailResponse {
   wish_count: number;
   bid_count: number;
   view_count: number;
-  media_urls: ItemMediaInfo[];
+  media_urls: ItemMediaResponse[];
 }
 
 export interface ItemResponse {
   item_id: number;
+}
+
+export interface BuyNowResponse {
+  item_id: number;
+  buyer_id: number;
+  price: number;
+  status: ItemStatus;
 }
 
 // ────────────────────────────────────────────────

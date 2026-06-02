@@ -136,17 +136,24 @@ export function ProductDetailPage() {
 
   const handleBidNext = () => {
     const amount = parseInt(bidAmount.replace(/,/g, ""));
-    if (!bidAmount || isNaN(amount) || amount <= (item?.current_price ?? 0)) {
+    if (!bidAmount || isNaN(amount) || amount <= displayPrice) {
       toast.error("현재가보다 높은 금액을 입력하세요.");
       return;
     }
     setBidStep("confirm");
   };
 
-  const handleBuyNow = () => {
-    toast.success("구매가 완료되었습니다!");
-    setBuyNowModalOpen(false);
-    setBuyNowAgreed(false);
+  const handleBuyNow = async () => {
+    try {
+      await itemApi.buyNow(Number(id));
+      toast.success("즉시 구매가 완료되었습니다!");
+      setItem((prev) => prev ? { ...prev, status: "BUY_NOW_CLOSED" } : prev);
+      setBuyNowModalOpen(false);
+      setBuyNowAgreed(false);
+    } catch (err: unknown) {
+      const error = err as { message?: string };
+      toast.error(error?.message ?? "즉시 구매에 실패했습니다.");
+    }
   };
 
   const handleBidConfirm = async () => {
@@ -281,7 +288,7 @@ export function ProductDetailPage() {
               <h1 className="text-2xl font-semibold text-stone-800 leading-tight -ml-[3px]">
                 {item.title}
               </h1>
-              <div className="flex items-center gap-2 flex-shrink-0 -mt-[3px]">
+              <div className="flex items-center gap-2 flex-shrink-0 -mt-[13px]">
                 {!item.is_seller && (
                   <motion.button
                     onClick={handleWishToggle}
@@ -311,23 +318,35 @@ export function ProductDetailPage() {
 
             {/* Price */}
             <div className="mb-5">
-              <p className="text-xs text-stone-400 mb-1">현재가</p>
-              <div className="text-2xl font-semibold text-stone-800" style={{ perspective: "400px" }}>
-                {(displayPrice.toLocaleString() + "원").split("").map((char, i, arr) => (
-                  <motion.span
-                    key={`${priceAnimKey}-${i}`}
-                    initial={priceAnimKey === 0 ? false : { opacity: 0, rotateX: -90, y: -8 }}
-                    animate={{ opacity: 1, rotateX: 0, y: 0 }}
-                    transition={{
-                      delay: (arr.length - 1 - i) * 0.08,
-                      duration: 0.35,
-                      ease: [0.23, 1, 0.32, 1],
-                    }}
-                    style={{ display: "inline-block", transformOrigin: "top center" }}
-                  >
-                    {char}
-                  </motion.span>
-                ))}
+              <div className={`flex ${item.buy_now_price ? "justify-around" : ""}`}>
+                <div className="text-center">
+                  <p className="text-xs text-stone-400 mb-1.5">현재가</p>
+                  <div className="text-2xl font-semibold text-stone-800 leading-tight" style={{ perspective: "400px" }}>
+                    {(displayPrice.toLocaleString() + "원").split("").map((char, i, arr) => (
+                      <motion.span
+                        key={`${priceAnimKey}-${i}`}
+                        initial={priceAnimKey === 0 ? false : { opacity: 0, rotateX: -90, y: -8 }}
+                        animate={{ opacity: 1, rotateX: 0, y: 0 }}
+                        transition={{
+                          delay: (arr.length - 1 - i) * 0.08,
+                          duration: 0.35,
+                          ease: [0.23, 1, 0.32, 1],
+                        }}
+                        style={{ display: "inline-block", transformOrigin: "top center" }}
+                      >
+                        {char}
+                      </motion.span>
+                    ))}
+                  </div>
+                </div>
+                {item.buy_now_price && (
+                  <div className="text-center">
+                    <p className="text-xs text-stone-400 mb-1.5">즉시 구매가</p>
+                    <p className="text-2xl font-semibold text-stone-800 leading-tight">
+                      {item.buy_now_price.toLocaleString()}원
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -338,10 +357,8 @@ export function ProductDetailPage() {
               {item.description}
             </p>
 
-            {/* 조회수 + Timer */}
+            {/* Timer */}
             <div className="flex items-center flex-nowrap gap-1.5 mb-5">
-              <p className="text-xs text-stone-500 tabular-nums whitespace-nowrap">조회수: {item.view_count.toLocaleString()}</p>
-              <span className="text-stone-500 flex-shrink-0">·</span>
               <p className="text-xs text-stone-500 whitespace-nowrap">경매종료:{" "}<span className="text-stone-500 tabular-nums">{countdown}</span></p>
             </div>
 
@@ -378,20 +395,22 @@ export function ProductDetailPage() {
                 >
                   {item.status !== "ACTIVE" ? "경매 종료" : "입찰하기"}
                 </Button>
-                <Button
-                  onClick={() => {
-                    if (!isAuthenticated) {
-                      navigate("/login");
-                      return;
-                    }
-                    setBuyNowModalOpen(true);
-                  }}
-                  disabled={item.status !== "ACTIVE"}
-                  variant="outline"
-                  className="flex-1 border-stone-200 text-stone-600 h-11 text-sm font-medium rounded hover:bg-stone-50 hover:border-stone-300 transition-colors disabled:opacity-50"
-                >
-                  즉시 구매
-                </Button>
+                {item.buy_now_price && (
+                  <Button
+                    onClick={() => {
+                      if (!isAuthenticated) {
+                        navigate("/login");
+                        return;
+                      }
+                      setBuyNowModalOpen(true);
+                    }}
+                    disabled={item.status !== "ACTIVE"}
+                    variant="outline"
+                    className="flex-1 border-stone-200 text-stone-600 h-11 text-sm font-medium rounded hover:bg-stone-50 hover:border-stone-300 transition-colors disabled:opacity-50"
+                  >
+                    즉시 구매
+                  </Button>
+                )}
               </div>
             )}
 
@@ -632,7 +651,7 @@ export function ProductDetailPage() {
                         className="w-full text-2xl font-semibold text-stone-800 border-0 border-b border-gray-200 pb-2 bg-transparent outline-none focus:border-stone-600 transition-colors placeholder:text-gray-200"
                       />
                       <p className="text-xs text-gray-400 mt-2.5">
-                        최소 {(item.current_price + 1).toLocaleString()}원 이상
+                        최소 {(displayPrice + 1).toLocaleString()}원 이상
                       </p>
                     </div>
                     <div className="flex gap-3">
@@ -707,7 +726,9 @@ export function ProductDetailPage() {
             >
               <div className="mb-8">
                 <p className="text-xs text-gray-400 mb-1.5">즉시 구매가</p>
-                <p className="text-3xl font-semibold text-stone-800">문의 후 결정</p>
+                <p className="text-3xl font-semibold text-stone-800">
+                  {item.buy_now_price?.toLocaleString()}원
+                </p>
               </div>
 
               <label className="flex items-center gap-3 cursor-pointer mb-8">

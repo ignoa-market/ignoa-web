@@ -33,7 +33,7 @@ export function ProductEditPage() {
   const [submitting, setSubmitting] = useState(false);
 
   // 기존 데이터
-  const [existingImages, setExistingImages] = useState<{ id: number; url: string }[]>([]);
+  const [existingImages, setExistingImages] = useState<{ item_media_id: number; url: string }[]>([]);
   const [deletedMediaIds, setDeletedMediaIds] = useState<number[]>([]);
   const [startPrice, setStartPrice] = useState(0);
   const [currentPrice, setCurrentPrice] = useState(0);
@@ -101,7 +101,7 @@ export function ProductEditPage() {
   };
 
   const removeExistingImage = (id: number) => {
-    setExistingImages((prev) => prev.filter((img) => img.id !== id));
+    setExistingImages((prev) => prev.filter((img) => img.item_media_id !== id));
     setDeletedMediaIds((prev) => [...prev, id]);
   };
 
@@ -178,7 +178,7 @@ export function ProductEditPage() {
               <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 mb-3">
                 {existingImages.map((img, idx) => (
                   <div
-                    key={img.id}
+                    key={img.item_media_id}
                     className="relative group aspect-square rounded-lg overflow-hidden border-2 border-gray-200 hover:border-red-300 transition-all"
                   >
                     {idx === 0 && (
@@ -190,7 +190,7 @@ export function ProductEditPage() {
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
                       <button
                         type="button"
-                        onClick={() => removeExistingImage(img.id)}
+                        onClick={() => removeExistingImage(img.item_media_id)}
                         className="opacity-0 group-hover:opacity-100 w-7 h-7 bg-red-500 rounded-full flex items-center justify-center text-white hover:bg-red-600 transition-all"
                       >
                         <X className="w-4 h-4" />

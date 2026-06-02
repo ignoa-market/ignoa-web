@@ -4,6 +4,7 @@ import type {
   ItemSummary,
   ItemDetailResponse,
   ItemResponse,
+  BuyNowResponse,
   ItemCondition,
   ItemViewType,
   BidSummary,
@@ -82,6 +83,9 @@ export const itemApi = {
 
   deleteItem: (itemId: number) =>
     api.delete<ItemResponse>(`/api/items/${itemId}`),
+
+  buyNow: (itemId: number) =>
+    api.post<BuyNowResponse>(`/api/items/${itemId}/buy-now`, {}),
 };
 
 // ────────────────────────────────────────────────
