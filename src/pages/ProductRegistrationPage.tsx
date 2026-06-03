@@ -142,10 +142,18 @@ export function ProductRegistrationPage() {
       return;
     }
 
-    const startPriceNum = parseInt(startPrice.replace(/,/g, ""), 10);
-    const buyNowPriceNum = parseInt(buyNowPrice.replace(/,/g, ""), 10);
+    if (!startPrice) {
+      toast.error("시작가를 입력해주세요.");
+      return;
+    }
     if (!buyNowPrice) {
       toast.error("즉시 구매가를 입력해주세요.");
+      return;
+    }
+    const startPriceNum = parseInt(startPrice.replace(/,/g, ""), 10);
+    const buyNowPriceNum = parseInt(buyNowPrice.replace(/,/g, ""), 10);
+    if (buyNowPriceNum <= startPriceNum) {
+      toast.error("즉시 구매가는 시작가보다 높아야 합니다.");
       return;
     }
 
@@ -294,8 +302,15 @@ export function ProductRegistrationPage() {
                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₩</span>
                   <Input type="text" placeholder="1,200,000" value={buyNowPrice}
                     onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, ""); setBuyNowPrice(v ? parseInt(v).toLocaleString() : ""); }}
-                    className="pl-8 h-11 text-sm font-semibold focus-visible:ring-2 focus-visible:ring-black border-gray-300" required />
+                    className={`pl-8 h-11 text-sm font-semibold focus-visible:ring-2 focus-visible:ring-black ${
+                      buyNowPrice && startPrice && parseInt(buyNowPrice.replace(/,/g, "")) <= parseInt(startPrice.replace(/,/g, ""))
+                        ? "border-red-300 focus-visible:ring-red-400"
+                        : "border-gray-300"
+                    }`} required />
                 </div>
+                {buyNowPrice && startPrice && parseInt(buyNowPrice.replace(/,/g, "")) <= parseInt(startPrice.replace(/,/g, "")) && (
+                  <p className="text-xs text-red-500 mt-1.5">시작가보다 높아야 합니다.</p>
+                )}
               </div>
             </div>
 
