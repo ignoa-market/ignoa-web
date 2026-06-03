@@ -78,9 +78,6 @@ export const itemApi = {
     return api.patchForm<ItemResponse>(`/api/items/${itemId}`, formData);
   },
 
-  cancelItem: (itemId: number) =>
-    api.patch<ItemResponse>(`/api/items/${itemId}/cancel`),
-
   deleteItem: (itemId: number) =>
     api.delete<ItemResponse>(`/api/items/${itemId}`),
 

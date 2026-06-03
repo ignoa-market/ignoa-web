@@ -122,15 +122,15 @@ export function ProductDetailPage() {
     }
   };
 
-  const handleCancelAuction = async () => {
-    if (!window.confirm("경매를 종료하시겠습니까?\n입찰 내역은 유지되며 낙찰자는 선정되지 않습니다.")) return;
+  const handleDeleteItem = async () => {
+    if (!window.confirm("상품을 삭제하시겠습니까?\n삭제된 상품은 복구할 수 없습니다.")) return;
     try {
-      await itemApi.cancelItem(Number(id));
-      toast.success("경매가 종료되었습니다.");
-      setItem((prev) => prev ? { ...prev, status: "CANCELED" } : prev);
+      await itemApi.deleteItem(Number(id));
+      toast.success("상품이 삭제되었습니다.");
+      navigate("/app");
     } catch (err: unknown) {
       const error = err as { message?: string };
-      toast.error(error?.message ?? "경매 종료에 실패했습니다.");
+      toast.error(error?.message ?? "상품 삭제에 실패했습니다.");
     }
   };
 
@@ -367,17 +367,18 @@ export function ProductDetailPage() {
               <div className="flex gap-2">
                 <Button
                   onClick={() => navigate(`/app/products/${id}/edit`)}
-                  className="flex-1 bg-stone-800 hover:bg-stone-700 text-white h-11 text-sm font-medium rounded transition-colors"
+                  disabled={item.status !== "ACTIVE"}
+                  className="flex-1 bg-stone-800 hover:bg-stone-700 text-white h-11 text-sm font-medium rounded transition-colors disabled:opacity-40"
                 >
                   상품 수정
                 </Button>
                 <Button
-                  onClick={handleCancelAuction}
-                  disabled={item.status !== "ACTIVE"}
+                  onClick={handleDeleteItem}
+                  disabled={!(item.status === "NO_BID_CLOSED" || (item.status === "ACTIVE" && item.bid_count === 0))}
                   variant="outline"
                   className="flex-1 border-red-200 text-red-500 h-11 text-sm font-medium rounded hover:bg-red-50 hover:border-red-300 transition-colors disabled:opacity-40"
                 >
-                  {item.status === "ACTIVE" ? "경매 종료" : "종료됨"}
+                  상품 삭제
                 </Button>
               </div>
             ) : (
