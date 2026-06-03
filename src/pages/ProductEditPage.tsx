@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
-import { Upload, X } from "lucide-react";
+import { Upload, X, CheckCircle2 } from "lucide-react";
+import { DateTimePicker } from "@/components/common/DateTimePicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,6 +39,7 @@ export function ProductEditPage() {
   const [startPrice, setStartPrice] = useState(0);
   const [currentPrice, setCurrentPrice] = useState(0);
   const [endAt, setEndAt] = useState("");
+  const [endAtMode, setEndAtMode] = useState("custom");
 
   // 수정 가능한 필드
   const [title, setTitle] = useState("");
@@ -110,6 +112,29 @@ export function ProductEditPage() {
     setNewFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const handleQuickDuration = (ms: number, key: string) => {
+    const end = new Date(Date.now() + ms);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    setEndAt(`${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}T${pad(end.getHours())}:${pad(end.getMinutes())}`);
+    setEndAtMode(key);
+  };
+
+  const QUICK_OPTIONS = [
+    { label: "1일 후", ms: 1 * 24 * 60 * 60 * 1000, key: "1" },
+    { label: "3일 후", ms: 3 * 24 * 60 * 60 * 1000, key: "3" },
+    { label: "7일 후", ms: 7 * 24 * 60 * 60 * 1000, key: "7" },
+  ];
+
+  const getEndTimeStatus = (): { valid: boolean; message: string } | null => {
+    if (!endAt) return null;
+    const diff = new Date(endAt).getTime() - Date.now();
+    if (diff <= 0) return { valid: false, message: "마감 시간이 현재보다 과거입니다" };
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    return { valid: true, message: days > 0 ? `약 ${days}일 ${hours}시간 ${minutes}분 후` : `약 ${hours}시간 ${minutes}분 후` };
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!condition) {
@@ -138,7 +163,7 @@ export function ProductEditPage() {
           item_condition: condition,
           buy_now_price: buyNowPriceNum,
           delete_media_ids: deletedMediaIds.length > 0 ? deletedMediaIds : undefined,
-          end_at: endAt ? new Date(endAt).toISOString() : undefined,
+          end_at: endAt ? `${endAt}:00` : undefined,
         },
         newFiles
       );
@@ -387,17 +412,47 @@ export function ProductEditPage() {
 
             {/* 마감 시간 */}
             <div>
-              <Label className="text-sm font-semibold text-black mb-2 block">
-                경매 마감
-              </Label>
-              <Input
-                type="datetime-local"
-                value={endAt ? endAt.slice(0, 16) : ""}
-                min={new Date().toISOString().slice(0, 16)}
-                max={new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16)}
-                onChange={(e) => setEndAt(e.target.value)}
-                className="h-11 text-sm focus-visible:ring-2 focus-visible:ring-black border-gray-300"
-              />
+              <Label className="text-sm font-semibold text-black mb-3 block">경매 마감</Label>
+              <div className="flex flex-wrap gap-2 mb-3">
+                {QUICK_OPTIONS.map((opt) => (
+                  <button key={opt.key} type="button" onClick={() => handleQuickDuration(opt.ms, opt.key)}
+                    className={`px-4 h-9 rounded-lg border-2 text-sm font-medium transition-all ${
+                      endAtMode === opt.key ? "border-black bg-black text-white" : "border-gray-200 text-gray-600 hover:border-gray-400"
+                    }`}>
+                    {opt.label}
+                  </button>
+                ))}
+                <DateTimePicker
+                  value={endAt ? endAt.slice(0, 16) : ""}
+                  onChange={(val) => { setEndAt(val); setEndAtMode("custom"); }}
+                  min={new Date()}
+                  max={new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)}
+                >
+                  <button type="button" onClick={() => setEndAtMode("custom")}
+                    className={`px-4 h-9 rounded-lg border-2 text-sm font-medium transition-all ${
+                      endAtMode === "custom" ? "border-black bg-black text-white" : "border-gray-200 text-gray-600 hover:border-gray-400"
+                    }`}>
+                    직접 입력
+                  </button>
+                </DateTimePicker>
+              </div>
+              {endAt && (() => {
+                const status = getEndTimeStatus();
+                if (!status) return null;
+                return (
+                  <div className={`mt-3 flex items-center justify-between text-sm rounded-lg px-4 py-3 border ${
+                    status.valid ? "bg-gray-50 border-gray-200 text-gray-500" : "bg-red-50 border-red-200 text-red-500"
+                  }`}>
+                    <span className="flex items-center gap-1.5">
+                      <CheckCircle2 className={`w-4 h-4 flex-shrink-0 ${status.valid ? "text-black" : "text-red-400"}`} />
+                      {new Date(endAt).toLocaleString("ko-KR", { month: "long", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                    <span className={`ml-auto ${status.valid ? "text-black" : "text-red-500"}`}>
+                      {status.message}
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
           </div>
 

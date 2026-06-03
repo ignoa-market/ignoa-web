@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { Upload, X, Calendar, Clock, CheckCircle2 } from "lucide-react";
+import { Upload, X, CheckCircle2 } from "lucide-react";
+import { DateTimePicker } from "@/components/common/DateTimePicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -97,25 +98,29 @@ export function ProductRegistrationPage() {
     setImageFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleQuickDuration = (days: number) => {
-    const end = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
-    const year = end.getFullYear();
-    const month = String(end.getMonth() + 1).padStart(2, "0");
-    const day = String(end.getDate()).padStart(2, "0");
-    const hours = String(end.getHours()).padStart(2, "0");
-    const minutes = String(end.getMinutes()).padStart(2, "0");
-    setEndDate(`${year}-${month}-${day}`);
-    setEndTime(`${hours}:${minutes}`);
-    setQuickDuration(days.toString());
+  const handleQuickDuration = (ms: number, key: string) => {
+    const end = new Date(Date.now() + ms);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    setEndDate(`${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}`);
+    setEndTime(`${pad(end.getHours())}:${pad(end.getMinutes())}`);
+    setQuickDuration(key);
   };
 
-  const getRemainingTime = () => {
+  const QUICK_OPTIONS = [
+    { label: "1일 후", ms: 1 * 24 * 60 * 60 * 1000, key: "1" },
+    { label: "3일 후", ms: 3 * 24 * 60 * 60 * 1000, key: "3" },
+    { label: "7일 후", ms: 7 * 24 * 60 * 60 * 1000, key: "7" },
+  ];
+
+  const getEndTimeStatus = (): { valid: boolean; message: string } | null => {
     if (!endDate || !endTime) return null;
     const diff = new Date(`${endDate}T${endTime}`).getTime() - Date.now();
-    if (diff <= 0) return "마감 시간이 현재보다 과거입니다";
+    if (diff <= 0) return { valid: false, message: "마감 시간이 현재보다 과거입니다" };
+    if (diff < 24 * 60 * 60 * 1000 - 60 * 1000) return { valid: false, message: "최소 1일 이후여야 합니다" };
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    return days > 0 ? `약 ${days}일 ${hours}시간 후` : `약 ${hours}시간 후`;
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    return { valid: true, message: days > 0 ? `약 ${days}일 ${hours}시간 ${minutes}분 후` : `약 ${hours}시간 ${minutes}분 후` };
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -130,6 +135,10 @@ export function ProductRegistrationPage() {
     }
     if (!endDate || !endTime) {
       toast.error("경매 마감 시간을 설정해주세요.");
+      return;
+    }
+    if (new Date(`${endDate}T${endTime}`).getTime() < Date.now() + 24 * 60 * 60 * 1000 - 60 * 1000) {
+      toast.error("경매 마감 시간은 최소 1일 이후여야 합니다.");
       return;
     }
 
@@ -294,49 +303,51 @@ export function ProductRegistrationPage() {
             <div>
               <Label className="text-sm font-semibold text-black mb-3 block">경매 마감 <span className="text-red-500">*</span></Label>
               <div className="flex flex-wrap gap-2">
-                {[1, 3, 7].map((days) => (
-                  <button key={days} type="button" onClick={() => handleQuickDuration(days)}
+                {QUICK_OPTIONS.map((opt) => (
+                  <button key={opt.key} type="button" onClick={() => handleQuickDuration(opt.ms, opt.key)}
                     className={`px-4 h-9 rounded-lg border-2 text-sm font-medium transition-all ${
-                      quickDuration === String(days) ? "border-black bg-black text-white" : "border-gray-200 text-gray-600 hover:border-gray-400"
+                      quickDuration === opt.key ? "border-black bg-black text-white" : "border-gray-200 text-gray-600 hover:border-gray-400"
                     }`}>
-                    {days}일 후
+                    {opt.label}
                   </button>
                 ))}
-                <button type="button" onClick={() => setQuickDuration("custom")}
-                  className={`px-4 h-9 rounded-lg border-2 text-sm font-medium transition-all ${
-                    quickDuration === "custom" ? "border-black bg-black text-white" : "border-gray-200 text-gray-600 hover:border-gray-400"
-                  }`}>
-                  직접 입력
-                </button>
+                <DateTimePicker
+                  value={endDate && endTime ? `${endDate}T${endTime}` : ""}
+                  onChange={(val) => {
+                    const [date, time] = val.split("T");
+                    setEndDate(date ?? "");
+                    setEndTime(time ?? "");
+                    setQuickDuration("custom");
+                  }}
+                  min={new Date(new Date().setHours(24, 0, 0, 0))}
+                  max={new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)}
+                >
+                  <button type="button" onClick={() => setQuickDuration("custom")}
+                    className={`px-4 h-9 rounded-lg border-2 text-sm font-medium transition-all ${
+                      quickDuration === "custom" ? "border-black bg-black text-white" : "border-gray-200 text-gray-600 hover:border-gray-400"
+                    }`}>
+                    직접 입력
+                  </button>
+                </DateTimePicker>
               </div>
 
-              {quickDuration === "custom" && (
-                <div className="grid grid-cols-2 gap-3 mt-3">
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10" />
-                    <Input type="date" value={endDate}
-                      min={new Date().toISOString().split("T")[0]}
-                      max={new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      className="pl-10 h-11 text-sm focus-visible:ring-2 focus-visible:ring-black border-gray-300" />
+              {endDate && endTime && (() => {
+                const status = getEndTimeStatus();
+                if (!status) return null;
+                return (
+                  <div className={`mt-3 flex items-center justify-between text-sm rounded-lg px-4 py-3 border ${
+                    status.valid ? "bg-gray-50 border-gray-200 text-gray-500" : "bg-red-50 border-red-200 text-red-500"
+                  }`}>
+                    <span className="flex items-center gap-1.5">
+                      <CheckCircle2 className={`w-4 h-4 flex-shrink-0 ${status.valid ? "text-black" : "text-red-400"}`} />
+                      {new Date(`${endDate}T${endTime}`).toLocaleString("ko-KR", { month: "long", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                    <span className={`ml-auto ${status.valid ? "text-black" : "text-red-500"}`}>
+                      {status.message}
+                    </span>
                   </div>
-                  <div className="relative">
-                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10" />
-                    <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)}
-                      className="pl-10 h-11 text-sm focus-visible:ring-2 focus-visible:ring-black border-gray-300" />
-                  </div>
-                </div>
-              )}
-
-              {endDate && endTime && (
-                <div className="mt-3 flex items-center justify-between text-sm text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
-                  <span className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-4 h-4 text-black flex-shrink-0" />
-                    {new Date(`${endDate}T${endTime}`).toLocaleString("ko-KR", { month: "long", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit" })}
-                  </span>
-                  {getRemainingTime() && <span className="font-semibold text-black">{getRemainingTime()}</span>}
-                </div>
-              )}
+                );
+              })()}
             </div>
           </div>
 
