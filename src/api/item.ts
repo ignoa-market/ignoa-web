@@ -43,6 +43,7 @@ export interface ItemUpdatePayload {
   item_condition: ItemCondition;
   buy_now_price?: number;
   delete_media_ids?: number[];
+  end_at?: string;
 }
 
 export const itemApi = {

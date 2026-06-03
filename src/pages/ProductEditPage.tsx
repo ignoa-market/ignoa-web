@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
-import { Upload, X, CheckCircle2 } from "lucide-react";
+import { Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -138,6 +138,7 @@ export function ProductEditPage() {
           item_condition: condition,
           buy_now_price: buyNowPriceNum,
           delete_media_ids: deletedMediaIds.length > 0 ? deletedMediaIds : undefined,
+          end_at: endAt ? new Date(endAt).toISOString() : undefined,
         },
         newFiles
       );
@@ -384,23 +385,19 @@ export function ProductEditPage() {
               </div>
             </div>
 
-            {/* 마감 시간 (읽기 전용) */}
+            {/* 마감 시간 */}
             <div>
               <Label className="text-sm font-semibold text-black mb-2 block">
-                경매 마감 <span className="text-xs text-gray-400 font-normal">(변경 불가)</span>
+                경매 마감
               </Label>
-              <div className="flex items-center gap-1.5 text-sm text-gray-400 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
-                <CheckCircle2 className="w-4 h-4 text-gray-300 flex-shrink-0" />
-                {endAt
-                  ? new Date(endAt).toLocaleString("ko-KR", {
-                      month: "long",
-                      day: "numeric",
-                      weekday: "short",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
-                  : "-"}
-              </div>
+              <Input
+                type="datetime-local"
+                value={endAt ? endAt.slice(0, 16) : ""}
+                min={new Date().toISOString().slice(0, 16)}
+                max={new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16)}
+                onChange={(e) => setEndAt(e.target.value)}
+                className="h-11 text-sm focus-visible:ring-2 focus-visible:ring-black border-gray-300"
+              />
             </div>
           </div>
 
