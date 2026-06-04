@@ -158,19 +158,25 @@ export function ProductDetailPage() {
 
   const handleBidConfirm = async () => {
     const amount = parseInt(bidAmount.replace(/,/g, ""));
+    const willBuyNow = item?.buy_now_price != null && amount >= item.buy_now_price;
     try {
-      await bidApi.placeBid(Number(id), amount);
-      toast.success(`입찰 완료: ${amount.toLocaleString()}원`);
-      setDisplayPrice(amount);
-      setPriceAnimKey((k) => k + 1);
+      if (willBuyNow) {
+        await itemApi.buyNow(Number(id));
+        toast.success("즉시 구매가 완료되었습니다!");
+        setItem((prev) => prev ? { ...prev, status: "BUY_NOW_CLOSED" } : prev);
+      } else {
+        await bidApi.placeBid(Number(id), amount);
+        toast.success(`입찰 완료: ${amount.toLocaleString()}원`);
+        setDisplayPrice(amount);
+        setPriceAnimKey((k) => k + 1);
+        bidApi.getBids(Number(id)).then((res) => setBids(res.content));
+      }
       setBidModalOpen(false);
       setBidStep("input");
       setBidAmount("");
-      // 입찰 내역 갱신
-      bidApi.getBids(Number(id)).then((res) => setBids(res.content));
     } catch (err: unknown) {
       const error = err as { message?: string };
-      toast.error(error?.message ?? "입찰에 실패했습니다.");
+      toast.error(error?.message ?? "처리에 실패했습니다.");
     }
   };
 
@@ -681,9 +687,21 @@ export function ProductDetailPage() {
                     exit={{ opacity: 0, x: 20 }}
                     transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
                   >
-                    <p className="text-xs text-gray-400 mb-6">입찰 금액 확인</p>
-                    <p className="text-3xl font-semibold text-stone-800 mb-2">{bidAmount}원</p>
-                    <p className="text-sm text-gray-400 mb-10">이 금액으로 입찰하시겠습니까?</p>
+                    {(() => {
+                      const amount = parseInt(bidAmount.replace(/,/g, ""));
+                      const willBuyNow = item?.buy_now_price != null && !isNaN(amount) && amount >= item.buy_now_price;
+                      return (
+                        <>
+                          <p className="text-xs text-gray-400 mb-6">{willBuyNow ? "즉시 구매 확인" : "입찰 금액 확인"}</p>
+                          <p className="text-3xl font-semibold text-stone-800 mb-2">{bidAmount}원</p>
+                          <p className="text-sm text-gray-400 mb-10">
+                            {willBuyNow
+                              ? "즉시구매가 이상으로 즉시 구매로 처리됩니다."
+                              : "이 금액으로 입찰하시겠습니까?"}
+                          </p>
+                        </>
+                      );
+                    })()}
                     <div className="flex gap-3">
                       <button
                         onClick={handleBidConfirm}

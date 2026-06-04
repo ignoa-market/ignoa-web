@@ -129,6 +129,7 @@ export function ProductEditPage() {
     if (!endAt) return null;
     const diff = new Date(endAt).getTime() - Date.now();
     if (diff <= 0) return { valid: false, message: "마감 시간이 현재보다 과거입니다" };
+    if (diff > 7 * 24 * 60 * 60 * 1000 + 60 * 1000) return { valid: false, message: "최대 7일 이내여야 합니다" };
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -139,6 +140,11 @@ export function ProductEditPage() {
     e.preventDefault();
     if (!condition) {
       toast.error("상품 상태를 선택해주세요.");
+      return;
+    }
+
+    if (endAt && new Date(endAt).getTime() > Date.now() + 7 * 24 * 60 * 60 * 1000 + 60 * 1000) {
+      toast.error("경매 마감 시간은 최대 7일 이내여야 합니다.");
       return;
     }
 

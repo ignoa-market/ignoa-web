@@ -117,6 +117,7 @@ export function ProductRegistrationPage() {
     const diff = new Date(`${endDate}T${endTime}`).getTime() - Date.now();
     if (diff <= 0) return { valid: false, message: "마감 시간이 현재보다 과거입니다" };
     if (diff < 24 * 60 * 60 * 1000 - 60 * 1000) return { valid: false, message: "최소 1일 이후여야 합니다" };
+    if (diff > 7 * 24 * 60 * 60 * 1000 + 60 * 1000) return { valid: false, message: "최대 7일 이내여야 합니다" };
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -139,6 +140,10 @@ export function ProductRegistrationPage() {
     }
     if (new Date(`${endDate}T${endTime}`).getTime() < Date.now() + 24 * 60 * 60 * 1000 - 60 * 1000) {
       toast.error("경매 마감 시간은 최소 1일 이후여야 합니다.");
+      return;
+    }
+    if (new Date(`${endDate}T${endTime}`).getTime() > Date.now() + 7 * 24 * 60 * 60 * 1000 + 60 * 1000) {
+      toast.error("경매 마감 시간은 최대 7일 이내여야 합니다.");
       return;
     }
 
