@@ -1,261 +1,340 @@
 import { useState } from "react";
-import { Search, Send, MoreVertical, ChevronLeft, Image as ImageIcon } from "lucide-react";
+import { Send, ChevronLeft, MessageSquare, ImageIcon, X, Plus, Truck, CheckCircle, FileText, Banknote, AlertCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { motion, AnimatePresence } from "motion/react";
 
 interface Chat {
   id: string;
   name: string;
-  avatar: string;
+  avatar?: string;
   lastMessage: string;
   timestamp: string;
   unread: number;
   productTitle?: string;
   productImage?: string;
-  status: "waiting" | "inprogress" | "completed" | "archived";
 }
 
 interface Message {
   id: string;
   senderId: string;
   text?: string;
-  type?: "image";
-  imageUrl?: string;
+  mediaUrl?: string;
+  mediaType?: "image" | "video";
   timestamp: string;
 }
 
-
 export function MessagesPage() {
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"all" | "buying" | "selling">("all");
   const [message, setMessage] = useState("");
+  const [mediaPreview, setMediaPreview] = useState<{ url: string; type: "image" | "video" } | null>(null);
+  const [actionPanelOpen, setActionPanelOpen] = useState(false);
 
-  const handleSendMessage = () => {
-    if (message.trim()) {
-      // Send message logic here
-      setMessage("");
-    }
+  const ACTION_BUTTONS = [
+    { icon: Truck,        label: "택배 신청",    desc: "택배사 연동 배송 신청" },
+    { icon: FileText,     label: "송장번호 전달", desc: "운송장 번호 입력 후 전달" },
+    { icon: Banknote,     label: "계좌번호 전달", desc: "정산 계좌 정보 공유" },
+    { icon: CheckCircle,  label: "거래 완료",    desc: "거래를 완료로 변경" },
+    { icon: AlertCircle,  label: "거래 취소",    desc: "거래 취소 요청" },
+  ];
+
+  const chats: Chat[] = [
+    {
+      id: "1",
+      name: "김민준",
+      lastMessage: "혹시 직거래 가능하신가요?",
+      timestamp: "11:42",
+      unread: 2,
+      productTitle: "Nike Air Force 1 Low '07",
+      productImage: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=80&h=80&fit=crop",
+    },
+    {
+      id: "2",
+      name: "이서연",
+      lastMessage: "네 확인했습니다 감사해요",
+      timestamp: "어제",
+      unread: 0,
+      productTitle: "Stüssy 8 Ball Crewneck",
+    },
+  ];
+
+  const mockMessages: Record<string, Message[]> = {
+    "1": [
+      { id: "m1", senderId: "other", text: "안녕하세요! 상품 문의드려도 될까요?", timestamp: "11:30" },
+      { id: "m2", senderId: "me", text: "네 말씀하세요!", timestamp: "11:31" },
+      { id: "m3", senderId: "other", text: "사이즈가 270인데 발볼이 좀 있는 편인데 사이즈 여유 있을까요?", timestamp: "11:33" },
+      { id: "m4", senderId: "me", text: "저도 270 신는데 발볼 넓은 편이에요. 에어포스는 원래 여유롭게 나와서 괜찮을 것 같아요.", timestamp: "11:35" },
+      { id: "m5", senderId: "other", text: "아 그렇군요 감사합니다! 혹시 직거래 가능하신가요?", timestamp: "11:42" },
+    ],
+    "2": [
+      { id: "m1", senderId: "me", text: "낙찰 축하드려요! 배송 주소 알려주시면 바로 발송할게요.", timestamp: "어제 14:20" },
+      { id: "m2", senderId: "other", text: "서울시 마포구 합정동 ***번지 이○○ 010-****-****", timestamp: "어제 14:35" },
+      { id: "m3", senderId: "me", text: "확인했습니다! 내일 오전 중으로 발송 예정이에요.", timestamp: "어제 14:40" },
+      { id: "m4", senderId: "other", text: "네 확인했습니다 감사해요", timestamp: "어제 14:41" },
+    ],
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const messages: Message[] = selectedChat ? (mockMessages[selectedChat] ?? []) : [];
+  const selectedChatData = chats.find((c) => c.id === selectedChat);
+
+  const handleSend = () => {
+    if (!message.trim() && !mediaPreview) return;
+    setMessage("");
+    setMediaPreview(null);
+  };
+
+  const handleMediaSelect = (e: React.ChangeEvent<HTMLInputElement>, type: "image" | "video") => {
     const file = e.target.files?.[0];
-    if (file) {
-      // Create preview URL
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        // Here you would normally send the image to the server
-        // For now, we'll just log it
-        // In a real app, add this to messages
-      };
-      reader.readAsDataURL(file);
-    }
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    setMediaPreview({ url, type });
+    e.target.value = "";
   };
-
-  const chats: Chat[] = [];
-  const messages: Message[] = [];
-  const selectedChatData = chats.find((chat) => chat.id === selectedChat);
 
   return (
-    <div className="min-h-screen bg-white pt-[80px]">
-      <div className="mx-auto h-[calc(100vh-80px)]">
-        <div className="flex h-full border-x border-gray-200">
-          {/* Chat List */}
-          <div className="w-[300px] sm:w-[360px] border-r border-gray-200 flex-shrink-0">
+    <div className="min-h-screen bg-white pt-[196px]">
+      <div className="h-[calc(100vh-196px)] flex border-t border-stone-100">
 
-            {/* Chat List */}
-            <div className="overflow-y-auto h-full">
-              {chats.length > 0 ? (
-                chats.map((chat) => (
-                  <button
-                    key={chat.id}
-                    onClick={() => setSelectedChat(chat.id)}
-                    className={`w-full p-4 flex items-center gap-3 hover:bg-gray-50 transition-colors border-b border-gray-100 ${
-                      selectedChat === chat.id ? "bg-gray-50" : ""
-                    }`}
-                  >
-                    <Avatar className="w-12 h-12 flex-shrink-0">
-                      <AvatarImage src={chat.avatar} />
-                      <AvatarFallback className="bg-gray-200 text-gray-600">
-                        {chat.name.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-
-                    <div className="flex-1 min-w-0 text-left">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-semibold text-gray-900 text-sm">
-                          {chat.name}
-                        </span>
-                        <div className="flex items-center gap-2">
-                          {chat.unread > 0 && (
-                            <span className="bg-red-500 text-white text-xs font-semibold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
-                              {chat.unread}
-                            </span>
-                          )}
-                          {chat.productImage && (
-                            <img
-                              src={chat.productImage}
-                              alt={chat.productTitle}
-                              className="w-10 h-10 rounded object-cover flex-shrink-0"
-                            />
-                          )}
-                        </div>
-                      </div>
-                      <p className="text-xs text-gray-500 truncate mb-1">
-                        {chat.lastMessage}
-                      </p>
-                      <div className="flex items-center justify-between">
-                        {chat.productTitle && (
-                          <span className="text-xs text-gray-400">
-                            {chat.productTitle}
-                          </span>
-                        )}
-                        <span className="text-xs text-gray-400">
-                          {chat.timestamp}
-                        </span>
-                      </div>
-                    </div>
-                  </button>
-                ))
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full py-12">
-                  <p className="text-gray-500 text-sm">해당하는 메시지가 없습니다</p>
-                </div>
-              )}
-            </div>
+        {/* Chat List */}
+        <div className={`w-full md:w-[420px] flex-shrink-0 border-r border-stone-100 flex flex-col ${selectedChat ? "hidden md:flex" : "flex"}`}>
+          <div className="px-5 h-[68px] flex items-center gap-1 border-b border-stone-100">
+            {(["all", "buying", "selling"] as const).map((tab) => {
+              const label = { all: "전체", buying: "구매", selling: "판매" }[tab];
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-4 h-8 rounded-full text-xs font-medium transition-all ${
+                    activeTab === tab
+                      ? "bg-stone-800 text-white"
+                      : "text-stone-400 hover:text-stone-700"
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
           </div>
 
-          {/* Chat Window */}
-          {selectedChat ? (
-            <div className="flex flex-col h-full flex-1">
-              {/* Header */}
-              <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-white">
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setSelectedChat(null)}
-                    className="md:hidden text-gray-600 hover:text-gray-900"
-                  >
-                    <ChevronLeft className="w-6 h-6" />
-                  </button>
-                  <Avatar className="w-10 h-10">
-                    <AvatarImage src={selectedChatData?.avatar} />
-                    <AvatarFallback className="bg-gray-200 text-gray-600">
-                      {selectedChatData?.name.charAt(0)}
+          <div className="flex-1 overflow-y-auto">
+            {chats.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full gap-2">
+                <p className="text-[11px] font-semibold tracking-[0.2em] uppercase text-stone-300">No messages</p>
+              </div>
+            ) : (
+              chats.map((chat) => (
+                <button
+                  key={chat.id}
+                  onClick={() => setSelectedChat(chat.id)}
+                  className={`w-full px-5 py-4 flex items-center gap-3 border-b border-stone-100 transition-colors hover:bg-stone-50 text-left relative ${
+                    selectedChat === chat.id ? "bg-stone-50" : ""
+                  }`}
+                >
+                  {selectedChat === chat.id && (
+                    <span className="absolute left-0 top-0 bottom-0 w-[3px] bg-stone-800 rounded-r-full" />
+                  )}
+                  <Avatar className="w-10 h-10 flex-shrink-0">
+                    <AvatarImage src={chat.avatar} />
+                    <AvatarFallback className="bg-stone-100 text-stone-500 text-sm">
+                      {chat.name.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
-                  <div>
-                    <div className="font-semibold text-gray-900">
-                      {selectedChatData?.name}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-sm font-semibold text-stone-800 truncate">{chat.name}</span>
+                      <span className="text-[11px] text-stone-400 flex-shrink-0 ml-2">{chat.timestamp}</span>
                     </div>
-                    {selectedChatData?.productTitle && (
-                      <div className="text-xs text-gray-500">
-                        {selectedChatData.productTitle}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <Button variant="ghost" size="icon">
-                  <MoreVertical className="w-5 h-5" />
-                </Button>
-              </div>
-
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-                {messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`flex ${
-                      msg.senderId === "me" ? "justify-end" : "justify-start"
-                    }`}
-                  >
-                    <div
-                      className={`max-w-[70%] ${
-                        msg.senderId === "me"
-                          ? "bg-[#6BCF7F] text-white"
-                          : "bg-white text-gray-900"
-                      } rounded-2xl px-4 py-2 shadow-sm`}
-                    >
-                      {msg.type === "image" ? (
-                        <img
-                          src={msg.imageUrl}
-                          alt="Message Image"
-                          className="w-full h-auto"
-                        />
-                      ) : (
-                        <p className="text-sm">{msg.text}</p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-stone-500 truncate">{chat.lastMessage}</p>
+                      {chat.unread > 0 && (
+                        <span className="ml-2 flex-shrink-0 w-4 h-4 bg-stone-800 text-white text-[10px] font-semibold rounded-full flex items-center justify-center">
+                          {chat.unread}
+                        </span>
                       )}
-                      <span
-                        className={`text-xs mt-1 block ${
-                          msg.senderId === "me"
-                            ? "text-white/80"
-                            : "text-gray-500"
-                        }`}
-                      >
-                        {msg.timestamp}
-                      </span>
                     </div>
                   </div>
-                ))}
-              </div>
-
-              {/* Input */}
-              <div className="p-4 border-t border-gray-200 bg-white">
-                <div className="flex items-center gap-2">
-                  <label htmlFor="image-upload" className="cursor-pointer">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="text-gray-600 hover:text-gray-900"
-                      onClick={() => document.getElementById("image-upload")?.click()}
-                    >
-                      <ImageIcon className="w-5 h-5" />
-                    </Button>
-                  </label>
-                  <input
-                    id="image-upload"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                  />
-                  <Input
-                    type="text"
-                    placeholder="메시지를 입력하세요..."
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === "Enter") {
-                        handleSendMessage();
-                      }
-                    }}
-                    className="flex-1 h-11 border-gray-300"
-                  />
-                  <Button
-                    onClick={handleSendMessage}
-                    disabled={!message.trim()}
-                    className="bg-[#6BCF7F] hover:bg-[#5ABD6D] text-white h-11 px-6"
-                  >
-                    <Send className="w-5 h-5" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-1 items-center justify-center h-full bg-gray-50">
-              <div className="text-center">
-                <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Send className="w-10 h-10 text-gray-400" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  메시지를 선택하세요
-                </h3>
-                <p className="text-gray-500">
-                  대화를 시작하려면 채팅을 선택하세요
-                </p>
-              </div>
-            </div>
-          )}
+                  <div className="w-10 h-10 rounded flex-shrink-0 overflow-hidden bg-stone-100">
+                    {chat.productImage
+                      ? <img src={chat.productImage} alt="" className="w-full h-full object-cover" />
+                      : <div className="w-full h-full flex items-center justify-center">
+                          <MessageSquare className="w-4 h-4 text-stone-300" />
+                        </div>
+                    }
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
         </div>
+
+        {/* Chat Window */}
+        {selectedChat ? (
+          <div className={`flex flex-col flex-1 relative ${selectedChat ? "flex" : "hidden md:flex"}`}>
+            {/* Header */}
+            <div className="px-5 h-[68px] border-b border-stone-100 flex items-center gap-3">
+              <button
+                onClick={() => setSelectedChat(null)}
+                className="md:hidden w-8 h-8 flex items-center justify-center rounded-full hover:bg-stone-100 transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4 text-stone-500" />
+              </button>
+              <Avatar className="w-9 h-9 flex-shrink-0">
+                <AvatarImage src={selectedChatData?.avatar} />
+                <AvatarFallback className="bg-stone-100 text-stone-500 text-sm">
+                  {selectedChatData?.name.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-stone-800">{selectedChatData?.name}</p>
+              </div>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto px-5 py-6 space-y-3 bg-stone-50">
+              {messages.map((msg) => {
+                const isMe = msg.senderId === "me";
+                return (
+                  <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
+                    <div className={`max-w-[68%] rounded-2xl overflow-hidden ${
+                      isMe
+                        ? "bg-stone-800 text-white rounded-br-sm"
+                        : "bg-white text-stone-800 rounded-bl-sm shadow-sm"
+                    }`}>
+                      {msg.mediaType === "image" && msg.mediaUrl && (
+                        <img src={msg.mediaUrl} alt="" className="w-full max-w-[260px] object-cover" />
+                      )}
+                      {msg.mediaType === "video" && msg.mediaUrl && (
+                        <video src={msg.mediaUrl} controls className="w-full max-w-[260px]" />
+                      )}
+                      {msg.text && (
+                        <div className="px-4 py-2.5">
+                          <p className="text-sm leading-relaxed">{msg.text}</p>
+                        </div>
+                      )}
+                      <div className={`px-4 pb-2 ${msg.text ? "pt-0" : "pt-1"}`}>
+                        <p className={`text-[10px] ${isMe ? "text-white/50" : "text-stone-400"}`}>
+                          {msg.timestamp}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Action Panel */}
+            <AnimatePresence>
+              {actionPanelOpen && (
+                <>
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="absolute inset-0 z-10"
+                    onClick={() => setActionPanelOpen(false)}
+                  />
+                  <motion.div
+                    initial={{ y: "100%", opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: "100%", opacity: 0 }}
+                    transition={{ type: "spring", damping: 28, stiffness: 320 }}
+                    className="absolute bottom-[72px] left-0 right-0 z-20 bg-white border-t border-stone-100 shadow-lg px-5 py-4"
+                  >
+                    <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-stone-400 mb-3">거래 관련</p>
+                    <div className="grid grid-cols-5 gap-2">
+                      {ACTION_BUTTONS.map(({ icon: Icon, label }) => (
+                        <button
+                          key={label}
+                          onClick={() => setActionPanelOpen(false)}
+                          className="flex flex-col items-center gap-2 py-3 rounded-xl hover:bg-stone-50 transition-all group"
+                        >
+                          <div className="w-9 h-9 rounded-full bg-stone-100 flex items-center justify-center group-hover:bg-stone-200 transition-all">
+                            <Icon className="w-[17px] h-[17px] text-stone-500 group-hover:text-stone-800 transition-colors" />
+                          </div>
+                          <span className="text-[10px] text-stone-500 font-medium text-center leading-tight group-hover:text-stone-800 transition-colors">{label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+
+            {/* Input */}
+            <div className="px-5 py-4 border-t border-stone-100 bg-white">
+              {mediaPreview && (
+                <div className="mb-3 relative inline-block">
+                  {mediaPreview.type === "image"
+                    ? <img src={mediaPreview.url} alt="" className="h-20 rounded-lg object-cover" />
+                    : <video src={mediaPreview.url} className="h-20 rounded-lg" />
+                  }
+                  <button
+                    onClick={() => setMediaPreview(null)}
+                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-stone-800 text-white rounded-full flex items-center justify-center"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+              <div className="flex items-center gap-4">
+                {/* 왼쪽: + 버튼 */}
+                <button
+                  onClick={() => setActionPanelOpen((v) => !v)}
+                  className={`w-9 h-9 flex items-center justify-center rounded-full transition-all flex-shrink-0 -ml-[10px] ${
+                    actionPanelOpen ? "bg-stone-800 text-white" : "bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-800"
+                  }`}
+                >
+                  <Plus className={`w-[17px] h-[17px] transition-transform duration-200 ${actionPanelOpen ? "rotate-45" : ""}`} />
+                </button>
+
+                <Input
+                  placeholder="메시지를 입력하세요"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+                  className="flex-1 h-10 border-stone-200 text-sm focus-visible:ring-1 focus-visible:ring-stone-400"
+                />
+
+                {/* 오른쪽: 미디어/전송 */}
+                <input
+                  id="media-upload"
+                  type="file"
+                  accept="image/*,video/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const type = file.type.startsWith("video/") ? "video" : "image";
+                    handleMediaSelect(e, type);
+                  }}
+                />
+                <button
+                  onClick={() => document.getElementById("media-upload")?.click()}
+                  className="w-9 h-9 flex items-center justify-center rounded-full bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-800 transition-all flex-shrink-0"
+                >
+                  <ImageIcon className="w-[17px] h-[17px]" />
+                </button>
+                <button
+                  onClick={handleSend}
+                  disabled={!message.trim() && !mediaPreview}
+                  className="w-9 h-9 bg-stone-800 hover:bg-stone-700 disabled:opacity-30 disabled:cursor-not-allowed text-white rounded-full flex items-center justify-center transition-all flex-shrink-0"
+                >
+                  <Send className="w-[15px] h-[15px]" />
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="hidden md:flex flex-1 items-center justify-center bg-stone-50">
+            <div className="text-center flex flex-col items-center gap-3">
+              <div className="w-14 h-14 rounded-full bg-stone-100 flex items-center justify-center">
+                <MessageSquare className="w-6 h-6 text-stone-300" />
+              </div>
+              <p className="text-[11px] font-semibold tracking-[0.3em] uppercase text-stone-300">대화를 선택하세요</p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

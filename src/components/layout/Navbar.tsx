@@ -5,7 +5,6 @@ import { useState, useRef, useEffect } from "react";
 import logoImage from "@/assets/logo.png";
 import { useAuth } from "@/context/AuthContext";
 import { authApi } from "@/api/auth";
-import { ChatPanel } from "@/components/common/ChatPanel";
 import { NotificationPanel } from "@/components/common/NotificationPanel";
 import { WithdrawalModal } from "@/components/common/WithdrawalModal";
 import { motion, AnimatePresence } from "motion/react";
@@ -27,7 +26,6 @@ export function Navbar() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
-  const [chatOpen, setChatOpen] = useState(false);
   const [notiOpen, setNotiOpen] = useState(false);
   const { isAuthenticated, logout } = useAuth();
   const searchContainerRef = useRef<HTMLDivElement>(null);
@@ -135,7 +133,7 @@ export function Navbar() {
 
                   <div className="flex items-center gap-3">
                     <button
-                      onClick={() => { setNotiOpen((v) => !v); setChatOpen(false); }}
+                      onClick={() => setNotiOpen((v) => !v)}
                       className={`w-9 h-9 flex items-center justify-center rounded-full transition-colors ${
                         notiOpen ? "bg-gray-200 text-black" : "bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-black"
                       }`}
@@ -144,10 +142,8 @@ export function Navbar() {
                       <Bell className="w-[18px] h-[18px]" />
                     </button>
                     <button
-                      onClick={() => { setChatOpen((v) => !v); setNotiOpen(false); }}
-                      className={`w-9 h-9 flex items-center justify-center rounded-full transition-colors ${
-                        chatOpen ? "bg-gray-200 text-black" : "bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-black"
-                      }`}
+                      onClick={() => { navigate("/app/messages"); setNotiOpen(false); }}
+                      className="w-9 h-9 flex items-center justify-center rounded-full transition-colors bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-black"
                       title="채팅"
                     >
                       <MessageSquare className="w-[18px] h-[18px]" />
@@ -248,7 +244,6 @@ export function Navbar() {
 
       {/* Chat Panel */}
       <AnimatePresence>
-        {chatOpen && <ChatPanel onClose={() => setChatOpen(false)} />}
       </AnimatePresence>
 
       {/* Withdrawal Modal */}
@@ -263,14 +258,14 @@ export function Navbar() {
 
       {/* Backdrop */}
       <AnimatePresence>
-        {(chatOpen || notiOpen) && (
+        {notiOpen && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="fixed inset-0 z-40 bg-black/20"
-            onClick={() => { setChatOpen(false); setNotiOpen(false); }}
+            onClick={() => setNotiOpen(false)}
           />
         )}
       </AnimatePresence>
