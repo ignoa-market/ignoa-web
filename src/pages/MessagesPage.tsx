@@ -39,43 +39,9 @@ export function MessagesPage() {
     { icon: AlertCircle,  label: "거래 취소",    desc: "거래 취소 요청" },
   ];
 
-  const chats: Chat[] = [
-    {
-      id: "1",
-      name: "김민준",
-      lastMessage: "혹시 직거래 가능하신가요?",
-      timestamp: "11:42",
-      unread: 2,
-      productTitle: "Nike Air Force 1 Low '07",
-      productImage: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=80&h=80&fit=crop",
-    },
-    {
-      id: "2",
-      name: "이서연",
-      lastMessage: "네 확인했습니다 감사해요",
-      timestamp: "어제",
-      unread: 0,
-      productTitle: "Stüssy 8 Ball Crewneck",
-    },
-  ];
+  const chats: Chat[] = [];
 
-  const mockMessages: Record<string, Message[]> = {
-    "1": [
-      { id: "m1", senderId: "other", text: "안녕하세요! 상품 문의드려도 될까요?", timestamp: "11:30" },
-      { id: "m2", senderId: "me", text: "네 말씀하세요!", timestamp: "11:31" },
-      { id: "m3", senderId: "other", text: "사이즈가 270인데 발볼이 좀 있는 편인데 사이즈 여유 있을까요?", timestamp: "11:33" },
-      { id: "m4", senderId: "me", text: "저도 270 신는데 발볼 넓은 편이에요. 에어포스는 원래 여유롭게 나와서 괜찮을 것 같아요.", timestamp: "11:35" },
-      { id: "m5", senderId: "other", text: "아 그렇군요 감사합니다! 혹시 직거래 가능하신가요?", timestamp: "11:42" },
-    ],
-    "2": [
-      { id: "m1", senderId: "me", text: "낙찰 축하드려요! 배송 주소 알려주시면 바로 발송할게요.", timestamp: "어제 14:20" },
-      { id: "m2", senderId: "other", text: "서울시 마포구 합정동 ***번지 이○○ 010-****-****", timestamp: "어제 14:35" },
-      { id: "m3", senderId: "me", text: "확인했습니다! 내일 오전 중으로 발송 예정이에요.", timestamp: "어제 14:40" },
-      { id: "m4", senderId: "other", text: "네 확인했습니다 감사해요", timestamp: "어제 14:41" },
-    ],
-  };
-
-  const messages: Message[] = selectedChat ? (mockMessages[selectedChat] ?? []) : [];
+  const messages: Message[] = [];
   const selectedChatData = chats.find((c) => c.id === selectedChat);
 
   const handleSend = () => {

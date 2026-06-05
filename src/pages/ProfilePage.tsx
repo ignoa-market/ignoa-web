@@ -235,7 +235,7 @@ export function ProfilePage() {
                 </button>
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm text-gray-400">판매수</span>
-                  <span className="text-sm font-bold text-black">{myItems.length}</span>
+                  <span className="text-sm font-bold text-black">0</span>
                 </div>
               </div>
             </div>
