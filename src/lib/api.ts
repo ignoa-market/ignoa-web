@@ -46,6 +46,8 @@ async function parseError(res: Response): Promise<ApiError> {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  if (refreshLock) await refreshLock;
+
   const isFormData = init?.body instanceof FormData;
 
   const headers: Record<string, string> = {
