@@ -129,6 +129,7 @@ export function ProfilePage() {
     viewCount?: number;
     isWished?: boolean;
     isEnded: boolean;
+    isSold?: boolean;
   };
 
   const itemToCard = (item: ItemSummary): ProfileCard => ({
@@ -140,6 +141,7 @@ export function ProfilePage() {
     wishCount: item.wish_count,
     viewCount: item.view_count,
     isEnded: item.status !== "ACTIVE",
+    isSold: item.status === "BID_CLOSED" || item.status === "BUY_NOW_CLOSED",
   });
 
   const wishToCard = (w: WishSummary): ProfileCard => ({
@@ -402,7 +404,7 @@ export function ProfilePage() {
                         <div className="absolute inset-0 bg-black/30" />
                         <div className="absolute inset-0 flex items-center justify-center">
                           <span className="text-2xl font-black text-white drop-shadow-md">
-                            {activeTab === "products" ? "SOLD" : "ENDED"}
+                            {card.isSold ? "SOLD" : "ENDED"}
                           </span>
                         </div>
                       </div>

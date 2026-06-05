@@ -65,7 +65,7 @@ export function ProductCard({ product }: ProductCardProps) {
   };
 
   return (
-    <Link to={`/app/product/${id}`} className="group block cursor-pointer">
+    <Link to={`/app/products/${id}`} className="group block cursor-pointer">
       {/* Image */}
       <div className="relative aspect-square overflow-hidden bg-gray-100 rounded-sm mb-2.5">
         <img

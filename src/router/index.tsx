@@ -20,7 +20,6 @@ export const router = createBrowserRouter([
     Component: Root,
     children: [
       { index: true, Component: HomePage },
-      { path: "product/:id", Component: ProductDetailPage },
       { path: "products/:id", Component: ProductDetailPage },
       { path: "register-product", Component: ProductRegistrationPage },
       { path: "products/:id/edit", Component: ProductEditPage },

@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
 import { setAccessToken, setUnauthorizedHandler } from "@/lib/api";
-import { authApi } from "@/api/auth";
+import { authApi, userApi } from "@/api/auth";
 
 interface AuthState {
   isAuthenticated: boolean;
@@ -29,10 +29,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initialized.current = true;
 
     authApi.refresh()
-      .then((res) => {
+      .then(async (res) => {
         setAccessToken(res.access_token);
-        // refresh 응답에 userId가 없으므로 별도 /me 호출 없이 일단 authenticated 처리
-        setState({ isAuthenticated: true, userId: null, isInitializing: false });
+        const me = await userApi.getMe();
+        setState({ isAuthenticated: true, userId: me.user_id, isInitializing: false });
       })
       .catch(() => {
         setState({ isAuthenticated: false, userId: null, isInitializing: false });

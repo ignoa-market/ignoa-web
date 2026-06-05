@@ -44,7 +44,7 @@ export interface UserMeResponse {
 // Item
 // ────────────────────────────────────────────────
 
-export type ItemStatus = "ACTIVE" | "CLOSED" | "NO_BID_CLOSED" | "BUY_NOW_CLOSED" | "CANCELED";
+export type ItemStatus = "ACTIVE" | "BID_CLOSED" | "NO_BID_CLOSED" | "BUY_NOW_CLOSED";
 export type ItemCondition = "NEW" | "LIKE_NEW" | "GOOD" | "FAIR";
 export type ItemViewType = "ALL" | "POPULAR" | "ENDING_SOON" | "LATEST";
 
