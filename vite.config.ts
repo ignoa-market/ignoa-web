@@ -27,4 +27,8 @@ export default defineConfig({
       '/ws':  'http://localhost:38080',
     },
   },
+  preview: {
+    port: 35173,
+    allowedHosts: ['ignoa.wisoft.dev'],
+  },
 })
