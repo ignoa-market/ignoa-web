@@ -141,6 +141,7 @@ export function ProfilePage() {
     wishCount: item.wish_count,
     viewCount: item.view_count,
     status: item.status,
+    isEnded: new Date(item.end_at) < new Date(),
   });
 
   const wishToCard = (w: WishSummary): ProfileCard => ({
@@ -150,6 +151,7 @@ export function ProfilePage() {
     imageUrl: w.media_url,
     wishCount: w.wish_count,
     isWished: true,
+    status: w.status,
     isEnded: new Date(w.end_at) < new Date(),
   });
 

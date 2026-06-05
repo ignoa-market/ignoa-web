@@ -143,4 +143,5 @@ export interface WishSummary {
   end_at: string;
   media_url: string;
   wished_at: string;
+  status: ItemStatus;
 }
