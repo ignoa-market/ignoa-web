@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
 import { userApi } from "@/api/auth";
 import { wishApi } from "@/api/item";
-import type { ApiError, ItemSummary, WishSummary } from "@/types/api";
+import type { ApiError, ItemStatus, ItemSummary, WishSummary } from "@/types/api";
 
 
 export function ProfilePage() {
@@ -128,8 +128,8 @@ export function ProfilePage() {
     wishCount: number;
     viewCount?: number;
     isWished?: boolean;
-    isEnded: boolean;
-    isSold?: boolean;
+    status?: ItemStatus;
+    isEnded?: boolean;
   };
 
   const itemToCard = (item: ItemSummary): ProfileCard => ({
@@ -140,8 +140,7 @@ export function ProfilePage() {
     imageUrl: item.media_url,
     wishCount: item.wish_count,
     viewCount: item.view_count,
-    isEnded: item.status !== "ACTIVE",
-    isSold: item.status === "BID_CLOSED" || item.status === "BUY_NOW_CLOSED",
+    status: item.status,
   });
 
   const wishToCard = (w: WishSummary): ProfileCard => ({
@@ -396,19 +395,8 @@ export function ProfilePage() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3, delay: index * 0.05 }}
-                    className="relative"
                   >
                     <ProductCard product={card} />
-                    {card.isEnded && (
-                      <div className="absolute top-0 left-0 right-0 aspect-square rounded-sm overflow-hidden pointer-events-none">
-                        <div className="absolute inset-0 bg-black/30" />
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="text-2xl font-black text-white drop-shadow-md">
-                            {card.isSold ? "SOLD" : "ENDED"}
-                          </span>
-                        </div>
-                      </div>
-                    )}
                   </motion.div>
                 ))}
               </div>

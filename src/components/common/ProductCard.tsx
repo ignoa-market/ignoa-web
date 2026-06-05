@@ -5,6 +5,7 @@ import { motion } from "motion/react";
 import { wishApi } from "@/api/item";
 import { useAuth } from "@/context/AuthContext";
 import { wishStore } from "@/store/wishStore";
+import type { ItemStatus } from "@/types/api";
 
 interface ProductCardProps {
   product: {
@@ -17,11 +18,21 @@ interface ProductCardProps {
     wishCount?: number;
     viewCount?: number;
     isWished?: boolean;
+    status?: ItemStatus;
+    isEnded?: boolean;
   };
+}
+
+function resolveOverlay(status?: ItemStatus, isEnded?: boolean): "SOLD" | "ENDED" | null {
+  if (status === "BID_CLOSED" || status === "BUY_NOW_CLOSED") return "SOLD";
+  if (status === "NO_BID_CLOSED") return "ENDED";
+  if (isEnded) return "ENDED";
+  return null;
 }
 
 export function ProductCard({ product }: ProductCardProps) {
   const { id, title, brand, currentPrice, size, imageUrl, viewCount } = product;
+  const overlay = resolveOverlay(product.status, product.isEnded);
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
 
@@ -73,6 +84,11 @@ export function ProductCard({ product }: ProductCardProps) {
           alt={title}
           className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
         />
+        {overlay && (
+          <div className="absolute inset-0 bg-black/30 flex items-center justify-center pointer-events-none">
+            <span className="text-2xl text-white drop-shadow-md" style={{ fontWeight: 750 }}>{overlay}</span>
+          </div>
+        )}
         <motion.button
           onClick={handleWishToggle}
           whileTap={{ scale: 0.82 }}
