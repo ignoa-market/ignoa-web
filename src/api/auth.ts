@@ -3,7 +3,6 @@ import type {
   EmailVerifyResponse,
   ItemSummary,
   LoginResponse,
-  RefreshResponse,
   SignupResponse,
   UserMeResponse,
 } from "@/types/api";
@@ -24,9 +23,6 @@ export const authApi = {
 
   logout: () =>
     api.post<void>("/api/auth/logout"),
-
-  refresh: () =>
-    api.post<RefreshResponse>("/api/auth/refresh"),
 
   sendEmailCode: (email: string) =>
     api.post<void>("/api/auth/email/send", { email }),

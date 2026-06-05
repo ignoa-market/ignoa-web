@@ -9,6 +9,7 @@ import { LoginPage } from "@/pages/LoginPage";
 import { SignUpPage } from "@/pages/SignUpPage";
 import { OAuthKakaoCallbackPage } from "@/pages/OAuthKakaoCallbackPage";
 import { Root } from "@/components/layout/RootLayout";
+import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 
 export const router = createBrowserRouter([
   {
@@ -21,10 +22,15 @@ export const router = createBrowserRouter([
     children: [
       { index: true, Component: HomePage },
       { path: "products/:id", Component: ProductDetailPage },
-      { path: "register-product", Component: ProductRegistrationPage },
-      { path: "products/:id/edit", Component: ProductEditPage },
-      { path: "profile", Component: ProfilePage },
-      { path: "messages", Component: MessagesPage },
+      {
+        Component: ProtectedRoute,
+        children: [
+          { path: "register-product", Component: ProductRegistrationPage },
+          { path: "products/:id/edit", Component: ProductEditPage },
+          { path: "profile", Component: ProfilePage },
+          { path: "messages", Component: MessagesPage },
+        ],
+      },
     ],
   },
   {

@@ -24,10 +24,6 @@ export interface SignupResponse {
   access_token: string;
 }
 
-export interface RefreshResponse {
-  access_token: string;
-}
-
 export interface EmailVerifyResponse {
   verified: boolean;
 }
@@ -54,6 +50,7 @@ export interface ItemSummary {
   title: string;
   media_url: string;
   current_price: number;
+  is_wished: boolean;
   wish_count: number;
   view_count: number;
   status: ItemStatus;
@@ -143,5 +140,5 @@ export interface WishSummary {
   end_at: string;
   media_url: string;
   wished_at: string;
-  status: ItemStatus;
+  item_status: ItemStatus;
 }

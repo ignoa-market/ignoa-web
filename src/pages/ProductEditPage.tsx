@@ -67,7 +67,7 @@ export function ProductEditPage() {
         setBuyNowPrice("");
         setStartPrice(data.start_price);
         setCurrentPrice(data.current_price);
-        setEndAt(data.end_at);
+        setEndAt(data.end_at.slice(0, 16));
         setExistingImages(data.media_urls);
       })
       .catch(() => toast.error("상품 정보를 불러오지 못했습니다."))
@@ -88,18 +88,22 @@ export function ProductEditPage() {
     if (e.target.files) handleFiles(Array.from(e.target.files));
   };
 
-  const handleFiles = (files: File[]) => {
-    files.forEach((file) => {
-      if (!file.type.startsWith("image/")) return;
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        if (e.target?.result) {
-          setNewPreviews((prev) => [...prev, e.target!.result as string]);
-          setNewFiles((prev) => [...prev, file]);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+  const handleFiles = async (files: File[]) => {
+    const validFiles = files.filter((file) => file.type.startsWith("image/"));
+
+    const previews = await Promise.all(
+      validFiles.map(
+        (file) =>
+          new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target!.result as string);
+            reader.readAsDataURL(file);
+          })
+      )
+    );
+
+    setNewPreviews((prev) => [...prev, ...previews]);
+    setNewFiles((prev) => [...prev, ...validFiles]);
   };
 
   const removeExistingImage = (id: number) => {
@@ -203,88 +207,84 @@ export function ProductEditPage() {
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* 이미지 */}
           <div className="bg-white rounded-lg p-6 sm:p-8 border border-gray-200">
-            <Label className="text-sm font-semibold text-black mb-3 block">상품 이미지</Label>
+            <Label className="text-sm font-semibold text-black mb-4 block">
+              상품 이미지
+              <span className="text-xs text-gray-400 font-normal ml-2">
+                {existingImages.length + newPreviews.length}장
+              </span>
+            </Label>
 
-            {/* 기존 이미지 */}
-            {existingImages.length > 0 && (
-              <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 mb-3">
-                {existingImages.map((img, idx) => (
-                  <div
-                    key={img.item_media_id}
-                    className="relative group aspect-square rounded-lg overflow-hidden border-2 border-gray-200 hover:border-red-300 transition-all"
-                  >
-                    {idx === 0 && (
-                      <div className="absolute top-1.5 left-1.5 z-10 bg-black text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-                        대표
-                      </div>
-                    )}
-                    <img src={img.url} alt="" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
-                      <button
-                        type="button"
-                        onClick={() => removeExistingImage(img.item_media_id)}
-                        className="opacity-0 group-hover:opacity-100 w-7 h-7 bg-red-500 rounded-full flex items-center justify-center text-white hover:bg-red-600 transition-all"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
+            <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+              {/* 기존 이미지 */}
+              {existingImages.map((img, idx) => (
+                <div
+                  key={img.item_media_id}
+                  className="relative group aspect-square rounded-lg overflow-hidden border-2 border-gray-200 hover:border-red-300 transition-all"
+                >
+                  {idx === 0 && (
+                    <div className="absolute top-1.5 left-1.5 z-10 bg-black text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                      대표
                     </div>
+                  )}
+                  <img src={img.url} alt="" className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
+                    <button
+                      type="button"
+                      onClick={() => removeExistingImage(img.item_media_id)}
+                      className="opacity-0 group-hover:opacity-100 w-7 h-7 bg-red-500 rounded-full flex items-center justify-center text-white hover:bg-red-600 transition-all"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
-                ))}
-              </div>
-            )}
+                </div>
+              ))}
 
-            {/* 새 이미지 추가 */}
-            <div
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              onClick={() => document.getElementById("edit-file-input")?.click()}
-              className={`border-2 border-dashed rounded-lg p-5 text-center transition-all cursor-pointer ${
-                isDragging
-                  ? "border-black bg-gray-50 scale-[1.01]"
-                  : "border-gray-300 bg-gray-50 hover:border-black"
-              }`}
-            >
-              <Upload className="w-6 h-6 text-black mx-auto mb-1.5" />
-              <p className="text-sm font-medium text-black">
-                {newPreviews.length > 0
-                  ? `추가 사진 ${newPreviews.length}장`
-                  : "사진 추가 (드래그 또는 클릭)"}
-              </p>
-              <input
-                id="edit-file-input"
-                type="file"
-                accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-                multiple
-                onChange={handleFileInput}
-                className="hidden"
-              />
+              {/* 새로 추가한 이미지 */}
+              {newPreviews.map((img, idx) => (
+                <div
+                  key={`new-${idx}`}
+                  className="relative group aspect-square rounded-lg overflow-hidden border-2 border-dashed border-stone-400"
+                >
+                  <div className="absolute top-1.5 left-1.5 z-10 bg-stone-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                    NEW
+                  </div>
+                  <img src={img} alt="" className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); removeNewImage(idx); }}
+                      className="opacity-0 group-hover:opacity-100 w-7 h-7 bg-red-500 rounded-full flex items-center justify-center text-white hover:bg-red-600 transition-all"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {/* 추가 버튼 */}
+              <div
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => document.getElementById("edit-file-input")?.click()}
+                className={`aspect-square rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all ${
+                  isDragging
+                    ? "border-black bg-gray-100 scale-[1.03]"
+                    : "border-gray-300 bg-gray-50 hover:border-black hover:bg-gray-100"
+                }`}
+              >
+                <Upload className="w-5 h-5 text-gray-400 mb-1" />
+                <span className="text-[11px] text-gray-400 font-medium">추가</span>
+                <input
+                  id="edit-file-input"
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                  multiple
+                  onChange={handleFileInput}
+                  className="hidden"
+                />
+              </div>
             </div>
-
-            {newPreviews.length > 0 && (
-              <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 mt-3">
-                {newPreviews.map((img, idx) => (
-                  <div
-                    key={idx}
-                    className="relative group aspect-square rounded-lg overflow-hidden border-2 border-dashed border-stone-400"
-                  >
-                    <img src={img} alt="" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeNewImage(idx);
-                        }}
-                        className="opacity-0 group-hover:opacity-100 w-7 h-7 bg-red-500 rounded-full flex items-center justify-center text-white hover:bg-red-600 transition-all"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* 상품 정보 */}

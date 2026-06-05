@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { authApi } from "@/api/auth";
@@ -9,8 +9,12 @@ export function OAuthKakaoCallbackPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { login } = useAuth();
+  const called = useRef(false);
 
   useEffect(() => {
+    if (called.current) return;
+    called.current = true;
+
     const code = searchParams.get("code");
 
     if (!code) {
@@ -28,7 +32,7 @@ export function OAuthKakaoCallbackPage() {
         toast.error(err.message ?? "카카오 로그인에 실패했습니다");
         navigate("/login");
       });
-  }, []);
+  }, [searchParams, login, navigate]);
 
   return (
     <div className="h-screen flex items-center justify-center">

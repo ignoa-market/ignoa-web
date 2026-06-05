@@ -4,6 +4,7 @@ const BASE_URL = import.meta.env.VITE_API_URL ?? "";
 
 let accessToken: string | null = null;
 let onUnauthorized: (() => void) | null = null;
+let refreshLock: Promise<string | null> | null = null;
 
 export function setAccessToken(token: string | null) {
   accessToken = token;
@@ -11,6 +12,29 @@ export function setAccessToken(token: string | null) {
 
 export function setUnauthorizedHandler(handler: () => void) {
   onUnauthorized = handler;
+}
+
+export function refreshAccessToken(): Promise<string | null> {
+  if (refreshLock) return refreshLock;
+
+  refreshLock = fetch(`${BASE_URL}/api/auth/refresh`, {
+    method: "POST",
+    credentials: "include",
+  })
+    .then((res) => {
+      if (!res.ok) return null;
+      return res.json().then((json) => {
+        const token = json.data.access_token as string;
+        setAccessToken(token);
+        return token;
+      });
+    })
+    .catch(() => null)
+    .finally(() => {
+      refreshLock = null;
+    });
+
+  return refreshLock;
 }
 
 async function parseError(res: Response): Promise<ApiError> {
@@ -40,9 +64,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (res.status === 401 && path !== "/api/auth/refresh" && path !== "/api/auth/login") {
-    const refreshed = await tryRefresh();
-    if (refreshed) {
-      headers["Authorization"] = `Bearer ${accessToken}`;
+    const token = await refreshAccessToken();
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
       res = await fetch(`${BASE_URL}${path}`, {
         ...init,
         headers,
@@ -62,20 +86,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return json.data as T;
 }
 
-async function tryRefresh(): Promise<boolean> {
-  try {
-    const res = await fetch(`${BASE_URL}/api/auth/refresh`, {
-      method: "POST",
-      credentials: "include",
-    });
-    if (!res.ok) return false;
-    const json = await res.json();
-    setAccessToken(json.data.access_token);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 export const api = {
   get: <T>(path: string) => request<T>(path, { method: "GET" }),

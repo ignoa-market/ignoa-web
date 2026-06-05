@@ -75,22 +75,28 @@ export function ProductRegistrationPage() {
     );
   };
 
-  const handleFiles = (files: File[]) => {
-    files.forEach((file) => {
-      if (!file.type.startsWith("image/") && !isHeic(file)) return;
+  const handleFiles = async (files: File[]) => {
+    const validFiles = files.filter((file) => {
       if (isHeic(file)) {
         toast.error(`${file.name} — iPhone HEIC 포맷은 미리보기가 지원되지 않습니다. 설정 → 카메라 → 포맷 → '호환성 최고'로 변경 후 JPEG로 올려주세요.`);
-        return;
+        return false;
       }
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        if (e.target?.result) {
-          setPreviews((prev) => [...prev, e.target!.result as string]);
-          setImageFiles((prev) => [...prev, file]);
-        }
-      };
-      reader.readAsDataURL(file);
+      return file.type.startsWith("image/");
     });
+
+    const previews = await Promise.all(
+      validFiles.map(
+        (file) =>
+          new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target!.result as string);
+            reader.readAsDataURL(file);
+          })
+      )
+    );
+
+    setPreviews((prev) => [...prev, ...previews]);
+    setImageFiles((prev) => [...prev, ...validFiles]);
   };
 
   const removeImage = (index: number) => {
@@ -179,7 +185,7 @@ export function ProductRegistrationPage() {
         imageFiles
       );
       toast.success("상품이 등록되었습니다!");
-      navigate("/");
+      navigate("/app");
     } catch (err: unknown) {
       const error = err as { message?: string };
       toast.error(error?.message ?? "상품 등록에 실패했습니다.");

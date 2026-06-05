@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
 import { Mail, Lock, User, Clock, MapPin, Search, Eye, EyeOff, CheckCircle2 } from "lucide-react";
@@ -44,6 +44,13 @@ export function SignUpPage() {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
 
   const checkEmailDuplicate = async () => {
     if (!email.trim()) { setErrors({ email: "이메일을 입력해주세요" }); return; }
@@ -68,12 +75,20 @@ export function SignUpPage() {
     setIsSendingCode(true);
     try {
       await authApi.sendEmailCode(email);
+      if (timerRef.current) clearInterval(timerRef.current);
       setIsCodeSent(true);
       setTimeRemaining(300);
       setVerificationCode("");
       toast.success("인증 코드가 전송되었습니다");
-      const timer = setInterval(() => {
-        setTimeRemaining((prev) => { if (prev <= 1) { clearInterval(timer); return 0; } return prev - 1; });
+      timerRef.current = setInterval(() => {
+        setTimeRemaining((prev) => {
+          if (prev <= 1) {
+            if (timerRef.current) clearInterval(timerRef.current);
+            timerRef.current = null;
+            return 0;
+          }
+          return prev - 1;
+        });
       }, 1000);
     } catch (err) {
       const error = err as ApiError;
@@ -128,6 +143,12 @@ export function SignUpPage() {
     }
   };
 
+  useEffect(() => {
+    if (step !== "complete") return;
+    const timer = setTimeout(() => navigate("/app"), 4000);
+    return () => clearTimeout(timer);
+  }, [step, navigate]);
+
   const handleSignUp = async () => {
     if (!isNameAvailable) { setErrors({ name: "이름 중복 확인을 완료해주세요" }); return; }
     if (!address.trim()) { setErrors({ address: "주소를 입력해주세요" }); return; }
@@ -136,7 +157,6 @@ export function SignUpPage() {
       const res = await authApi.signup({ email, password, nickname: name, address });
       login(res.user_id, res.access_token);
       setStep("complete");
-      setTimeout(() => navigate("/app"), 4000);
     } catch (err) {
       const error = err as ApiError;
       toast.error(error.message ?? "회원가입에 실패했습니다");

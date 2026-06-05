@@ -1,10 +1,8 @@
 import { Heart, Eye } from "lucide-react";
-import { Link, useNavigate } from "react-router";
-import { useState } from "react";
+import { Link } from "react-router";
+import { memo } from "react";
 import { motion } from "motion/react";
-import { wishApi } from "@/api/item";
-import { useAuth } from "@/context/AuthContext";
-import { wishStore } from "@/store/wishStore";
+import { useWishToggle } from "@/hooks/useWishToggle";
 import type { ItemStatus } from "@/types/api";
 
 interface ProductCardProps {
@@ -30,50 +28,15 @@ function resolveOverlay(status?: ItemStatus, isEnded?: boolean): "SOLD" | "ENDED
   return null;
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+export const ProductCard = memo(function ProductCard({ product }: ProductCardProps) {
   const { id, title, brand, currentPrice, size, imageUrl, viewCount } = product;
   const overlay = resolveOverlay(product.status, product.isEnded);
-  const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
-
   const numericId = Number(id);
-  const [wished, setWished] = useState(
-    () => wishStore.isWished(numericId) || (product.isWished ?? false)
+  const { wished, wishCount, toggle: handleWishToggle } = useWishToggle(
+    numericId,
+    product.isWished ?? false,
+    product.wishCount ?? 0
   );
-  const [wishCount, setWishCount] = useState(product.wishCount ?? 0);
-
-  const handleWishToggle = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!isAuthenticated) {
-      navigate("/login");
-      return;
-    }
-    const prevWished = wished;
-    const prevCount = wishCount;
-    setWished(!prevWished);
-    setWishCount(prevWished ? prevCount - 1 : prevCount + 1);
-    if (!prevWished) {
-      wishStore.add(numericId);
-    } else {
-      wishStore.remove(numericId);
-    }
-    try {
-      if (prevWished) {
-        await wishApi.removeWish(numericId);
-      } else {
-        await wishApi.addWish(numericId);
-      }
-    } catch {
-      setWished(prevWished);
-      setWishCount(prevCount);
-      if (prevWished) {
-        wishStore.add(numericId);
-      } else {
-        wishStore.remove(numericId);
-      }
-    }
-  };
 
   return (
     <Link to={`/app/products/${id}`} className="group block cursor-pointer">
@@ -82,6 +45,7 @@ export function ProductCard({ product }: ProductCardProps) {
         <img
           src={imageUrl}
           alt={title}
+          loading="lazy"
           className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
         />
         {overlay && (
@@ -147,4 +111,4 @@ export function ProductCard({ product }: ProductCardProps) {
       </div>
     </Link>
   );
-}
+});

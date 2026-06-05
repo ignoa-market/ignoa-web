@@ -27,7 +27,7 @@ export function Navbar() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
   const [notiOpen, setNotiOpen] = useState(false);
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, isInitializing, logout } = useAuth();
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [withdrawalOpen, setWithdrawalOpen] = useState(false);
@@ -123,7 +123,9 @@ export function Navbar() {
 
             {/* Right Actions */}
             <div className="flex items-center gap-2 ml-auto">
-              {isAuthenticated ? (
+              {isInitializing ? (
+                <div className="w-[180px]" />
+              ) : isAuthenticated ? (
                 <div className="flex items-center gap-5">
                   <Link to="/app/register-product">
                     <button className="h-9 px-4 text-sm font-semibold bg-black text-white rounded-full hover:bg-gray-800 transition-colors">

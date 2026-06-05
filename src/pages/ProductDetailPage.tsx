@@ -7,9 +7,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { motion, AnimatePresence } from "motion/react";
-import { ChatPanel } from "@/components/common/ChatPanel";
-import { itemApi, bidApi, wishApi } from "@/api/item";
+import { itemApi, bidApi } from "@/api/item";
 import { wishStore } from "@/store/wishStore";
+import { useWishToggle } from "@/hooks/useWishToggle";
 import type { ItemDetailResponse, BidSummary } from "@/types/api";
 
 export function ProductDetailPage() {
@@ -21,7 +21,6 @@ export function ProductDetailPage() {
   const [bids, setBids] = useState<BidSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [msgOpen, setMsgOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [slideDir, setSlideDir] = useState(1);
   const [isSliding, setIsSliding] = useState(false);
@@ -34,24 +33,22 @@ export function ProductDetailPage() {
   const [priceAnimKey, setPriceAnimKey] = useState(0);
   const [shippingOpen, setShippingOpen] = useState(false);
   const [returnOpen, setReturnOpen] = useState(false);
-  const [countdown, setCountdown] = useState("");
+  const numericId = Number(id);
+  const countdownSpanRef = useRef<HTMLSpanElement>(null);
   const endTimeRef = useRef<Date | null>(null);
-  const [wished, setWished] = useState(false);
-  const [wishCount, setWishCount] = useState(0);
+  const { wished, wishCount, toggle: handleWishToggle } = useWishToggle(numericId);
 
   // 상품 상세 조회
   useEffect(() => {
     if (!id) return;
     setLoading(true);
     itemApi
-      .getItem(Number(id))
+      .getItem(numericId)
       .then((data) => {
         setItem(data);
         setDisplayPrice(data.current_price);
         endTimeRef.current = new Date(data.end_at);
-        const initialWished = wishStore.isWished(data.item_id) || data.is_wished;
-        setWished(initialWished);
-        setWishCount(data.wish_count);
+        wishStore.sync(data.item_id, data.is_wished, data.wish_count);
       })
       .catch(() => toast.error("상품 정보를 불러오지 못했습니다."))
       .finally(() => setLoading(false));
@@ -61,56 +58,38 @@ export function ProductDetailPage() {
   useEffect(() => {
     if (!id) return;
     bidApi
-      .getBids(Number(id))
+      .getBids(numericId)
       .then((res) => setBids(res.content))
       .catch(() => setBids([]));
   }, [id]);
 
-  // 카운트다운 타이머
+  // 카운트다운 타이머 — state 대신 DOM ref 직접 업데이트로 매초 리렌더 방지
   useEffect(() => {
     const tick = () => {
-      if (!endTimeRef.current) return;
+      if (!endTimeRef.current || !countdownSpanRef.current) return;
       const diff = endTimeRef.current.getTime() - Date.now();
+      let text: string;
       if (diff <= 0) {
-        setCountdown("마감");
-        return;
+        text = "마감";
+      } else {
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+        const hh = String(hours).padStart(2, "0");
+        const mm = String(minutes).padStart(2, "0");
+        const ss = String(seconds).padStart(2, "0");
+        if (days > 0) text = `${days}일 ${hh}시간 ${mm}분 ${ss}초`;
+        else if (hours > 0) text = `${hh}시간 ${mm}분 ${ss}초`;
+        else text = `${mm}분 ${ss}초`;
       }
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-      const hh = String(hours).padStart(2, "0");
-      const mm = String(minutes).padStart(2, "0");
-      const ss = String(seconds).padStart(2, "0");
-      if (days > 0) setCountdown(`${days}일 ${hh}시간 ${mm}분 ${ss}초`);
-      else if (hours > 0) setCountdown(`${hh}시간 ${mm}분 ${ss}초`);
-      else setCountdown(`${mm}분 ${ss}초`);
+      countdownSpanRef.current.textContent = text;
     };
     tick();
     const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
   }, []);
 
-  const handleWishToggle = async () => {
-    if (!isAuthenticated) { navigate("/login"); return; }
-    if (!item) return;
-    const prevWished = wished;
-    const prevCount = wishCount;
-    setWished(!prevWished);
-    setWishCount(prevWished ? prevCount - 1 : prevCount + 1);
-    if (!prevWished) wishStore.add(item.item_id);
-    else wishStore.remove(item.item_id);
-    try {
-      if (!prevWished) await wishApi.addWish(item.item_id);
-      else await wishApi.removeWish(item.item_id);
-    } catch {
-      setWished(prevWished);
-      setWishCount(prevCount);
-      if (prevWished) wishStore.add(item.item_id);
-      else wishStore.remove(item.item_id);
-    }
-  };
 
   const handleShare = async () => {
     const url = window.location.href;
@@ -125,7 +104,7 @@ export function ProductDetailPage() {
   const handleDeleteItem = async () => {
     if (!window.confirm("상품을 삭제하시겠습니까?\n삭제된 상품은 복구할 수 없습니다.")) return;
     try {
-      await itemApi.deleteItem(Number(id));
+      await itemApi.deleteItem(numericId);
       toast.success("상품이 삭제되었습니다.");
       navigate("/app");
     } catch (err: unknown) {
@@ -145,7 +124,7 @@ export function ProductDetailPage() {
 
   const handleBuyNow = async () => {
     try {
-      await itemApi.buyNow(Number(id));
+      await itemApi.buyNow(numericId);
       toast.success("즉시 구매가 완료되었습니다!");
       setItem((prev) => prev ? { ...prev, status: "BUY_NOW_CLOSED" } : prev);
       setBuyNowModalOpen(false);
@@ -161,15 +140,15 @@ export function ProductDetailPage() {
     const willBuyNow = item?.buy_now_price != null && amount >= item.buy_now_price;
     try {
       if (willBuyNow) {
-        await itemApi.buyNow(Number(id));
+        await itemApi.buyNow(numericId);
         toast.success("즉시 구매가 완료되었습니다!");
         setItem((prev) => prev ? { ...prev, status: "BUY_NOW_CLOSED" } : prev);
       } else {
-        await bidApi.placeBid(Number(id), amount);
+        await bidApi.placeBid(numericId, amount);
         toast.success(`입찰 완료: ${amount.toLocaleString()}원`);
         setDisplayPrice(amount);
         setPriceAnimKey((k) => k + 1);
-        bidApi.getBids(Number(id)).then((res) => setBids(res.content));
+        bidApi.getBids(numericId).then((res) => setBids(res.content));
       }
       setBidModalOpen(false);
       setBidStep("input");
@@ -295,23 +274,21 @@ export function ProductDetailPage() {
                 {item.title}
               </h1>
               <div className="flex items-center gap-2 flex-shrink-0 -mt-[13px]">
-                {!item.is_seller && (
-                  <motion.button
-                    onClick={handleWishToggle}
-                    whileTap={{ scale: 0.88 }}
-                    className="flex items-center gap-1.5 px-3.5 h-10 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+                <motion.button
+                  onClick={handleWishToggle}
+                  whileTap={{ scale: 0.88 }}
+                  className="flex items-center gap-1.5 px-3.5 h-10 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+                >
+                  <motion.span
+                    key={String(wished)}
+                    initial={{ scale: 0.6 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 450, damping: 14 }}
                   >
-                    <motion.span
-                      key={String(wished)}
-                      initial={{ scale: 0.6 }}
-                      animate={{ scale: 1 }}
-                      transition={{ type: "spring", stiffness: 450, damping: 14 }}
-                    >
-                      <Heart className={`w-4 h-4 ${wished ? "fill-rose-400 text-rose-400" : "text-stone-500"}`} />
-                    </motion.span>
-                    <span className="text-sm text-stone-600 font-medium tabular-nums">{wishCount}</span>
-                  </motion.button>
-                )}
+                    <Heart className={`w-4 h-4 ${wished ? "fill-rose-400 text-rose-400" : "text-stone-500"}`} />
+                  </motion.span>
+                  <span className="text-sm text-stone-600 font-medium tabular-nums">{wishCount}</span>
+                </motion.button>
                 <motion.button
                   onClick={handleShare}
                   whileTap={{ scale: 0.88 }}
@@ -365,7 +342,7 @@ export function ProductDetailPage() {
 
             {/* Timer */}
             <div className="flex items-center flex-nowrap gap-1.5 mb-5">
-              <p className="text-xs text-stone-500 whitespace-nowrap">경매종료:{" "}<span className="text-stone-500 tabular-nums">{countdown}</span></p>
+              <p className="text-xs text-stone-500 whitespace-nowrap">경매종료:{" "}<span ref={countdownSpanRef} className="text-stone-500 tabular-nums" /></p>
             </div>
 
             {/* Buttons */}
@@ -460,7 +437,7 @@ export function ProductDetailPage() {
                 팔로우
               </button>
               <button
-                onClick={() => isAuthenticated ? setMsgOpen(true) : navigate("/login")}
+                onClick={() => !isAuthenticated && navigate("/login")}
                 className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-200 hover:bg-gray-50 transition-colors text-stone-500"
                 title="메시지 보내기"
               >
@@ -784,22 +761,6 @@ export function ProductDetailPage() {
         )}
       </AnimatePresence>
 
-      {/* Chat Panel */}
-      <AnimatePresence>
-        {msgOpen && <ChatPanel onClose={() => setMsgOpen(false)} />}
-      </AnimatePresence>
-      <AnimatePresence>
-        {msgOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-40 bg-black/20"
-            onClick={() => setMsgOpen(false)}
-          />
-        )}
-      </AnimatePresence>
     </div>
   );
 }

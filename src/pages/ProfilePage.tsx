@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Mail, User, MapPin, Camera, Search, X, CheckCircle2, Trash2 } from "lucide-react";
 import { ProductCard } from "@/components/common/ProductCard";
 import { AddressModal } from "@/components/common/AddressModal";
@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
 import { userApi } from "@/api/auth";
 import { wishApi } from "@/api/item";
+import { wishStore } from "@/store/wishStore";
 import type { ApiError, ItemStatus, ItemSummary, WishSummary } from "@/types/api";
 
 
@@ -32,6 +33,23 @@ export function ProfilePage() {
   const [wishItems, setWishItems] = useState<WishSummary[]>([]);
   const [tabLoading, setTabLoading] = useState(true);
 
+  const fetchWishes = useCallback(
+    () => wishApi.getWishes(0, 20).then((res) => setWishItems(res.content)),
+    []
+  );
+
+  useEffect(() => {
+    return wishStore.subscribe((id, state, source) => {
+      if (source === "toggle" && !state.wished) {
+        setWishItems((prev) => prev.filter((item) => item.item_id !== id));
+        return;
+      }
+      if ((source === "commit" || source === "rollback") && state.wished) {
+        fetchWishes().catch(() => {});
+      }
+    });
+  }, [fetchWishes]);
+
   const isNicknameDirty = userName !== savedName;
   const isDirty = isNicknameDirty || address !== savedAddr;
   const canSave = isDirty && (!isNicknameDirty || isNicknameAvailable === true);
@@ -50,20 +68,14 @@ export function ProfilePage() {
   }, []);
 
   useEffect(() => {
-    setTabLoading(true);
     Promise.all([
-      userApi.getMyItems(),
-      userApi.getMyBids(),
-      wishApi.getWishes(0, 20),
+      userApi.getMyItems().then(setMyItems),
+      userApi.getMyBids().then(setBiddingItems),
+      fetchWishes(),
     ])
-      .then(([items, bids, wishes]) => {
-        setMyItems(items);
-        setBiddingItems(bids);
-        setWishItems(wishes.content);
-      })
       .catch(() => toast.error("목록을 불러오지 못했습니다"))
       .finally(() => setTabLoading(false));
-  }, []);
+  }, [fetchWishes]);
 
   const checkNickname = async () => {
     if (!userName.trim()) { setNicknameError("닉네임을 입력해주세요"); return; }
@@ -138,6 +150,7 @@ export function ProfilePage() {
     title: item.title,
     currentPrice: item.current_price,
     imageUrl: item.media_url,
+    isWished: item.is_wished,
     wishCount: item.wish_count,
     viewCount: item.view_count,
     status: item.status,
@@ -151,7 +164,7 @@ export function ProfilePage() {
     imageUrl: w.media_url,
     wishCount: w.wish_count,
     isWished: true,
-    status: w.status,
+    status: w.item_status,
     isEnded: new Date(w.end_at) < new Date(),
   });
 

@@ -3,6 +3,7 @@ import { ProductCard } from "@/components/common/ProductCard";
 import { motion, AnimatePresence, useInView } from "motion/react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { itemApi } from "@/api/item";
+import { useAuth } from "@/context/AuthContext";
 import type { ItemSummary } from "@/types/api";
 
 const bannerSlides = [
@@ -31,6 +32,7 @@ function toProductCardProps(item: ItemSummary) {
     title: item.title,
     currentPrice: item.current_price,
     imageUrl: item.media_url,
+    isWished: item.is_wished,
     wishCount: item.wish_count,
     viewCount: item.view_count,
     status: item.status,
@@ -39,6 +41,7 @@ function toProductCardProps(item: ItemSummary) {
 }
 
 export function HomePage() {
+  const { isInitializing, isAuthenticated } = useAuth();
   const [ctaSlide, setCtaSlide] = useState(0);
   const [slideDir, setSlideDir] = useState(1);
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -56,23 +59,27 @@ export function HomePage() {
   const allProductsInView = useInView(allProductsRef, { once: true, amount: 0.1 });
 
   useEffect(() => {
+    if (isInitializing) return;
     setPopularLoading(true);
     itemApi
       .getItems({ view: "POPULAR", size: 5 })
       .then((res) => setPopularItems(res.content))
       .catch(() => setPopularItems([]))
       .finally(() => setPopularLoading(false));
-  }, []);
+  }, [isInitializing, isAuthenticated]);
 
   useEffect(() => {
+    if (isInitializing) return;
+    let stale = false;
     setAllLoading(true);
     const category = selectedCategory === "All" ? undefined : selectedCategory;
     itemApi
       .getItems({ view: "ALL", category, size: 20 })
-      .then((res) => setAllItems(res.content))
-      .catch(() => setAllItems([]))
-      .finally(() => setAllLoading(false));
-  }, [selectedCategory]);
+      .then((res) => { if (!stale) setAllItems(res.content); })
+      .catch(() => { if (!stale) setAllItems([]); })
+      .finally(() => { if (!stale) setAllLoading(false); });
+    return () => { stale = true; };
+  }, [selectedCategory, isInitializing, isAuthenticated]);
 
   const goToSlide = (next: number) => {
     setSlideDir(next > ctaSlide ? 1 : -1);

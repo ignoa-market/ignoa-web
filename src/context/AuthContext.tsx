@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
-import { setAccessToken, setUnauthorizedHandler } from "@/lib/api";
-import { authApi, userApi } from "@/api/auth";
+import { createContext, useContext, useState, useEffect, useRef, useMemo, useCallback, ReactNode } from "react";
+import { refreshAccessToken, setAccessToken, setUnauthorizedHandler } from "@/lib/api";
+import { userApi } from "@/api/auth";
+import { wishStore } from "@/store/wishStore";
 
 interface AuthState {
   isAuthenticated: boolean;
@@ -28,9 +29,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (initialized.current) return;
     initialized.current = true;
 
-    authApi.refresh()
-      .then(async (res) => {
-        setAccessToken(res.access_token);
+    refreshAccessToken()
+      .then(async (token) => {
+        if (!token) {
+          setState({ isAuthenticated: false, userId: null, isInitializing: false });
+          return;
+        }
         const me = await userApi.getMe();
         setState({ isAuthenticated: true, userId: me.user_id, isInitializing: false });
       })
@@ -42,22 +46,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setUnauthorizedHandler(() => {
       setAccessToken(null);
+      wishStore.clear();
       setState({ isAuthenticated: false, userId: null, isInitializing: false });
     });
   }, []);
 
-  const login = (userId: number, accessToken: string) => {
+  const login = useCallback((userId: number, accessToken: string) => {
     setAccessToken(accessToken);
+    wishStore.clear();
     setState({ isAuthenticated: true, userId, isInitializing: false });
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setAccessToken(null);
+    wishStore.clear();
     setState({ isAuthenticated: false, userId: null, isInitializing: false });
-  };
+  }, []);
+
+  const value = useMemo(
+    () => ({ ...state, login, logout }),
+    [state, login, logout]
+  );
 
   return (
-    <AuthContext.Provider value={{ ...state, login, logout }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
