@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router";
 import { Mail, User, MapPin, Camera, Search, X, CheckCircle2, Trash2 } from "lucide-react";
 import { ProductCard } from "@/components/common/ProductCard";
 import { AddressModal } from "@/components/common/AddressModal";
@@ -12,8 +13,14 @@ import { wishStore } from "@/store/wishStore";
 import type { ApiError, ItemStatus, ItemSummary, WishSummary } from "@/types/api";
 
 
+const TAB_IDS = ["products", "bidding", "wishlist"] as const;
+type TabId = (typeof TAB_IDS)[number];
+
 export function ProfilePage() {
-  const [activeTab, setActiveTab] = useState("products");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const activeTab: TabId = TAB_IDS.includes(tabParam as TabId) ? (tabParam as TabId) : "products";
+  const setActiveTab = (tab: TabId) => setSearchParams({ tab }, { replace: true });
   const [isEditing, setIsEditing] = useState(false);
   const [showFollowModal, setShowFollowModal] = useState<"followers" | "following" | null>(null);
 
@@ -171,7 +178,7 @@ export function ProfilePage() {
   const followers: { id: string; name: string }[] = [];
   const following: { id: string; name: string }[] = [];
 
-  const tabs = [
+  const tabs: { id: TabId; label: string; count: number }[] = [
     { id: "products", label: "판매중", count: myItems.length },
     { id: "bidding",  label: "입찰중", count: biddingItems.length },
     { id: "wishlist", label: "찜목록", count: wishItems.length },
