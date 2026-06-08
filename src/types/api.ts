@@ -88,8 +88,6 @@ export interface ItemDetailResponse {
   end_at: string;
   is_wished: boolean;
   wish_count: number;
-  bid_count: number;
-  view_count: number;
   media_urls: ItemMediaResponse[];
 }
 
@@ -110,7 +108,7 @@ export interface BuyNowResponse {
 
 export type BidStatus = "ACTIVE" | "WON";
 
-export interface BidSummary {
+export interface BidHistory {
   bid_id: number;
   bidder_nickname: string;
   price: number;

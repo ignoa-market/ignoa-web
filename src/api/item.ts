@@ -7,7 +7,7 @@ import type {
   BuyNowResponse,
   ItemCondition,
   ItemViewType,
-  BidSummary,
+  BidHistory,
   BidResponse,
   WishSummary,
 } from "@/types/api";
@@ -94,10 +94,8 @@ export const bidApi = {
   placeBid: (itemId: number, price: number) =>
     api.post<BidResponse>(`/api/items/${itemId}/bids`, { price }),
 
-  getBids: (itemId: number, page = 0, size = 50) =>
-    api.get<SliceResponse<BidSummary>>(
-      `/api/items/${itemId}/bids?page=${page}&size=${size}`
-    ),
+  getBids: (itemId: number) =>
+    api.get<BidHistory[]>(`/api/items/${itemId}/bids`),
 };
 
 // ────────────────────────────────────────────────

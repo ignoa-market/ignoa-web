@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { itemApi, bidApi } from "@/api/item";
 import { wishStore } from "@/store/wishStore";
 import { useWishToggle } from "@/hooks/useWishToggle";
-import type { ItemDetailResponse, BidSummary } from "@/types/api";
+import type { ItemDetailResponse, BidHistory } from "@/types/api";
 
 export function ProductDetailPage() {
   const { id } = useParams();
@@ -18,7 +18,7 @@ export function ProductDetailPage() {
   const { isAuthenticated } = useAuth();
 
   const [item, setItem] = useState<ItemDetailResponse | null>(null);
-  const [bids, setBids] = useState<BidSummary[]>([]);
+  const [bids, setBids] = useState<BidHistory[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -59,7 +59,7 @@ export function ProductDetailPage() {
     if (!id) return;
     bidApi
       .getBids(numericId)
-      .then((res) => setBids(res.content))
+      .then((res) => setBids(res))
       .catch(() => setBids([]));
   }, [id]);
 
@@ -148,7 +148,7 @@ export function ProductDetailPage() {
         toast.success(`입찰 완료: ${amount.toLocaleString()}원`);
         setDisplayPrice(amount);
         setPriceAnimKey((k) => k + 1);
-        bidApi.getBids(numericId).then((res) => setBids(res.content));
+        bidApi.getBids(numericId).then((res) => setBids(res));
       }
       setBidModalOpen(false);
       setBidStep("input");
@@ -357,7 +357,7 @@ export function ProductDetailPage() {
                 </Button>
                 <Button
                   onClick={handleDeleteItem}
-                  disabled={!(item.status === "NO_BID_CLOSED" || (item.status === "ACTIVE" && item.bid_count === 0))}
+                  disabled={!(item.status === "NO_BID_CLOSED" || (item.status === "ACTIVE" && bids.length === 0))}
                   variant="outline"
                   className="flex-1 border-red-200 text-red-500 h-11 text-sm font-medium rounded hover:bg-red-50 hover:border-red-300 transition-colors disabled:opacity-40"
                 >
