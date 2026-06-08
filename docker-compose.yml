@@ -1,0 +1,8 @@
+services:
+  web:
+    build: .
+    container_name: ignoa-web
+    platform: linux/arm64
+    ports:
+      - "35173:80"
+    restart: unless-stopped
