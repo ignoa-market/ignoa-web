@@ -1,0 +1,9 @@
+node_modules
+dist
+.git
+.env*
+*.log
+nohup.out
+.DS_Store
+Dockerfile
+.dockerignore
