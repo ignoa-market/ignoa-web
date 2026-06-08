@@ -30,7 +30,7 @@ export function useWishToggle(
 
   useEffect(() => {
     if (initialWished === undefined || initialCount === undefined) return;
-    wishStore.sync(itemId, initialWished, initialCount);
+    wishStore.seed(itemId, initialWished, initialCount);
     const synced = wishStore.get(itemId);
     if (synced) setState(synced);
   }, [itemId, initialWished, initialCount]);

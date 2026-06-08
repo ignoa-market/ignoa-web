@@ -47,6 +47,15 @@ export function ProfilePage() {
 
   useEffect(() => {
     return wishStore.subscribe((id, state, source) => {
+      const mirror = (prev: ItemSummary[]) =>
+        prev.map((item) =>
+          item.item_id === id
+            ? { ...item, is_wished: state.wished, wish_count: state.count }
+            : item
+        );
+      setMyItems(mirror);
+      setBiddingItems(mirror);
+
       if (source === "toggle" && !state.wished) {
         setWishItems((prev) => prev.filter((item) => item.item_id !== id));
         return;

@@ -40,6 +40,11 @@ export const wishStore = {
     set(id, { wished, count }, "sync");
   },
 
+  seed: (id: number, wished: boolean, count: number) => {
+    if (pendingCounts.has(id) || states.has(id)) return;
+    set(id, { wished, count }, "sync");
+  },
+
   toggle: async (id: number, fallback: WishState) => {
     const prev = states.get(id) ?? fallback;
     const next: WishState = prev.wished
