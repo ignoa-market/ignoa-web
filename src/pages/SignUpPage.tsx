@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
 import { Mail, Lock, User, Clock, MapPin, Search, Eye, EyeOff, CheckCircle2 } from "lucide-react";
