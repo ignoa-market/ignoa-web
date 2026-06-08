@@ -1,6 +1,10 @@
 services:
   web:
-    build: .
+    build:
+      context: .
+      args:
+        VITE_KAKAO_CLIENT_ID: ${VITE_KAKAO_CLIENT_ID}
+        VITE_KAKAO_REDIRECT_URI: ${VITE_KAKAO_REDIRECT_URI}
     container_name: ignoa-web
     platform: linux/arm64
     ports:
