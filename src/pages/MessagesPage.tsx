@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Send, ChevronLeft, MessageSquare, ImageIcon, X, Plus, Truck, CheckCircle, FileText, Banknote, AlertCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
@@ -44,10 +44,20 @@ export function MessagesPage() {
   const messages: Message[] = [];
   const selectedChatData = chats.find((c) => c.id === selectedChat);
 
+  useEffect(() => {
+    return () => {
+      if (mediaPreview) URL.revokeObjectURL(mediaPreview.url);
+    };
+  }, [mediaPreview]);
+
+  const clearMediaPreview = () => {
+    setMediaPreview(null);
+  };
+
   const handleSend = () => {
     if (!message.trim() && !mediaPreview) return;
     setMessage("");
-    setMediaPreview(null);
+    clearMediaPreview();
   };
 
   const handleMediaSelect = (e: React.ChangeEvent<HTMLInputElement>, type: "image" | "video") => {
@@ -236,7 +246,7 @@ export function MessagesPage() {
                     : <video src={mediaPreview.url} className="h-20 rounded-lg" />
                   }
                   <button
-                    onClick={() => setMediaPreview(null)}
+                    onClick={clearMediaPreview}
                     className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-stone-800 text-white rounded-full flex items-center justify-center"
                   >
                     <X className="w-3 h-3" />

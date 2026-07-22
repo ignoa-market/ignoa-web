@@ -29,7 +29,22 @@ export function LoginPage() {
       navigate("/app");
     } catch (err) {
       const error = err as ApiError;
-      if (error.code === "INVALID_CREDENTIALS") {
+      if (error.code === "ACCOUNT_PENDING_DELETION") {
+        const shouldRecover = window.confirm(
+          "탈퇴 처리 중인 계정입니다. 탈퇴를 취소하고 계정을 복구하시겠습니까?"
+        );
+        if (shouldRecover) {
+          try {
+            const res = await authApi.recover(email, password);
+            login(res.user_id, res.access_token);
+            toast.success("계정이 복구되었습니다.");
+            navigate("/app");
+          } catch (recoverErr) {
+            const recoverError = recoverErr as ApiError;
+            toast.error(recoverError.message ?? "계정 복구에 실패했습니다");
+          }
+        }
+      } else if (error.code === "INVALID_CREDENTIALS") {
         setErrors({ email: "이메일 또는 비밀번호가 올바르지 않습니다" });
       } else {
         toast.error(error.message ?? "로그인에 실패했습니다");
@@ -42,7 +57,16 @@ export function LoginPage() {
   const handleKakaoLogin = () => {
     const clientId = import.meta.env.VITE_KAKAO_CLIENT_ID;
     const redirectUri = import.meta.env.VITE_KAKAO_REDIRECT_URI;
-    window.location.href = `https://kauth.kakao.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code`;
+    if (!clientId || !redirectUri) {
+      toast.error("카카오 로그인 설정을 확인해주세요");
+      return;
+    }
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: "code",
+    });
+    window.location.href = `https://kauth.kakao.com/oauth/authorize?${params}`;
   };
 
   const handleOAuthLogin = (provider: string) => {

@@ -18,6 +18,9 @@ export const authApi = {
   login: (email: string, password: string) =>
     api.post<LoginResponse>("/api/auth/login", { email, password }),
 
+  recover: (email: string, password: string) =>
+    api.post<LoginResponse>("/api/auth/recover", { email, password }),
+
   signup: (payload: SignupPayload) =>
     api.post<SignupResponse>("/api/auth/signup", payload),
 

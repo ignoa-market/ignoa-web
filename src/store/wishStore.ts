@@ -46,6 +46,8 @@ export const wishStore = {
   },
 
   toggle: async (id: number, fallback: WishState) => {
+    if (pendingCounts.has(id)) return;
+
     const prev = states.get(id) ?? fallback;
     const next: WishState = prev.wished
       ? { wished: false, count: Math.max(prev.count - 1, 0) }

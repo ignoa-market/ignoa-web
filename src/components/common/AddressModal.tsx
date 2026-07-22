@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { motion } from "motion/react";
 
@@ -21,17 +21,25 @@ interface AddressModalProps {
 
 export function AddressModal({ onSelect, onClose }: AddressModalProps) {
   const embedRef = useRef<HTMLDivElement>(null);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
+    if (!window.daum?.Postcode) {
+      setLoadError(true);
+      return;
+    }
+
     new window.daum.Postcode({
       oncomplete: (data) => {
-        onSelect(data.roadAddress);
+        const address = data.roadAddress || data.jibunAddress;
+        if (!address) return;
+        onSelect(address);
         onClose();
       },
       width: "100%",
       height: "100%",
     }).embed(embedRef.current);
-  }, []);
+  }, [onClose, onSelect]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -51,7 +59,20 @@ export function AddressModal({ onSelect, onClose }: AddressModalProps) {
             <X className="w-4 h-4 text-gray-500" />
           </button>
         </div>
-        <div ref={embedRef} style={{ height: "500px" }} />
+        {loadError ? (
+          <div className="h-[500px] flex flex-col items-center justify-center gap-3 px-6 text-center">
+            <p className="text-sm text-gray-600">주소 검색 서비스를 불러오지 못했습니다.</p>
+            <button
+              type="button"
+              onClick={onClose}
+              className="h-9 px-4 border border-gray-300 text-sm hover:border-black transition-colors"
+            >
+              닫기
+            </button>
+          </div>
+        ) : (
+          <div ref={embedRef} style={{ height: "500px" }} />
+        )}
       </motion.div>
     </div>
   );
