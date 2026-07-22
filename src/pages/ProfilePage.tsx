@@ -168,7 +168,6 @@ export function ProfilePage() {
     imageUrl: item.media_url,
     isWished: item.is_wished,
     wishCount: item.wish_count,
-    viewCount: item.view_count,
     status: item.status,
     isEnded: new Date(item.end_at) < new Date(),
   });

@@ -18,7 +18,7 @@ import { itemApi } from "@/api/item";
 import type { ItemCondition } from "@/types/api";
 
 const categories = ["아우터", "상의", "하의", "신발", "가방", "액세서리", "시계", "모자", "기타"];
-
+const SUPPORTED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
 
 const conditions: { value: ItemCondition; label: string }[] = [
   { value: "NEW", label: "새 상품 (미사용)" },
@@ -81,7 +81,11 @@ export function ProductRegistrationPage() {
         toast.error(`${file.name} — iPhone HEIC 포맷은 미리보기가 지원되지 않습니다. 설정 → 카메라 → 포맷 → '호환성 최고'로 변경 후 JPEG로 올려주세요.`);
         return false;
       }
-      return file.type.startsWith("image/");
+      if (!SUPPORTED_IMAGE_TYPES.has(file.type)) {
+        toast.error(`${file.name} — JPEG, PNG, GIF, WEBP 파일만 업로드할 수 있습니다.`);
+        return false;
+      }
+      return true;
     });
 
     const previews = await Promise.all(
@@ -113,7 +117,7 @@ export function ProductRegistrationPage() {
   };
 
   const QUICK_OPTIONS = [
-    { label: "1일 후", ms: 1 * 24 * 60 * 60 * 1000, key: "1" },
+    { label: "1일 후", ms: 1 * 24 * 60 * 60 * 1000 + 60 * 1000, key: "1" },
     { label: "3일 후", ms: 3 * 24 * 60 * 60 * 1000, key: "3" },
     { label: "7일 후", ms: 7 * 24 * 60 * 60 * 1000, key: "7" },
   ];
@@ -122,7 +126,7 @@ export function ProductRegistrationPage() {
     if (!endDate || !endTime) return null;
     const diff = new Date(`${endDate}T${endTime}`).getTime() - Date.now();
     if (diff <= 0) return { valid: false, message: "마감 시간이 현재보다 과거입니다" };
-    if (diff < 24 * 60 * 60 * 1000 - 60 * 1000) return { valid: false, message: "최소 1일 이후여야 합니다" };
+    if (diff < 24 * 60 * 60 * 1000) return { valid: false, message: "최소 1일 이후여야 합니다" };
     if (diff > 7 * 24 * 60 * 60 * 1000 + 60 * 1000) return { valid: false, message: "최대 7일 이내여야 합니다" };
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
@@ -144,7 +148,7 @@ export function ProductRegistrationPage() {
       toast.error("경매 마감 시간을 설정해주세요.");
       return;
     }
-    if (new Date(`${endDate}T${endTime}`).getTime() < Date.now() + 24 * 60 * 60 * 1000 - 60 * 1000) {
+    if (new Date(`${endDate}T${endTime}`).getTime() < Date.now() + 24 * 60 * 60 * 1000) {
       toast.error("경매 마감 시간은 최소 1일 이후여야 합니다.");
       return;
     }
@@ -176,10 +180,9 @@ export function ProductRegistrationPage() {
           description,
           category,
           brand,
-          size: "",
           item_condition: condition,
           start_price: startPriceNum,
-          buy_now_price: buyNowPriceNum ?? undefined,
+          buy_now_price: buyNowPriceNum,
           end_at: `${endDate}T${endTime}:00`,
         },
         imageFiles
@@ -219,7 +222,7 @@ export function ProductRegistrationPage() {
               <p className="text-sm font-medium text-black">
                 {previews.length > 0 ? `사진 추가 (${previews.length}/10)` : "사진을 드래그하거나 클릭하세요"}
               </p>
-              <input id="file-input" type="file" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp" multiple onChange={handleFileInput} className="hidden" />
+              <input id="file-input" type="file" accept="image/jpeg,image/png,image/gif,image/webp" multiple onChange={handleFileInput} className="hidden" />
             </div>
 
             {previews.length > 0 && (
@@ -345,7 +348,7 @@ export function ProductRegistrationPage() {
                     setEndTime(time ?? "");
                     setQuickDuration("custom");
                   }}
-                  min={new Date(new Date().setHours(24, 0, 0, 0))}
+                  min={new Date(Date.now() + 24 * 60 * 60 * 1000)}
                   max={new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)}
                 >
                   <button type="button" onClick={() => setQuickDuration("custom")}

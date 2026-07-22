@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
-import { Upload, X, CheckCircle2 } from "lucide-react";
-import { DateTimePicker } from "@/components/common/DateTimePicker";
+import { Upload, X, Clock3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +17,7 @@ import { itemApi } from "@/api/item";
 import type { ItemCondition } from "@/types/api";
 
 const categories = ["아우터", "상의", "하의", "신발", "가방", "액세서리", "시계", "모자", "기타"];
+const SUPPORTED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
 
 const conditions: { value: ItemCondition; label: string }[] = [
   { value: "NEW", label: "새 상품 (미사용)" },
@@ -32,6 +32,7 @@ export function ProductEditPage() {
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [extending, setExtending] = useState(false);
 
   // 기존 데이터
   const [existingImages, setExistingImages] = useState<{ item_media_id: number; url: string }[]>([]);
@@ -39,7 +40,8 @@ export function ProductEditPage() {
   const [startPrice, setStartPrice] = useState(0);
   const [currentPrice, setCurrentPrice] = useState(0);
   const [endAt, setEndAt] = useState("");
-  const [endAtMode, setEndAtMode] = useState("custom");
+  const [extensionCount, setExtensionCount] = useState<number | null>(null);
+  const [isActive, setIsActive] = useState(false);
 
   // 수정 가능한 필드
   const [title, setTitle] = useState("");
@@ -59,20 +61,26 @@ export function ProductEditPage() {
     itemApi
       .getItem(Number(id))
       .then((data) => {
+        if (!data.is_seller) {
+          toast.error("본인 상품만 수정할 수 있습니다.");
+          navigate(`/app/products/${id}`, { replace: true });
+          return;
+        }
         setTitle(data.title);
         setBrand(data.brand ?? "");
         setCategory(data.category);
         setCondition(data.item_condition);
         setDescription(data.description);
-        setBuyNowPrice("");
+        setBuyNowPrice(data.buy_now_price?.toLocaleString() ?? "");
         setStartPrice(data.start_price);
         setCurrentPrice(data.current_price);
         setEndAt(data.end_at.slice(0, 16));
+        setIsActive(data.status === "ACTIVE" && new Date(data.end_at).getTime() > Date.now());
         setExistingImages(data.media_urls);
       })
       .catch(() => toast.error("상품 정보를 불러오지 못했습니다."))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, navigate]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -89,7 +97,11 @@ export function ProductEditPage() {
   };
 
   const handleFiles = async (files: File[]) => {
-    const validFiles = files.filter((file) => file.type.startsWith("image/"));
+    const validFiles = files.filter((file) => {
+      if (SUPPORTED_IMAGE_TYPES.has(file.type)) return true;
+      toast.error(`${file.name} — JPEG, PNG, GIF, WEBP 파일만 업로드할 수 있습니다.`);
+      return false;
+    });
 
     const previews = await Promise.all(
       validFiles.map(
@@ -116,39 +128,34 @@ export function ProductEditPage() {
     setNewFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleQuickDuration = (ms: number, key: string) => {
-    const end = new Date(Date.now() + ms);
-    const pad = (n: number) => String(n).padStart(2, "0");
-    setEndAt(`${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}T${pad(end.getHours())}:${pad(end.getMinutes())}`);
-    setEndAtMode(key);
-  };
+  const hasBid = currentPrice > startPrice;
 
-  const QUICK_OPTIONS = [
-    { label: "1일 후", ms: 1 * 24 * 60 * 60 * 1000, key: "1" },
-    { label: "3일 후", ms: 3 * 24 * 60 * 60 * 1000, key: "3" },
-    { label: "7일 후", ms: 7 * 24 * 60 * 60 * 1000, key: "7" },
-  ];
+  const handleExtendAuction = async () => {
+    if (!id || extending || !isActive) return;
+    if (!window.confirm("경매 마감을 1일 연장하시겠습니까?\n마감 연장은 최대 3회까지 가능합니다.")) return;
 
-  const getEndTimeStatus = (): { valid: boolean; message: string } | null => {
-    if (!endAt) return null;
-    const diff = new Date(endAt).getTime() - Date.now();
-    if (diff <= 0) return { valid: false, message: "마감 시간이 현재보다 과거입니다" };
-    if (diff > 7 * 24 * 60 * 60 * 1000 + 60 * 1000) return { valid: false, message: "최대 7일 이내여야 합니다" };
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    return { valid: true, message: days > 0 ? `약 ${days}일 ${hours}시간 ${minutes}분 후` : `약 ${hours}시간 ${minutes}분 후` };
+    setExtending(true);
+    try {
+      const result = await itemApi.extendAuction(Number(id));
+      setEndAt(result.end_at.slice(0, 16));
+      setExtensionCount(result.extension_count);
+      toast.success("경매 마감이 1일 연장되었습니다.");
+    } catch (err: unknown) {
+      const error = err as { message?: string };
+      toast.error(error?.message ?? "경매 마감 연장에 실패했습니다.");
+    } finally {
+      setExtending(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!condition) {
-      toast.error("상품 상태를 선택해주세요.");
+    if (!isActive) {
+      toast.error("진행 중인 경매만 수정할 수 있습니다.");
       return;
     }
-
-    if (endAt && new Date(endAt).getTime() > Date.now() + 7 * 24 * 60 * 60 * 1000 + 60 * 1000) {
-      toast.error("경매 마감 시간은 최대 7일 이내여야 합니다.");
+    if (!condition) {
+      toast.error("상품 상태를 선택해주세요.");
       return;
     }
 
@@ -156,7 +163,7 @@ export function ProductEditPage() {
       ? parseInt(buyNowPrice.replace(/,/g, ""), 10)
       : undefined;
 
-    if (buyNowPriceNum !== undefined && buyNowPriceNum <= currentPrice) {
+    if (!hasBid && buyNowPriceNum !== undefined && buyNowPriceNum <= currentPrice) {
       toast.error(`즉시 구매가는 현재 입찰가(${currentPrice.toLocaleString()}원)보다 높아야 합니다.`);
       return;
     }
@@ -171,9 +178,8 @@ export function ProductEditPage() {
           category,
           brand,
           item_condition: condition,
-          buy_now_price: buyNowPriceNum,
+          buy_now_price: hasBid ? undefined : buyNowPriceNum,
           delete_media_ids: deletedMediaIds.length > 0 ? deletedMediaIds : undefined,
-          end_at: endAt ? `${endAt}:00` : undefined,
         },
         newFiles
       );
@@ -278,7 +284,7 @@ export function ProductEditPage() {
                 <input
                   id="edit-file-input"
                   type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
                   multiple
                   onChange={handleFileInput}
                   className="hidden"
@@ -394,7 +400,11 @@ export function ProductEditPage() {
               <div>
                 <Label className="text-sm font-semibold text-black mb-2 block">
                   즉시 구매가
-                  {currentPrice > 0 && (
+                  {hasBid ? (
+                    <span className="text-xs text-red-500 font-normal ml-1">
+                      (입찰 이후 변경 불가)
+                    </span>
+                  ) : (
                     <span className="text-xs text-gray-400 font-normal ml-1">
                       (현재 입찰가 {currentPrice.toLocaleString()}원보다 높게 설정해주세요)
                     </span>
@@ -406,11 +416,16 @@ export function ProductEditPage() {
                     type="text"
                     placeholder="변경할 경우 입력"
                     value={buyNowPrice}
+                    readOnly={hasBid}
                     onChange={(e) => {
                       const v = e.target.value.replace(/[^0-9]/g, "");
                       setBuyNowPrice(v ? parseInt(v).toLocaleString() : "");
                     }}
-                    className="pl-8 h-11 text-sm focus-visible:ring-2 focus-visible:ring-black border-gray-300"
+                    className={`pl-8 h-11 text-sm ${
+                      hasBid
+                        ? "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed"
+                        : "focus-visible:ring-2 focus-visible:ring-black border-gray-300"
+                    }`}
                   />
                 </div>
               </div>
@@ -419,46 +434,38 @@ export function ProductEditPage() {
             {/* 마감 시간 */}
             <div>
               <Label className="text-sm font-semibold text-black mb-3 block">경매 마감</Label>
-              <div className="flex flex-wrap gap-2 mb-3">
-                {QUICK_OPTIONS.map((opt) => (
-                  <button key={opt.key} type="button" onClick={() => handleQuickDuration(opt.ms, opt.key)}
-                    className={`px-4 h-9 rounded-lg border-2 text-sm font-medium transition-all ${
-                      endAtMode === opt.key ? "border-black bg-black text-white" : "border-gray-200 text-gray-600 hover:border-gray-400"
-                    }`}>
-                    {opt.label}
-                  </button>
-                ))}
-                <DateTimePicker
-                  value={endAt ? endAt.slice(0, 16) : ""}
-                  onChange={(val) => { setEndAt(val); setEndAtMode("custom"); }}
-                  min={new Date()}
-                  max={new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Clock3 className="w-4 h-4 text-gray-500" />
+                  <span>
+                    {endAt
+                      ? new Date(endAt).toLocaleString("ko-KR", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                          weekday: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      : "마감 시간 확인 불가"}
+                  </span>
+                  {extensionCount !== null && (
+                    <span className="text-xs text-gray-400">({extensionCount}/3회 연장)</span>
+                  )}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleExtendAuction}
+                  disabled={!isActive || extending || extensionCount === 3}
+                  className="shrink-0 border-stone-300 bg-white text-stone-700 hover:bg-stone-100"
                 >
-                  <button type="button" onClick={() => setEndAtMode("custom")}
-                    className={`px-4 h-9 rounded-lg border-2 text-sm font-medium transition-all ${
-                      endAtMode === "custom" ? "border-black bg-black text-white" : "border-gray-200 text-gray-600 hover:border-gray-400"
-                    }`}>
-                    직접 입력
-                  </button>
-                </DateTimePicker>
+                  {extending ? "연장 중..." : "마감 1일 연장"}
+                </Button>
               </div>
-              {endAt && (() => {
-                const status = getEndTimeStatus();
-                if (!status) return null;
-                return (
-                  <div className={`mt-3 flex items-center justify-between text-sm rounded-lg px-4 py-3 border ${
-                    status.valid ? "bg-gray-50 border-gray-200 text-gray-500" : "bg-red-50 border-red-200 text-red-500"
-                  }`}>
-                    <span className="flex items-center gap-1.5">
-                      <CheckCircle2 className={`w-4 h-4 flex-shrink-0 ${status.valid ? "text-black" : "text-red-400"}`} />
-                      {new Date(endAt).toLocaleString("ko-KR", { month: "long", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit" })}
-                    </span>
-                    <span className={`ml-auto ${status.valid ? "text-black" : "text-red-500"}`}>
-                      {status.message}
-                    </span>
-                  </div>
-                );
-              })()}
+              <p className="mt-2 text-xs text-gray-400">
+                마감 시간은 직접 수정할 수 없으며, 진행 중인 경매에 한해 최대 3회 연장할 수 있습니다.
+              </p>
             </div>
           </div>
 
@@ -474,7 +481,7 @@ export function ProductEditPage() {
             </Button>
             <Button
               type="submit"
-              disabled={submitting}
+              disabled={!isActive || submitting}
               className="flex-1 h-12 bg-black hover:bg-gray-800 text-white font-semibold rounded-lg disabled:opacity-50"
             >
               {submitting ? "저장 중..." : "수정 완료"}
@@ -497,7 +504,7 @@ export function ProductEditPage() {
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={submitting}
+              disabled={!isActive || submitting}
               className="bg-black hover:bg-gray-800 text-white px-8 h-11 font-semibold rounded-lg disabled:opacity-50"
             >
               {submitting ? "저장 중..." : "수정 완료"}

@@ -11,7 +11,7 @@ export interface SliceResponse<T> {
 export interface ApiError {
   code: string;
   message: string;
-  details?: { field: string; message: string }[];
+  details?: { field: string | null; message: string }[];
 }
 
 export interface LoginResponse {
@@ -25,7 +25,7 @@ export interface SignupResponse {
 }
 
 export interface EmailVerifyResponse {
-  verified: boolean;
+  email: string;
 }
 
 export interface UserMeResponse {
@@ -52,7 +52,6 @@ export interface ItemSummary {
   current_price: number;
   is_wished: boolean;
   wish_count: number;
-  view_count: number;
   status: ItemStatus;
   end_at: string;
 }
@@ -102,11 +101,17 @@ export interface BuyNowResponse {
   status: ItemStatus;
 }
 
+export interface AuctionExtensionResponse {
+  item_id: number;
+  end_at: string;
+  extension_count: number;
+}
+
 // ────────────────────────────────────────────────
 // Bid
 // ────────────────────────────────────────────────
 
-export type BidStatus = "ACTIVE" | "WON";
+export type BidStatus = "ACTIVE" | "WON" | "LOST";
 
 export interface BidHistory {
   bid_id: number;

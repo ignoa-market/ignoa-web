@@ -23,9 +23,11 @@ export function DateTimePicker({ value, onChange, min, max, children }: DateTime
     if (!value) { setSelectedDate(undefined); return; }
     const d = new Date(value);
     if (isNaN(d.getTime())) return;
+    const remainder = d.getMinutes() % 10;
+    if (remainder !== 0) d.setMinutes(d.getMinutes() + (10 - remainder), 0, 0);
     setSelectedDate(d);
     setHour(d.getHours());
-    setMinute(Math.round(d.getMinutes() / 10) * 10 % 60);
+    setMinute(d.getMinutes());
   }, [value]);
 
   const emit = (date: Date, h: number, m: number) => {

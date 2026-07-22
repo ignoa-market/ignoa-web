@@ -15,11 +15,12 @@ import type { ItemDetailResponse, BidHistory } from "@/types/api";
 export function ProductDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isInitializing } = useAuth();
 
   const [item, setItem] = useState<ItemDetailResponse | null>(null);
   const [bids, setBids] = useState<BidHistory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actionPending, setActionPending] = useState(false);
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [slideDir, setSlideDir] = useState(1);
@@ -40,19 +41,31 @@ export function ProductDetailPage() {
 
   // 상품 상세 조회
   useEffect(() => {
-    if (!id) return;
+    if (!id || isInitializing) return;
+    let stale = false;
     setLoading(true);
     itemApi
       .getItem(numericId)
       .then((data) => {
+        if (stale) return;
         setItem(data);
         setDisplayPrice(data.current_price);
         endTimeRef.current = new Date(data.end_at);
         wishStore.sync(data.item_id, data.is_wished, data.wish_count);
       })
-      .catch(() => toast.error("상품 정보를 불러오지 못했습니다."))
-      .finally(() => setLoading(false));
-  }, [id]);
+      .catch(() => {
+        if (!stale) {
+          setItem(null);
+          toast.error("상품 정보를 불러오지 못했습니다.");
+        }
+      })
+      .finally(() => {
+        if (!stale) setLoading(false);
+      });
+    return () => {
+      stale = true;
+    };
+  }, [id, isAuthenticated, isInitializing, numericId]);
 
   // 입찰 내역 조회
   useEffect(() => {
@@ -123,26 +136,34 @@ export function ProductDetailPage() {
   };
 
   const handleBuyNow = async () => {
+    if (item?.buy_now_price == null || actionPending) return;
+    setActionPending(true);
     try {
-      await itemApi.buyNow(numericId);
+      await itemApi.buyNow(numericId, item.buy_now_price);
       toast.success("즉시 구매가 완료되었습니다!");
       setItem((prev) => prev ? { ...prev, status: "BUY_NOW_CLOSED" } : prev);
+      setDisplayPrice(item.buy_now_price);
       setBuyNowModalOpen(false);
       setBuyNowAgreed(false);
     } catch (err: unknown) {
       const error = err as { message?: string };
       toast.error(error?.message ?? "즉시 구매에 실패했습니다.");
+    } finally {
+      setActionPending(false);
     }
   };
 
   const handleBidConfirm = async () => {
+    if (actionPending) return;
     const amount = parseInt(bidAmount.replace(/,/g, ""));
     const willBuyNow = item?.buy_now_price != null && amount >= item.buy_now_price;
+    setActionPending(true);
     try {
       if (willBuyNow) {
-        await itemApi.buyNow(numericId);
+        await itemApi.buyNow(numericId, item!.buy_now_price!);
         toast.success("즉시 구매가 완료되었습니다!");
         setItem((prev) => prev ? { ...prev, status: "BUY_NOW_CLOSED" } : prev);
+        setDisplayPrice(item!.buy_now_price!);
       } else {
         await bidApi.placeBid(numericId, amount);
         toast.success(`입찰 완료: ${amount.toLocaleString()}원`);
@@ -156,6 +177,8 @@ export function ProductDetailPage() {
     } catch (err: unknown) {
       const error = err as { message?: string };
       toast.error(error?.message ?? "처리에 실패했습니다.");
+    } finally {
+      setActionPending(false);
     }
   };
 
@@ -357,7 +380,7 @@ export function ProductDetailPage() {
                 </Button>
                 <Button
                   onClick={handleDeleteItem}
-                  disabled={!(item.status === "NO_BID_CLOSED" || (item.status === "ACTIVE" && bids.length === 0))}
+                  disabled={item.status !== "ACTIVE" || item.current_price > item.start_price}
                   variant="outline"
                   className="flex-1 border-red-200 text-red-500 h-11 text-sm font-medium rounded hover:bg-red-50 hover:border-red-300 transition-colors disabled:opacity-40"
                 >
@@ -682,9 +705,10 @@ export function ProductDetailPage() {
                     <div className="flex gap-3">
                       <button
                         onClick={handleBidConfirm}
+                        disabled={actionPending}
                         className="flex-1 h-11 bg-stone-800 hover:bg-stone-700 text-white text-sm font-medium rounded-full transition-colors"
                       >
-                        확인
+                        {actionPending ? "처리 중..." : "확인"}
                       </button>
                       <button
                         onClick={() => setBidStep("input")}
@@ -744,10 +768,10 @@ export function ProductDetailPage() {
               <div className="flex gap-3">
                 <button
                   onClick={handleBuyNow}
-                  disabled={!buyNowAgreed}
+                  disabled={!buyNowAgreed || actionPending}
                   className="flex-1 h-11 bg-stone-800 hover:bg-stone-700 disabled:opacity-30 disabled:cursor-not-allowed text-white text-sm font-medium rounded-full transition-colors"
                 >
-                  구매하기
+                  {actionPending ? "처리 중..." : "구매하기"}
                 </button>
                 <button
                   onClick={() => { setBuyNowModalOpen(false); setBuyNowAgreed(false); }}

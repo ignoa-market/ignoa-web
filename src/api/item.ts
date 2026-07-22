@@ -5,6 +5,7 @@ import type {
   ItemDetailResponse,
   ItemResponse,
   BuyNowResponse,
+  AuctionExtensionResponse,
   ItemCondition,
   ItemViewType,
   BidHistory,
@@ -28,10 +29,9 @@ export interface ItemCreatePayload {
   description: string;
   category: string;
   brand: string;
-  size: string;
   item_condition: ItemCondition;
   start_price: number;
-  buy_now_price?: number;
+  buy_now_price: number;
   end_at: string;
 }
 
@@ -43,7 +43,6 @@ export interface ItemUpdatePayload {
   item_condition: ItemCondition;
   buy_now_price?: number;
   delete_media_ids?: number[];
-  end_at?: string;
 }
 
 export const itemApi = {
@@ -76,14 +75,19 @@ export const itemApi = {
       new Blob([JSON.stringify(payload)], { type: "application/json" })
     );
     files.forEach((file) => formData.append("files", file));
-    return api.patchForm<ItemResponse>(`/api/items/${itemId}`, formData);
+    return api.patchForm<ItemDetailResponse>(`/api/items/${itemId}`, formData);
   },
 
   deleteItem: (itemId: number) =>
     api.delete<ItemResponse>(`/api/items/${itemId}`),
 
-  buyNow: (itemId: number) =>
-    api.post<BuyNowResponse>(`/api/items/${itemId}/buy-now`, {}),
+  buyNow: (itemId: number, buyNowPrice: number) =>
+    api.post<BuyNowResponse>(`/api/items/${itemId}/buy-now`, {
+      buy_now_price: buyNowPrice,
+    }),
+
+  extendAuction: (itemId: number) =>
+    api.post<AuctionExtensionResponse>(`/api/items/${itemId}/extend`),
 };
 
 // ────────────────────────────────────────────────

@@ -39,6 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setState({ isAuthenticated: true, userId: me.user_id, isInitializing: false });
       })
       .catch(() => {
+        setAccessToken(null);
         setState({ isAuthenticated: false, userId: null, isInitializing: false });
       });
   }, []);
