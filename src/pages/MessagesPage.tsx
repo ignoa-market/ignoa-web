@@ -3,6 +3,9 @@ import { Send, ChevronLeft, MessageSquare, ImageIcon, X, Plus, Truck, CheckCircl
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "motion/react";
+import { chatApi } from "@/api/chat";
+import type { ChatRoomRole } from "@/types/api";
+import { toast } from "sonner";
 
 interface Chat {
   id: string;
@@ -11,6 +14,7 @@ interface Chat {
   lastMessage: string;
   timestamp: string;
   unread: number;
+  role: ChatRoomRole;
   productTitle?: string;
   productImage?: string;
 }
@@ -25,6 +29,8 @@ interface Message {
 }
 
 export function MessagesPage() {
+  const [chats, setChats] = useState<Chat[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"all" | "buying" | "selling">("all");
   const [message, setMessage] = useState("");
@@ -39,10 +45,31 @@ export function MessagesPage() {
     { icon: AlertCircle,  label: "거래 취소",    desc: "거래 취소 요청" },
   ];
 
-  const chats: Chat[] = [];
-
   const messages: Message[] = [];
   const selectedChatData = chats.find((c) => c.id === selectedChat);
+  const filteredChats = chats.filter((chat) =>
+    activeTab === "all"
+    || (activeTab === "buying" && chat.role === "BUYER")
+    || (activeTab === "selling" && chat.role === "SELLER")
+  );
+
+  useEffect(() => {
+    chatApi.getChatRooms()
+      .then((chatRooms) => {
+        setChats(chatRooms.map((chatRoom) => ({
+          id: String(chatRoom.chat_room_id),
+          name: chatRoom.partner_nickname,
+          avatar: chatRoom.partner_profile_image_url ?? undefined,
+          lastMessage: chatRoom.item_title,
+          timestamp: new Date(chatRoom.created_at).toLocaleDateString("ko-KR"),
+          unread: 0,
+          role: chatRoom.role,
+          productTitle: chatRoom.item_title,
+        })));
+      })
+      .catch(() => toast.error("채팅방 목록을 불러오지 못했습니다."))
+      .finally(() => setIsLoading(false));
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -94,12 +121,16 @@ export function MessagesPage() {
           </div>
 
           <div className="flex-1 overflow-y-auto">
-            {chats.length === 0 ? (
+            {isLoading ? (
+              <div className="flex items-center justify-center h-full">
+                <p className="text-[11px] font-semibold tracking-[0.2em] uppercase text-stone-300">Loading</p>
+              </div>
+            ) : filteredChats.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full gap-2">
                 <p className="text-[11px] font-semibold tracking-[0.2em] uppercase text-stone-300">No messages</p>
               </div>
             ) : (
-              chats.map((chat) => (
+              filteredChats.map((chat) => (
                 <button
                   key={chat.id}
                   onClick={() => setSelectedChat(chat.id)}

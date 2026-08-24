@@ -145,3 +145,20 @@ export interface WishSummary {
   wished_at: string;
   item_status: ItemStatus;
 }
+
+// ────────────────────────────────────────────────
+// Chat
+// ────────────────────────────────────────────────
+
+export type ChatRoomRole = "BUYER" | "SELLER";
+
+export interface ChatRoomPreview {
+  chat_room_id: number;
+  item_id: number;
+  item_title: string;
+  partner_id: number;
+  partner_nickname: string;
+  partner_profile_image_url: string | null;
+  role: ChatRoomRole;
+  created_at: string;
+}
