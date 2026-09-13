@@ -21,7 +21,16 @@ interface AddressModalProps {
 
 export function AddressModal({ onSelect, onClose }: AddressModalProps) {
   const embedRef = useRef<HTMLDivElement>(null);
+  const onSelectRef = useRef(onSelect);
+  const onCloseRef = useRef(onClose);
   const [loadError, setLoadError] = useState(false);
+
+  // Keep the latest callbacks without recreating the postcode iframe whenever
+  // the parent re-renders (for example, while the signup timer is running).
+  useEffect(() => {
+    onSelectRef.current = onSelect;
+    onCloseRef.current = onClose;
+  }, [onClose, onSelect]);
 
   useEffect(() => {
     if (!window.daum?.Postcode) {
@@ -33,13 +42,17 @@ export function AddressModal({ onSelect, onClose }: AddressModalProps) {
       oncomplete: (data) => {
         const address = data.roadAddress || data.jibunAddress;
         if (!address) return;
-        onSelect(address);
-        onClose();
+        onSelectRef.current(address);
+        onCloseRef.current();
       },
       width: "100%",
       height: "100%",
     }).embed(embedRef.current);
-  }, [onClose, onSelect]);
+
+    return () => {
+      embedRef.current?.replaceChildren();
+    };
+  }, []);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
