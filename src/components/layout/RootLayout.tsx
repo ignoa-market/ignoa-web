@@ -6,8 +6,8 @@ import { AnnouncementBanner } from "@/components/layout/AnnouncementBanner";
 
 export function Root() {
   const location = useLocation();
-  const hideNavbarPaths = ["/login", "/signup"];
-  const shouldShowNavbar = !hideNavbarPaths.includes(location.pathname);
+  const shouldShowNavbar = true;
+  const shouldShowFooter = !["/login", "/signup"].includes(location.pathname);
 
   return (
     <>
@@ -15,7 +15,7 @@ export function Root() {
       {shouldShowNavbar && <AnnouncementBanner />}
       {shouldShowNavbar && <Navbar />}
       <Outlet />
-      {shouldShowNavbar && <Footer />}
+      {shouldShowFooter && <Footer />}
     </>
   );
 }

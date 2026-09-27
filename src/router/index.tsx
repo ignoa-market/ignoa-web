@@ -51,11 +51,17 @@ export const router = createBrowserRouter([
   },
   {
     path: "/login",
-    Component: LoginPage,
+    Component: Root,
+    children: [
+      { index: true, Component: LoginPage },
+    ],
   },
   {
     path: "/signup",
-    Component: SignUpPage,
+    Component: Root,
+    children: [
+      { index: true, Component: SignUpPage },
+    ],
   },
   {
     path: "/oauth/kakao/callback",

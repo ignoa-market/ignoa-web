@@ -186,7 +186,7 @@ export function SignUpPage() {
 
   if (step === "complete") {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center px-4 relative overflow-hidden">
+      <div className="min-h-screen bg-white flex items-center justify-center px-4 pt-[196px] relative overflow-hidden">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <motion.div animate={{ opacity: [0.1, 0.2, 0.1], scale: [1, 1.2, 1] }} transition={{ duration: 8, repeat: Infinity }} className="absolute top-10 left-10 w-96 h-96 bg-black rounded-full blur-3xl" />
           <motion.div animate={{ opacity: [0.05, 0.15, 0.05], scale: [1, 1.3, 1] }} transition={{ duration: 10, repeat: Infinity, delay: 1 }} className="absolute bottom-10 right-10 w-[500px] h-[500px] bg-gray-400 rounded-full blur-3xl" />
@@ -221,7 +221,7 @@ export function SignUpPage() {
   const currentStep = step as 1 | 2 | 3;
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center px-4 py-10">
+    <div className="min-h-screen bg-white flex items-center justify-center px-4 pb-10 pt-[236px]">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="w-full max-w-sm">
 
         {/* Logo */}
