@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronLeft, LoaderCircle, MessageSquare, Send } from "lucide-react";
+import { CheckCircle2, ChevronLeft, CreditCard, LoaderCircle, MapPin, MessageSquare, Plus, Send } from "lucide-react";
 import { useSearchParams } from "react-router";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
@@ -33,6 +33,7 @@ export function MessagesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isMessagesLoading, setIsMessagesLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [actionMenuOpen, setActionMenuOpen] = useState(false);
   const [draftItem, setDraftItem] = useState<ItemDetailResponse | null>(null);
   const [isDraftLoading, setIsDraftLoading] = useState(hasRequestedItem && !selectedChat);
   const [hasOlderMessages, setHasOlderMessages] = useState(false);
@@ -268,10 +269,10 @@ export function MessagesPage() {
   );
 
   return (
-    <div className="min-h-screen bg-white pt-[196px]">
-      <div className="mx-auto w-full max-w-[1400px] px-8">
-      <div className="h-[calc(100vh-196px)] flex overflow-hidden border-x border-t border-stone-100">
-        <div className={`w-full md:w-[360px] flex-shrink-0 border-r border-stone-100 flex-col ${hasConversation ? "hidden md:flex" : "flex"}`}>
+    <div className="bg-white pb-10 pt-[170px]">
+      <div className="mx-auto w-full max-w-[960px] px-8">
+      <div className="h-[67vh] min-h-[528px] flex overflow-hidden border-x border-b border-stone-100">
+        <div className={`min-h-0 w-full md:w-[264px] flex-shrink-0 border-r border-stone-100 flex-col ${hasConversation ? "hidden md:flex" : "flex"}`}>
           <div className="px-4 h-14 flex items-center gap-1 border-b border-stone-100">
             {(["all", "buying", "selling"] as const).map((tab) => (
               <button
@@ -286,11 +287,15 @@ export function MessagesPage() {
             ))}
           </div>
 
-          <div className="flex-1 overflow-y-auto">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
             {isLoading ? (
               <div className="flex h-full items-center justify-center"><LoaderCircle className="h-5 w-5 animate-spin text-stone-300" /></div>
             ) : filteredChats.length === 0 ? (
-              <div className="flex h-full items-center justify-center"><p className="text-[11px] font-semibold tracking-[0.2em] uppercase text-stone-300">No messages</p></div>
+              <div className="flex h-full items-center justify-center">
+                <p className="text-xs font-normal text-stone-400">
+                  {{ all: "대화가 없습니다.", buying: "구매 대화가 없습니다.", selling: "판매 대화가 없습니다." }[activeTab]}
+                </p>
+              </div>
             ) : filteredChats.map((chat) => (
               <button
                 key={chat.chat_room_id}
@@ -322,7 +327,7 @@ export function MessagesPage() {
         </div>
 
         {hasConversation ? (
-          <div className="relative flex flex-1 flex-col">
+          <div className="relative flex min-h-0 flex-1 flex-col">
             <div className="px-4 h-14 border-b border-stone-100 flex items-center gap-2.5">
               <button onClick={() => selectChat(null)} className="md:hidden w-8 h-8 flex items-center justify-center rounded-full hover:bg-stone-100">
                 <ChevronLeft className="w-4 h-4 text-stone-500" />
@@ -337,7 +342,7 @@ export function MessagesPage() {
               </div>
             </div>
 
-            <div ref={messageScrollRef} className="flex-1 overflow-y-auto bg-stone-50 px-4 py-5 space-y-2.5">
+            <div ref={messageScrollRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white px-4 py-5 space-y-2.5">
               {hasOlderMessages && (
                 <div className="flex justify-center pb-2">
                   <button onClick={loadOlderMessages} disabled={isMessagesLoading} className="text-xs text-stone-400 hover:text-stone-700 disabled:opacity-50">이전 메시지 불러오기</button>
@@ -363,9 +368,46 @@ export function MessagesPage() {
             </div>
 
             <div className="border-t border-stone-100 bg-white px-4 py-3">
-              <div className="flex items-center gap-3">
+              <div className="relative flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setActionMenuOpen((open) => !open)}
+                  className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border transition-colors ${
+                    actionMenuOpen
+                      ? "border-stone-800 bg-stone-800 text-white"
+                      : "border-stone-200 text-stone-500 hover:border-stone-400 hover:text-stone-800"
+                  }`}
+                  aria-label="채팅 기능 열기"
+                  aria-expanded={actionMenuOpen}
+                >
+                  <Plus className={`h-4 w-4 transition-transform ${actionMenuOpen ? "rotate-45" : ""}`} />
+                </button>
+
+                {actionMenuOpen && (
+                  <div className="absolute bottom-full left-0 z-20 mb-3 w-48 overflow-hidden rounded-2xl border border-stone-200 bg-white p-1.5 shadow-lg">
+                    {[
+                      { label: "결제 요청", icon: CreditCard },
+                      { label: "배송지 요청", icon: MapPin },
+                      { label: "거래 완료 요청", icon: CheckCircle2 },
+                    ].map(({ label, icon: Icon }) => (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={() => {
+                          setActionMenuOpen(false);
+                          toast.info(`${label} 기능은 준비 중입니다.`);
+                        }}
+                        className="flex h-10 w-full items-center gap-3 rounded-xl px-3 text-left text-xs font-medium text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-900"
+                      >
+                        <Icon className="h-4 w-4 text-stone-400" />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 <Input
-                  placeholder="메시지를 입력하세요"
+                  placeholder="메시지를 입력하세요."
                   value={message}
                   maxLength={1000}
                   onChange={(event) => setMessage(event.target.value)}
@@ -388,7 +430,7 @@ export function MessagesPage() {
             </div>
           </div>
         ) : (
-          <div className="hidden md:flex flex-1 items-center justify-center bg-stone-50">
+          <div className="hidden md:flex flex-1 items-center justify-center bg-white">
             <div className="text-center flex flex-col items-center gap-3">
               <div className="w-14 h-14 rounded-full bg-stone-100 flex items-center justify-center"><MessageSquare className="w-6 h-6 text-stone-300" /></div>
               <p className="text-[11px] font-semibold tracking-[0.3em] uppercase text-stone-300">대화를 선택하세요</p>
