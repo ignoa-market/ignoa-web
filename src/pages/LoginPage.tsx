@@ -70,7 +70,7 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white pt-[196px]">
+    <div className="min-h-screen flex items-center justify-center bg-white pt-[170px]">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}

@@ -41,17 +41,24 @@ export function Navbar() {
 
   return (
     <>
-      <nav className="fixed top-20 left-0 right-0 z-50 bg-white">
-        <div className="max-w-[1400px] mx-auto px-8 py-3.5">
+      <nav className="fixed top-[54px] left-0 right-0 z-50 flex h-[116px] flex-col bg-white">
+        <div className="w-full max-w-[1120px] mx-auto px-8 py-3.5">
           <div className="flex items-center gap-8">
             {/* Logo + Logo Name */}
-            <Link to="/app" className="flex items-center gap-3 flex-shrink-0">
+            <Link
+              to="/app"
+              className="flex items-center gap-3 flex-shrink-0"
+              style={{ transform: "scale(0.9)", transformOrigin: "left center" }}
+            >
               <img src={logoImage} alt="IGNOA" className="h-9 w-9" />
               <span className="text-2xl font-bold text-black tracking-tight">IGNOA</span>
             </Link>
 
             {/* Search Bar */}
-            <div className="flex-1 max-w-[500px] relative">
+            <div
+              className="-ml-3 flex-1 max-w-[500px] relative"
+              style={{ transform: "scale(0.9)", transformOrigin: "left center" }}
+            >
               <div className="relative group">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 transition-colors group-focus-within:text-black pointer-events-none" />
                 <input
@@ -74,7 +81,10 @@ export function Navbar() {
             </div>
 
             {/* Right Actions */}
-            <div className="flex items-center gap-2 ml-auto">
+            <div
+              className="flex items-center gap-2 ml-auto"
+              style={{ transform: "scale(0.9)", transformOrigin: "right center" }}
+            >
               {isInitializing ? (
                 <div className="w-[180px]" />
               ) : isAuthenticated ? (
@@ -167,9 +177,9 @@ export function Navbar() {
         </div>
 
         {/* Category Bar */}
-        <div className="border-b border-gray-200">
-          <div className="max-w-[1400px] mx-auto px-8">
-            <div className="flex items-center gap-3">
+        <div className="flex flex-1 items-center border-b border-gray-200">
+          <div className="w-full max-w-[1120px] mx-auto px-8">
+            <div className="flex items-center gap-3" style={{ zoom: 0.9 }}>
               {["카테고리", "한정판", "빈티지", "콜라보", "라이프", "브랜드", "기획전"].map((cat) => (
                 <button
                   key={cat}

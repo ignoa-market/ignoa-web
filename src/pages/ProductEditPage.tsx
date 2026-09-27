@@ -214,7 +214,7 @@ export function ProductEditPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white pt-[196px] pb-24">
+    <div className="min-h-screen bg-white pt-[170px] pb-24">
       <div className="max-w-[800px] mx-auto px-4 sm:px-6 py-6 sm:py-10">
         {/* Header */}
         <div className="mb-5">

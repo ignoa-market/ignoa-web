@@ -49,7 +49,7 @@ export function AppDownloadPage() {
   const showPreparing = () => toast.info("앱 출시를 준비 중입니다.");
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-white px-6 pb-16 pt-[212px] text-black">
+    <main className="flex min-h-screen items-center justify-center bg-white px-6 pb-16 pt-[186px] text-black">
       <section className="flex w-full max-w-xl flex-col items-center text-center">
         <h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
           앱에서 IGNOA를<br />제대로 즐겨보세요!

@@ -217,10 +217,10 @@ export function ProfilePage() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="min-h-screen bg-white pt-[196px] pb-28"
+      className="min-h-screen bg-white pt-[170px] pb-28"
     >
       {/* Profile Hero */}
-      <div className="max-w-[1400px] mx-auto px-8">
+      <div className="max-w-[1400px] mx-auto px-8" style={{ zoom: 0.9 }}>
         <div className="flex items-center justify-between py-8">
 
           {/* Left: Avatar + Info */}
@@ -264,7 +264,7 @@ export function ProfilePage() {
 
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-4xl font-black text-black leading-tight">{savedName}</h1>
+                <h1 className="text-3xl font-black text-black leading-tight">{savedName}</h1>
                 <button
                   type="button"
                   onClick={() => {
@@ -280,7 +280,7 @@ export function ProfilePage() {
                   title={isEditing ? "수정 취소" : "프로필 수정"}
                   aria-label={isEditing ? "수정 취소" : "프로필 수정"}
                 >
-                  {isEditing ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+                  {isEditing ? <X className="h-4 w-4" /> : <Pencil className="h-3.5 w-3.5" />}
                 </button>
               </div>
               <p className="text-sm text-gray-400 mt-1">{email}</p>
@@ -330,7 +330,7 @@ export function ProfilePage() {
                             setIsNicknameAvailable(null);
                             setNicknameError("");
                           }}
-                          className={`h-11 pr-8 border focus-visible:ring-1 focus-visible:ring-black focus-visible:border-black rounded-none ${
+                          className={`h-11 pr-8 border focus-visible:ring-1 focus-visible:ring-black focus-visible:border-black rounded-xl ${
                             nicknameError ? "border-red-400" :
                             isNicknameAvailable ? "border-green-400" :
                             "border-gray-200"
@@ -344,7 +344,7 @@ export function ProfilePage() {
                         type="button"
                         onClick={checkNickname}
                         disabled={isNicknameChecking || !userName.trim() || !isNicknameDirty}
-                        className="h-11 px-3 border border-gray-200 text-xs font-medium text-gray-600 hover:border-black hover:text-black transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+                        className="h-11 px-3 rounded-xl border border-gray-200 text-xs font-medium text-gray-600 hover:border-black hover:text-black transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
                       >
                         {isNicknameChecking ? "확인중..." : "중복확인"}
                       </button>
@@ -369,7 +369,7 @@ export function ProfilePage() {
                     <button
                       type="button"
                       onClick={() => setShowAddressModal(true)}
-                      className="w-full h-11 px-3 border border-gray-200 flex items-center justify-between text-sm hover:border-black transition-colors group rounded-none"
+                      className="w-full h-11 px-3 border border-gray-200 flex items-center justify-between text-sm hover:border-black transition-colors group rounded-xl"
                     >
                       <span className={address ? "text-black" : "text-gray-400"}>
                         {address || "주소를 검색해주세요"}
@@ -381,7 +381,7 @@ export function ProfilePage() {
                     <Label className="text-[11px] font-semibold tracking-[0.2em] text-gray-400 uppercase mb-2 flex items-center gap-1.5">
                       <Mail className="w-3 h-3" /> 이메일
                     </Label>
-                    <div className="h-11 px-3 bg-gray-50 border border-gray-200 flex items-center text-sm text-gray-400">
+                    <div className="h-11 px-3 rounded-xl bg-gray-50 border border-gray-200 flex items-center text-sm text-gray-400">
                       {email}
                     </div>
                   </div>
@@ -431,7 +431,7 @@ export function ProfilePage() {
             {tabLoading ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="aspect-square bg-gray-100 rounded-sm animate-pulse" />
+                  <div key={i} className="aspect-square bg-gray-100 rounded-lg animate-pulse" />
                 ))}
               </div>
             ) : currentCards.length > 0 ? (
@@ -478,7 +478,7 @@ export function ProfilePage() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 12 }}
               transition={{ duration: 0.2 }}
-              className="bg-white w-full max-w-sm mx-4 shadow-xl overflow-hidden"
+              className="bg-white w-full max-w-sm mx-4 rounded-2xl shadow-xl overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
@@ -487,7 +487,7 @@ export function ProfilePage() {
                 </p>
                 <button
                   onClick={() => setShowFollowModal(null)}
-                  className="w-7 h-7 flex items-center justify-center hover:bg-gray-100 transition-colors"
+                  className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors"
                 >
                   <X className="w-4 h-4 text-gray-500" />
                 </button>

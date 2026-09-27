@@ -243,8 +243,8 @@ export function ProductDetailPage() {
   const nextImage = () => goToImage(currentImageIndex === media.length - 1 ? 0 : currentImageIndex + 1);
 
   return (
-    <div className="min-h-screen bg-white pt-[196px]">
-      <div className="max-w-[1400px] mx-auto px-6 pt-0 pb-8 sm:pb-12">
+    <div className="min-h-screen bg-white pt-[170px]">
+      <div className="max-w-[1400px] mx-auto px-6 pt-0 pb-8 sm:pb-12" style={{ zoom: 0.8 }}>
 
         {/* 2-column layout */}
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">

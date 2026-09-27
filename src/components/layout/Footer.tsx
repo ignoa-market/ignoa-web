@@ -3,7 +3,7 @@ export function Footer() {
 
   return (
     <footer className="bg-white border-t border-gray-200 mt-20">
-      <div className="max-w-[1400px] mx-auto px-6 py-10">
+      <div className="max-w-[1400px] mx-auto px-6 py-10" style={{ zoom: 0.8 }}>
 
         {/* Nav Links */}
         <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mb-8">

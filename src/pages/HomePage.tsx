@@ -106,8 +106,9 @@ export function HomePage() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.6 }}
-      className="min-h-screen bg-white pt-[196px]"
+      className="min-h-screen bg-white pt-[170px]"
     >
+      <div style={{ zoom: 0.8 }}>
       {/* Section 1: Main Banner Slider */}
       <motion.div
         ref={promoRef}
@@ -366,6 +367,7 @@ export function HomePage() {
             </div>
           )}
         </motion.div>
+      </div>
       </div>
     </motion.div>
   );

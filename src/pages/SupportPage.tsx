@@ -48,8 +48,8 @@ export function SupportPage() {
   }, [category, query]);
 
   return (
-    <main className="min-h-screen bg-white px-6 pb-28 pt-[230px] text-stone-900">
-      <div className="mx-auto w-full max-w-[1040px]">
+    <main className="min-h-screen bg-white px-6 pb-28 pt-[204px] text-stone-900">
+      <div className="mx-auto w-full max-w-[1040px]" style={{ zoom: 0.9 }}>
         <section className="text-center">
           <p className="text-xs font-medium uppercase tracking-[0.24em] text-stone-400">Help Center</p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">IGNOA 고객센터</h1>

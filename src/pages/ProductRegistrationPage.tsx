@@ -148,9 +148,9 @@ export function ProductRegistrationPage() {
   const getEndTimeStatus = (): { valid: boolean; message: string } | null => {
     if (!endDate || !endTime) return null;
     const diff = new Date(`${endDate}T${endTime}`).getTime() - Date.now();
-    if (diff <= 0) return { valid: false, message: "마감 시간이 현재보다 과거입니다" };
-    if (diff < 24 * 60 * 60 * 1000) return { valid: false, message: "최소 1일 이후여야 합니다" };
-    if (diff > 7 * 24 * 60 * 60 * 1000 + 60 * 1000) return { valid: false, message: "최대 7일 이내여야 합니다" };
+    if (diff <= 0) return { valid: false, message: "마감 시간이 현재보다 과거입니다." };
+    if (diff < 24 * 60 * 60 * 1000) return { valid: false, message: "최소 1일 이후여야 합니다." };
+    if (diff > 7 * 24 * 60 * 60 * 1000 + 60 * 1000) return { valid: false, message: "최대 7일 이내여야 합니다." };
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -221,11 +221,11 @@ export function ProductRegistrationPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white pt-[196px] pb-24">
-      <div className="max-w-[800px] mx-auto px-4 sm:px-6 py-6 sm:py-10">
+    <div className="min-h-screen bg-white pt-[170px] pb-24">
+      <div className="max-w-[800px] mx-auto px-4 sm:px-6 py-6 sm:py-10" style={{ zoom: 0.8 }}>
         <div className="mb-5">
           <h1 className="text-3xl sm:text-4xl font-bold text-black mb-1">상품 등록</h1>
-          <p className="text-gray-600">경매에 올릴 상품 정보를 입력해주세요</p>
+          <p className="text-gray-600">경매에 올릴 상품 정보를 입력해주세요.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -243,7 +243,7 @@ export function ProductRegistrationPage() {
             >
               <Upload className={`w-8 h-8 text-black mx-auto mb-2 transition-transform ${isDragging ? "scale-110" : ""}`} />
               <p className="text-sm font-medium text-black">
-                {previews.length > 0 ? `미디어 추가 (${previews.length})` : "사진 또는 동영상을 드래그하거나 클릭하세요"}
+                {previews.length > 0 ? `미디어 추가 (${previews.length})` : "사진 또는 동영상을 드래그하거나 클릭하세요."}
               </p>
               <p className="mt-1 text-xs text-gray-400">동영상은 최대 1개, 사진은 최소 1개 필요합니다.</p>
               <input id="file-input" type="file" accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/x-msvideo,video/webm" multiple onChange={handleFileInput} className="hidden" />
@@ -424,8 +424,8 @@ export function ProductRegistrationPage() {
 
       {/* Desktop sticky bottom */}
       <div className="hidden md:block fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
-        <div className="max-w-[800px] mx-auto px-6 py-4 flex items-center justify-between">
-          <p className="text-sm text-gray-400">필수 항목을 모두 입력해주세요</p>
+        <div className="max-w-[800px] mx-auto px-6 py-4 flex items-center justify-between" style={{ zoom: 0.8 }}>
+          <p className="text-sm text-gray-400">필수 항목을 모두 입력해주세요.</p>
           <div className="flex gap-3">
             <Button onClick={() => navigate(-1)} variant="outline"
               className="px-6 h-11 font-semibold rounded-xl">
