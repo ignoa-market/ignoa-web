@@ -230,14 +230,14 @@ export function ProductRegistrationPage() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Media Upload */}
-          <div className="bg-white rounded-xl p-6 sm:p-8 border border-gray-200">
+          <div className="bg-white rounded-2xl p-6 sm:p-8 border border-gray-200">
             {/* 미디어 업로드 */}
             <div
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
               onClick={() => document.getElementById("file-input")?.click()}
-              className={`border-2 border-dashed rounded-xl p-6 text-center transition-all cursor-pointer ${
+              className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all cursor-pointer ${
                 isDragging ? "border-black bg-gray-50 scale-[1.01]" : "border-gray-300 bg-gray-50 hover:border-black"
               }`}
             >
@@ -274,18 +274,18 @@ export function ProductRegistrationPage() {
           </div>
 
           {/* 상품 정보 */}
-          <div className="bg-white rounded-xl p-6 sm:p-8 border border-gray-200 space-y-5">
+          <div className="bg-white rounded-2xl p-6 sm:p-8 border border-gray-200 space-y-5">
             {/* 브랜드 · 카테고리 · 상태 */}
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <Label className="text-sm font-semibold text-black mb-2 block">브랜드 <span className="text-red-500">*</span></Label>
                 <Input placeholder="예) Our Legacy" value={brand} onChange={(e) => setBrand(e.target.value)}
-                  className="rounded-lg text-sm focus-visible:ring-2 focus-visible:ring-black border-gray-300" required />
+                  className="rounded-xl text-sm focus-visible:ring-2 focus-visible:ring-black border-gray-300" required />
               </div>
               <div>
                 <Label className="text-sm font-semibold text-black mb-2 block">카테고리 <span className="text-red-500">*</span></Label>
                 <Select value={category} onValueChange={handleCategoryChange} required>
-                  <SelectTrigger className="rounded-lg text-sm focus:ring-2 focus:ring-black border-gray-300">
+                  <SelectTrigger className="rounded-xl text-sm focus:ring-2 focus:ring-black border-gray-300">
                     <SelectValue placeholder="선택" />
                   </SelectTrigger>
                   <SelectContent>
@@ -296,7 +296,7 @@ export function ProductRegistrationPage() {
               <div>
                 <Label className="text-sm font-semibold text-black mb-2 block">상태 <span className="text-red-500">*</span></Label>
                 <Select value={condition} onValueChange={(v) => setCondition(v as ItemCondition)} required>
-                  <SelectTrigger className="rounded-lg text-sm focus:ring-2 focus:ring-black border-gray-300">
+                  <SelectTrigger className="rounded-xl text-sm focus:ring-2 focus:ring-black border-gray-300">
                     <SelectValue placeholder="선택" />
                   </SelectTrigger>
                   <SelectContent>
@@ -311,7 +311,7 @@ export function ProductRegistrationPage() {
               <Label className="text-sm font-semibold text-black mb-2 block">상품 제목 <span className="text-red-500">*</span></Label>
               <Input placeholder="예) Rick Owens Vintage Leather Jacket" value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="h-11 rounded-lg text-sm focus-visible:ring-2 focus-visible:ring-black border-gray-300" required />
+                className="h-11 rounded-xl text-sm focus-visible:ring-2 focus-visible:ring-black border-gray-300" required />
               <p className="text-xs text-gray-400 mt-1.5 text-right">{title.length}/50</p>
             </div>
 
@@ -320,13 +320,13 @@ export function ProductRegistrationPage() {
               <Label className="text-sm font-semibold text-black mb-2 block">상품 설명 <span className="text-red-500">*</span></Label>
               <Textarea placeholder="상품 상태, 구매 시기, 사용감 등을 작성해주세요." value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="min-h-[160px] rounded-lg text-sm focus-visible:ring-2 focus-visible:ring-black border-gray-300 resize-none" required />
+                className="min-h-[160px] rounded-xl text-sm focus-visible:ring-2 focus-visible:ring-black border-gray-300 resize-none" required />
               <p className="text-xs text-gray-400 mt-1.5 text-right">{description.length}/1000</p>
             </div>
           </div>
 
           {/* 가격 & 경매 */}
-          <div className="bg-white rounded-xl p-6 sm:p-8 border border-gray-200 space-y-5">
+          <div className="bg-white rounded-2xl p-6 sm:p-8 border border-gray-200 space-y-5">
             {/* 시작가 + 즉시구매가 */}
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -335,7 +335,7 @@ export function ProductRegistrationPage() {
                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₩</span>
                   <Input type="text" placeholder="500,000" value={startPrice}
                     onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, ""); setStartPrice(v ? parseInt(v).toLocaleString() : ""); }}
-                    className="pl-8 h-11 rounded-lg text-sm font-semibold focus-visible:ring-2 focus-visible:ring-black border-gray-300" required />
+                    className="pl-8 h-11 rounded-xl text-sm font-semibold focus-visible:ring-2 focus-visible:ring-black border-gray-300" required />
                 </div>
               </div>
               <div>
@@ -344,7 +344,7 @@ export function ProductRegistrationPage() {
                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₩</span>
                   <Input type="text" placeholder="1,200,000" value={buyNowPrice}
                     onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, ""); setBuyNowPrice(v ? parseInt(v).toLocaleString() : ""); }}
-                    className={`pl-8 h-11 rounded-lg text-sm font-semibold focus-visible:ring-2 focus-visible:ring-black ${
+                    className={`pl-8 h-11 rounded-xl text-sm font-semibold focus-visible:ring-2 focus-visible:ring-black ${
                       buyNowPrice && startPrice && parseInt(buyNowPrice.replace(/,/g, "")) <= parseInt(startPrice.replace(/,/g, ""))
                         ? "border-red-300 focus-visible:ring-red-400"
                         : "border-gray-300"
@@ -362,7 +362,7 @@ export function ProductRegistrationPage() {
               <div className="flex flex-wrap gap-2">
                 {QUICK_OPTIONS.map((opt) => (
                   <button key={opt.key} type="button" onClick={() => handleQuickDuration(opt.ms, opt.key)}
-                    className={`px-4 h-9 rounded-lg border-2 text-sm font-medium transition-all ${
+                    className={`px-4 h-9 rounded-xl border-2 text-sm font-medium transition-all ${
                       quickDuration === opt.key ? "border-black bg-black text-white" : "border-gray-200 text-gray-600 hover:border-gray-400"
                     }`}>
                     {opt.label}
@@ -380,7 +380,7 @@ export function ProductRegistrationPage() {
                   max={new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)}
                 >
                   <button type="button" onClick={() => setQuickDuration("custom")}
-                    className={`px-4 h-9 rounded-lg border-2 text-sm font-medium transition-all ${
+                    className={`px-4 h-9 rounded-xl border-2 text-sm font-medium transition-all ${
                       quickDuration === "custom" ? "border-black bg-black text-white" : "border-gray-200 text-gray-600 hover:border-gray-400"
                     }`}>
                     직접 입력
@@ -392,7 +392,7 @@ export function ProductRegistrationPage() {
                 const status = getEndTimeStatus();
                 if (!status) return null;
                 return (
-                  <div className={`mt-3 flex items-center justify-between text-sm rounded-lg px-4 py-3 border ${
+                  <div className={`mt-3 flex items-center justify-between text-sm rounded-xl px-4 py-3 border ${
                     status.valid ? "bg-gray-50 border-gray-200 text-gray-500" : "bg-red-50 border-red-200 text-red-500"
                   }`}>
                     <span className="flex items-center gap-1.5">
@@ -411,11 +411,11 @@ export function ProductRegistrationPage() {
           {/* Mobile submit */}
           <div className="md:hidden pt-2 flex gap-3">
             <Button type="button" onClick={() => navigate(-1)} variant="outline"
-              className="flex-1 h-12 font-semibold rounded-lg">
+              className="flex-1 h-12 font-semibold rounded-xl">
               취소하기
             </Button>
             <Button type="submit" disabled={submitting}
-              className="flex-1 h-12 bg-black hover:bg-gray-800 text-white font-semibold rounded-lg disabled:opacity-50">
+              className="flex-1 h-12 bg-black hover:bg-gray-800 text-white font-semibold rounded-xl disabled:opacity-50">
               {submitting ? "등록 중..." : "등록하기"}
             </Button>
           </div>
@@ -428,11 +428,11 @@ export function ProductRegistrationPage() {
           <p className="text-sm text-gray-400">필수 항목을 모두 입력해주세요</p>
           <div className="flex gap-3">
             <Button onClick={() => navigate(-1)} variant="outline"
-              className="px-6 h-11 font-semibold rounded-lg">
+              className="px-6 h-11 font-semibold rounded-xl">
               취소하기
             </Button>
             <Button onClick={handleSubmit} disabled={submitting}
-              className="bg-black hover:bg-gray-800 text-white px-8 h-11 font-semibold rounded-lg disabled:opacity-50">
+              className="bg-black hover:bg-gray-800 text-white px-8 h-11 font-semibold rounded-xl disabled:opacity-50">
               {submitting ? "등록 중..." : "등록하기"}
             </Button>
           </div>
