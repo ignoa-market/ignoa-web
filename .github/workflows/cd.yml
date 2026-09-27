@@ -33,6 +33,9 @@ jobs:
 
       - name: 빌드
         run: npm run build
+        env:
+          VITE_KAKAO_CLIENT_ID: ${{ vars.VITE_KAKAO_CLIENT_ID }}
+          VITE_KAKAO_REDIRECT_URI: ${{ vars.VITE_KAKAO_REDIRECT_URI }}
 
       - name: AWS 인증
         uses: aws-actions/configure-aws-credentials@v5
