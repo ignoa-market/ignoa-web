@@ -5,8 +5,17 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { itemApi } from "@/api/item";
 import { useAuth } from "@/context/AuthContext";
 import type { ItemSummary } from "@/types/api";
+import lightweightPufferBanner from "@/assets/banner-lightweight-puffer.png";
+import { toast } from "sonner";
 
 const bannerSlides = [
+  {
+    type: "collection" as const,
+    image: lightweightPufferBanner as string | null,
+    label: "Curated Collection",
+    title: "Light Down",
+    subtitle: "환절기부터 초겨울까지, 가볍게",
+  },
   {
     type: "fee" as const,
     image: null as string | null,
@@ -23,7 +32,16 @@ const bannerSlides = [
   },
 ];
 
-const allCategories = ["All", "아우터", "상의", "하의", "신발", "가방", "액세서리"];
+const popularBrands = [
+  "Stone Island",
+  "Chrome Hearts",
+  "Supreme",
+  "PLASTICPRODUCT",
+  "Levi's",
+  "Polo Ralph Lauren",
+  "C.P. Company",
+  "Bape",
+];
 
 function toProductCardProps(item: ItemSummary) {
   return {
@@ -43,7 +61,6 @@ export function HomePage() {
   const { isInitializing, isAuthenticated } = useAuth();
   const [ctaSlide, setCtaSlide] = useState(0);
   const [slideDir, setSlideDir] = useState(1);
-  const [selectedCategory, setSelectedCategory] = useState("All");
   const [popularItems, setPopularItems] = useState<ItemSummary[]>([]);
   const [allItems, setAllItems] = useState<ItemSummary[]>([]);
   const [popularLoading, setPopularLoading] = useState(true);
@@ -71,14 +88,13 @@ export function HomePage() {
     if (isInitializing) return;
     let stale = false;
     setAllLoading(true);
-    const category = selectedCategory === "All" ? undefined : selectedCategory;
     itemApi
-      .getItems({ view: "ALL", category, size: 20 })
+      .getItems({ view: "ALL", size: 20 })
       .then((res) => { if (!stale) setAllItems(res.content); })
       .catch(() => { if (!stale) setAllItems([]); })
       .finally(() => { if (!stale) setAllLoading(false); });
     return () => { stale = true; };
-  }, [selectedCategory, isInitializing, isAuthenticated]);
+  }, [isInitializing, isAuthenticated]);
 
   const goToSlide = (next: number) => {
     setSlideDir(next > ctaSlide ? 1 : -1);
@@ -250,14 +266,14 @@ export function HomePage() {
           transition={{ duration: 0.6, ease: "easeOut" }}
         >
           <div className="mb-8">
-            <h2 className="text-2xl md:text-3xl font-bold text-black">Popular Listings</h2>
-            <p className="text-sm text-gray-500 mt-1">지금 가장 인기 있는 경매</p>
+            <h2 className="text-2xl md:text-3xl font-bold text-black">인기 상품</h2>
+            <p className="text-sm text-gray-500 mt-1">Popular Listings</p>
           </div>
 
           {popularLoading ? (
             <div className="grid grid-cols-5 gap-3 md:gap-4">
               {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="aspect-square bg-gray-100 rounded-sm animate-pulse" />
+                <div key={i} className="aspect-square bg-gray-100 rounded-lg animate-pulse" />
               ))}
             </div>
           ) : (
@@ -277,39 +293,56 @@ export function HomePage() {
         </motion.div>
       </div>
 
-      {/* Section 3: All Products */}
-      <div className="max-w-[1400px] mx-auto px-6 pt-24 pb-24">
+      {/* Section 3: Popular Brands */}
+      <motion.section
+        initial={{ opacity: 0, y: 24 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.25 }}
+        transition={{ duration: 0.55, ease: "easeOut" }}
+        className="mt-12 bg-stone-100/80 py-16 md:py-20"
+      >
+        <div className="max-w-[1400px] mx-auto px-8">
+          <p className="text-[11px] font-semibold tracking-[0.28em] text-gray-400 uppercase mb-3">
+            Popular Brands
+          </p>
+          <h2 className="text-2xl md:text-3xl font-bold text-black">인기 브랜드</h2>
+
+          <div className="mt-12 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex min-w-max items-center">
+              {popularBrands.map((brand, index) => (
+                <div key={brand} className="flex items-center">
+                  {index > 0 && <span className="mx-7 text-gray-300">•</span>}
+                  <button
+                    type="button"
+                    onClick={() => toast.info("아직 준비 중인 기능입니다.")}
+                    className="text-lg font-semibold text-gray-400 whitespace-nowrap transition-all duration-200 hover:-translate-y-0.5 hover:text-black active:translate-y-0"
+                  >
+                    {brand}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </motion.section>
+
+      {/* Section 4: All Products */}
+      <div className="max-w-[1400px] mx-auto px-8 pt-24 pb-24">
         <motion.div
           ref={allProductsRef}
           initial={{ opacity: 0, y: 40 }}
           animate={allProductsInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, ease: "easeOut" }}
         >
-          <div className="text-center mb-6">
-            <h2 className="text-2xl md:text-3xl font-bold text-black">All Products</h2>
-            <p className="text-sm text-gray-500 mt-1">전체 경매 상품</p>
-          </div>
-
-          <div className="flex flex-wrap justify-center gap-2 mb-8">
-            {allCategories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
-                  selectedCategory === cat
-                    ? "bg-black text-white"
-                    : "bg-white border border-gray-200 text-gray-600 hover:border-gray-400 hover:text-black"
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
+          <div className="mb-8">
+            <p className="text-[11px] font-normal tracking-[0.2em] text-gray-400">WE LOVE</p>
+            <h2 className="mt-1 text-2xl font-bold text-black md:text-3xl">지금 사랑받는 아이템</h2>
           </div>
 
           {allLoading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
               {Array.from({ length: 10 }).map((_, i) => (
-                <div key={i} className="aspect-square bg-gray-100 rounded-sm animate-pulse" />
+                <div key={i} className="aspect-square bg-gray-100 rounded-lg animate-pulse" />
               ))}
             </div>
           ) : (

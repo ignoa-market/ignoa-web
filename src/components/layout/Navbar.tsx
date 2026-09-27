@@ -1,34 +1,17 @@
 import { Link, useNavigate } from "react-router";
-import { Search, X, User, MessageSquare, Bell } from "lucide-react";
+import { Menu, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useRef, useEffect } from "react";
 import logoImage from "@/assets/logo.png";
 import { useAuth } from "@/context/AuthContext";
 import { authApi } from "@/api/auth";
-import { NotificationPanel } from "@/components/common/NotificationPanel";
 import { WithdrawalModal } from "@/components/common/WithdrawalModal";
 import { motion, AnimatePresence } from "motion/react";
-
-const POPULAR_SEARCHES = [
-  "나이키 덩크 로우",
-  "아크테릭스 베타",
-  "스톤아일랜드",
-  "몽클레어 패딩",
-  "발렌시아가 트리플S",
-  "노스페이스 눕시",
-  "아미 하트 니트",
-  "메종 마르지엘라",
-  "팔라스 트라이앵글",
-  "슈프림 박스로고",
-];
 
 export function Navbar() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchFocused, setSearchFocused] = useState(false);
-  const [notiOpen, setNotiOpen] = useState(false);
   const { isAuthenticated, isInitializing, logout } = useAuth();
-  const searchContainerRef = useRef<HTMLDivElement>(null);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [withdrawalOpen, setWithdrawalOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
@@ -56,7 +39,7 @@ export function Navbar() {
 
   return (
     <>
-      <nav className="fixed top-20 left-0 right-0 z-50 bg-white border-b border-gray-200">
+      <nav className="fixed top-20 left-0 right-0 z-50 bg-white">
         <div className="max-w-[1400px] mx-auto px-8 py-3.5">
           <div className="flex items-center gap-8">
             {/* Logo + Logo Name */}
@@ -66,7 +49,7 @@ export function Navbar() {
             </Link>
 
             {/* Search Bar */}
-            <div className="flex-1 max-w-[500px] relative" ref={searchContainerRef}>
+            <div className="flex-1 max-w-[500px] relative">
               <div className="relative group">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 transition-colors group-focus-within:text-black pointer-events-none" />
                 <input
@@ -74,12 +57,6 @@ export function Navbar() {
                   placeholder="브랜드, 상품명 검색"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  onFocus={() => setSearchFocused(true)}
-                  onBlur={(e) => {
-                    if (!searchContainerRef.current?.contains(e.relatedTarget as Node)) {
-                      setSearchFocused(false);
-                    }
-                  }}
                   className="w-full h-12 pl-9 pr-8 bg-white rounded-full text-sm font-medium text-black placeholder:text-gray-400 placeholder:font-light outline-none border border-gray-200 transition-all duration-200 focus:border-gray-400"
                 />
                 {searchQuery && (
@@ -92,33 +69,6 @@ export function Navbar() {
                 )}
               </div>
 
-              {/* Search Dropdown */}
-              <AnimatePresence>
-                {searchFocused && !searchQuery && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 6 }}
-                    transition={{ duration: 0.15 }}
-                    className="absolute top-full left-0 right-0 mt-3 bg-white border border-gray-100 shadow-lg z-50 py-5 px-5"
-                    onMouseDown={(e) => e.preventDefault()}
-                  >
-                    <p className="text-[10px] font-semibold tracking-[0.25em] text-gray-400 uppercase mb-4">인기 검색어</p>
-                    <div className="grid grid-cols-2 gap-x-6 gap-y-1">
-                      {POPULAR_SEARCHES.map((keyword, i) => (
-                        <button
-                          key={keyword}
-                          onClick={() => { setSearchQuery(keyword); setSearchFocused(false); }}
-                          className="flex items-center gap-2.5 py-1.5 text-left hover:opacity-60 transition-opacity"
-                        >
-                          <span className="text-[11px] font-bold text-gray-300 w-4 flex-shrink-0">{i + 1}</span>
-                          <span className="text-sm font-light text-black truncate">{keyword}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </div>
 
             {/* Right Actions */}
@@ -126,40 +76,29 @@ export function Navbar() {
               {isInitializing ? (
                 <div className="w-[180px]" />
               ) : isAuthenticated ? (
-                <div className="flex items-center gap-5">
+                <div className="flex items-center gap-3">
                   <Link to="/app/register-product">
-                    <button className="h-9 px-4 text-sm font-semibold bg-black text-white rounded-full hover:bg-gray-800 transition-colors">
+                    <button className="h-9 px-3 text-sm font-medium text-gray-700 rounded-full transition-all duration-200 hover:-translate-y-0.5 hover:text-black active:translate-y-0">
                       상품 등록
                     </button>
                   </Link>
 
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => setNotiOpen((v) => !v)}
-                      className={`w-9 h-9 flex items-center justify-center rounded-full transition-colors ${
-                        notiOpen ? "bg-gray-200 text-black" : "bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-black"
-                      }`}
-                      title="알림"
-                    >
-                      <Bell className="w-[18px] h-[18px]" />
-                    </button>
-                    <button
-                      onClick={() => { navigate("/app/messages"); setNotiOpen(false); }}
-                      className="w-9 h-9 flex items-center justify-center rounded-full transition-colors bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-black"
-                      title="채팅"
-                    >
-                      <MessageSquare className="w-[18px] h-[18px]" />
-                    </button>
+                  <button
+                    onClick={() => navigate("/app/messages")}
+                    className="h-9 px-3 text-sm font-medium text-gray-700 rounded-full transition-all duration-200 hover:-translate-y-0.5 hover:text-black active:translate-y-0"
+                  >
+                    메시지
+                  </button>
 
                   {/* 프로필 드롭다운 */}
                   <div className="relative" ref={profileMenuRef}>
                     <button
                       onClick={() => setProfileMenuOpen((v) => !v)}
-                      className={`w-9 h-9 flex items-center justify-center rounded-full transition-colors ${
-                        profileMenuOpen ? "bg-gray-200 text-black" : "bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-black"
+                      className={`h-9 px-3 text-sm font-medium rounded-full transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 ${
+                        profileMenuOpen ? "text-black" : "text-gray-700 hover:text-black"
                       }`}
                     >
-                      <User className="w-[18px] h-[18px]" />
+                      계정
                     </button>
 
                     <AnimatePresence>
@@ -179,7 +118,10 @@ export function Navbar() {
                             마이페이지
                           </Link>
                           <button
-                            onClick={() => setProfileMenuOpen(false)}
+                            onClick={() => {
+                              setProfileMenuOpen(false);
+                              toast.info("아직 준비 중인 기능입니다.");
+                            }}
                             className="w-full text-center py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                           >
                             고객센터
@@ -199,7 +141,6 @@ export function Navbar() {
                         </motion.div>
                       )}
                     </AnimatePresence>
-                  </div>
                   </div>
                 </div>
               ) : (
@@ -223,14 +164,17 @@ export function Navbar() {
         </div>
 
         {/* Category Bar */}
-        <div className="border-t border-gray-100">
+        <div className="border-b border-gray-200">
           <div className="max-w-[1400px] mx-auto px-8">
-            <div className="flex items-center gap-7">
-              {["한정판", "빈티지", "콜라보", "라이프", "브랜드", "기획전"].map((cat) => (
+            <div className="flex items-center gap-3">
+              {["카테고리", "한정판", "빈티지", "콜라보", "라이프", "브랜드", "기획전"].map((cat) => (
                 <button
                   key={cat}
-                  className="py-2.5 text-sm font-light text-gray-800 hover:text-black transition-colors whitespace-nowrap"
+                  type="button"
+                  onClick={() => toast.info("아직 준비 중인 기능입니다.")}
+                  className="my-1 flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 rounded-full whitespace-nowrap transition-all duration-200 hover:-translate-y-0.5 hover:bg-gray-100 hover:text-black active:translate-y-0"
                 >
+                  {cat === "카테고리" && <Menu className="h-4 w-4" />}
                   {cat}
                 </button>
               ))}
@@ -238,11 +182,6 @@ export function Navbar() {
           </div>
         </div>
       </nav>
-
-      {/* Notification Panel */}
-      <AnimatePresence>
-        {notiOpen && <NotificationPanel onClose={() => setNotiOpen(false)} />}
-      </AnimatePresence>
 
       {/* Chat Panel */}
       <AnimatePresence>
@@ -258,19 +197,6 @@ export function Navbar() {
         )}
       </AnimatePresence>
 
-      {/* Backdrop */}
-      <AnimatePresence>
-        {notiOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-40 bg-black/20"
-            onClick={() => setNotiOpen(false)}
-          />
-        )}
-      </AnimatePresence>
     </>
   );
 }
