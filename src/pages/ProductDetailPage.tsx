@@ -790,7 +790,7 @@ export function ProductDetailPage() {
               transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
               className="relative bg-white w-full max-w-sm rounded-2xl p-8"
             >
-              <div className="mb-8">
+              <div className="mb-5">
                 <p className="text-xs text-gray-400 mb-1.5">즉시 구매가</p>
                 <p className="text-3xl font-semibold text-stone-800">
                   {item.buy_now_price?.toLocaleString()}원
