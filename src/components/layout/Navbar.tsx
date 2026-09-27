@@ -122,15 +122,13 @@ export function Navbar() {
                           >
                             마이페이지
                           </Link>
-                          <button
-                            onClick={() => {
-                              setProfileMenuOpen(false);
-                              toast.info("아직 준비 중인 기능입니다.");
-                            }}
-                            className="w-full text-center py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                          <Link
+                            to="/support"
+                            onClick={() => setProfileMenuOpen(false)}
+                            className="block w-full text-center py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                           >
                             고객센터
-                          </button>
+                          </Link>
                           <button
                             onClick={() => { handleLogout(); setProfileMenuOpen(false); }}
                             className="w-full text-center py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"

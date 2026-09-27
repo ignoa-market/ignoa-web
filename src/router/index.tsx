@@ -9,6 +9,7 @@ import { LoginPage } from "@/pages/LoginPage";
 import { SignUpPage } from "@/pages/SignUpPage";
 import { OAuthKakaoCallbackPage } from "@/pages/OAuthKakaoCallbackPage";
 import { AppDownloadPage } from "@/pages/AppDownloadPage";
+import { SupportPage } from "@/pages/SupportPage";
 import { Root } from "@/components/layout/RootLayout";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 
@@ -39,6 +40,13 @@ export const router = createBrowserRouter([
     Component: Root,
     children: [
       { index: true, Component: AppDownloadPage },
+    ],
+  },
+  {
+    path: "/support",
+    Component: Root,
+    children: [
+      { index: true, Component: SupportPage },
     ],
   },
   {
