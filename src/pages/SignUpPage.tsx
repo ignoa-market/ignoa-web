@@ -199,7 +199,7 @@ export function SignUpPage() {
             />
           ))}
         </div>
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6 }} className="text-center relative z-10">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6 }} className="text-center relative z-10" style={{ zoom: 0.9 }}>
           <motion.div
             animate={{ y: [0, -12, 0] }}
             transition={{ duration: 0.8, repeat: Infinity, repeatDelay: 2, ease: "easeInOut" }}
@@ -222,7 +222,7 @@ export function SignUpPage() {
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center px-4 pb-10 pt-[210px]">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="w-full max-w-sm">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="w-full max-w-sm" style={{ zoom: 0.9 }}>
 
         {/* Logo */}
         <div className="flex flex-col items-center mb-10">

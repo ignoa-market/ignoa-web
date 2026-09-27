@@ -77,6 +77,7 @@ export function LoginPage() {
           transition={{ duration: 0.5 }}
           viewport={{ once: false }}
           className="w-full max-w-sm px-4"
+          style={{ zoom: 0.9 }}
         >
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-black mb-1">로그인</h2>
