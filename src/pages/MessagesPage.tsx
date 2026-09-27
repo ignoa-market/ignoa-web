@@ -433,7 +433,7 @@ export function MessagesPage() {
           <div className="hidden md:flex flex-1 items-center justify-center bg-white">
             <div className="text-center flex flex-col items-center gap-3">
               <div className="w-14 h-14 rounded-full bg-stone-100 flex items-center justify-center"><MessageSquare className="w-6 h-6 text-stone-300" /></div>
-              <p className="text-[11px] font-semibold tracking-[0.3em] uppercase text-stone-300">대화를 선택하세요</p>
+              <p className="text-[11px] font-normal text-stone-300">대화를 선택하세요.</p>
             </div>
           </div>
         )}

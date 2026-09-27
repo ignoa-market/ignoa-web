@@ -402,19 +402,19 @@ export function ProfilePage() {
         </AnimatePresence>
 
         {/* Tabs */}
-        <div className="flex items-center gap-10 mt-16 mb-8 border-b border-gray-100">
+        <div className="flex items-center gap-8 mt-16 mb-8 border-b border-gray-100">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`pb-5 text-[11px] font-semibold tracking-[0.25em] uppercase transition-colors border-b-2 -mb-px ${
+              className={`pb-5 text-[11px] font-normal transition-colors border-b-2 -mb-px ${
                 activeTab === tab.id
                   ? "border-black text-black"
                   : "border-transparent text-gray-400 hover:text-black"
               }`}
             >
               {tab.label}
-              <span className="ml-2 font-normal">{tab.count}</span>
+              <span className="ml-2">{tab.count}</span>
             </button>
           ))}
         </div>
@@ -456,7 +456,7 @@ export function ProfilePage() {
               </div>
             ) : (
               <div className="py-24 text-center">
-                <p className="text-[11px] font-semibold tracking-[0.3em] text-gray-300 uppercase">등록된 상품이 없습니다</p>
+                <p className="text-[11px] font-normal text-gray-300">등록된 상품이 없습니다.</p>
               </div>
             )}
           </motion.div>
