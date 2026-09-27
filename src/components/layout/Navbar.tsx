@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { useState, useRef, useEffect } from "react";
 import logoImage from "@/assets/logo.png";
 import { useAuth } from "@/context/AuthContext";
+import { useChat } from "@/context/ChatContext";
 import { authApi } from "@/api/auth";
 import { WithdrawalModal } from "@/components/common/WithdrawalModal";
 import { motion, AnimatePresence } from "motion/react";
@@ -12,6 +13,7 @@ export function Navbar() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const { isAuthenticated, isInitializing, logout } = useAuth();
+  const { hasNewMessage } = useChat();
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [withdrawalOpen, setWithdrawalOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
@@ -85,9 +87,12 @@ export function Navbar() {
 
                   <button
                     onClick={() => navigate("/app/messages")}
-                    className="h-9 px-3 text-sm font-medium text-gray-700 rounded-full transition-all duration-200 hover:-translate-y-0.5 hover:text-black active:translate-y-0"
+                    className="relative h-9 px-3 text-sm font-medium text-gray-700 rounded-full transition-all duration-200 hover:-translate-y-0.5 hover:text-black active:translate-y-0"
                   >
                     메시지
+                    {hasNewMessage && (
+                      <span className="absolute right-0 top-1 h-1.5 w-1.5 rounded-full bg-red-500 ring-2 ring-white" aria-label="새 메시지" />
+                    )}
                   </button>
 
                   {/* 프로필 드롭다운 */}

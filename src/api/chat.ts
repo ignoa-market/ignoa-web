@@ -3,12 +3,16 @@ import type {
   ChatMessageResponse,
   ChatRoomIdResponse,
   ChatRoomPreview,
+  MyChatRoomResponse,
   SliceResponse,
 } from "@/types/api";
 
 export const chatApi = {
   openChatRoom: (itemId: number) =>
     api.post<ChatRoomIdResponse>(`/api/items/${itemId}/chat-rooms`),
+
+  getMyChatRoom: (itemId: number) =>
+    api.get<MyChatRoomResponse>(`/api/items/${itemId}/chat-rooms/me`),
 
   getChatRooms: () =>
     api.get<ChatRoomPreview[]>("/api/chat-rooms"),

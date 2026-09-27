@@ -51,8 +51,11 @@ export function ProductDetailPage() {
 
     setChatOpening(true);
     try {
-      const room = await chatApi.openChatRoom(item.item_id);
-      navigate(`/app/messages?chatRoomId=${room.chat_room_id}`);
+      const room = await chatApi.getMyChatRoom(item.item_id);
+      navigate(room.chat_room_id
+        ? `/app/messages?chatRoomId=${room.chat_room_id}`
+        : `/app/messages?itemId=${item.item_id}`
+      );
     } catch (err) {
       const error = err as { message?: string };
       toast.error(error.message ?? "채팅방을 열지 못했습니다.");

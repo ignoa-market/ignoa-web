@@ -172,6 +172,10 @@ export interface ChatRoomIdResponse {
   chat_room_id: number;
 }
 
+export interface MyChatRoomResponse {
+  chat_room_id: number | null;
+}
+
 export interface ChatMessageResponse {
   message_id: number;
   chat_room_id: number;

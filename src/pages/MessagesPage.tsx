@@ -4,9 +4,10 @@ import { useSearchParams } from "react-router";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { chatApi } from "@/api/chat";
-import { createChatSocket } from "@/lib/chatSocket";
+import { itemApi } from "@/api/item";
 import { useAuth } from "@/context/AuthContext";
-import type { ApiError, ChatMessageResponse, ChatRoomPreview } from "@/types/api";
+import { useChat } from "@/context/ChatContext";
+import type { ApiError, ChatMessageResponse, ChatRoomPreview, ItemDetailResponse } from "@/types/api";
 import { toast } from "sonner";
 
 const formatRoomTime = (value: string | null, fallback: string) =>
@@ -17,8 +18,11 @@ const formatMessageTime = (value: string) =>
 
 export function MessagesPage() {
   const { userId } = useAuth();
+  const { clearNewMessage, setMessagesPageActive, subscribe } = useChat();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedRoomId = Number(searchParams.get("chatRoomId"));
+  const requestedItemId = Number(searchParams.get("itemId"));
+  const hasRequestedItem = Number.isFinite(requestedItemId) && requestedItemId > 0;
   const [chats, setChats] = useState<ChatRoomPreview[]>([]);
   const [messages, setMessages] = useState<ChatMessageResponse[]>([]);
   const [selectedChat, setSelectedChat] = useState<number | null>(
@@ -29,11 +33,12 @@ export function MessagesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isMessagesLoading, setIsMessagesLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [draftItem, setDraftItem] = useState<ItemDetailResponse | null>(null);
+  const [isDraftLoading, setIsDraftLoading] = useState(hasRequestedItem && !selectedChat);
   const [hasOlderMessages, setHasOlderMessages] = useState(false);
   const selectedChatRef = useRef<number | null>(selectedChat);
   const chatsRef = useRef<ChatRoomPreview[]>([]);
   const pendingRoomIdsRef = useRef(new Set<number>());
-  const socketErrorShownRef = useRef(false);
   const messageScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -122,16 +127,44 @@ export function MessagesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => subscribe(upsertMessage), [subscribe, upsertMessage]);
+
   useEffect(() => {
-    if (!userId) return;
-    const client = createChatSocket(upsertMessage, () => {
-      if (socketErrorShownRef.current) return;
-      socketErrorShownRef.current = true;
-      toast.error("실시간 채팅 연결이 끊겼습니다. 다시 연결하고 있습니다.");
-    });
-    client.activate();
-    return () => { void client.deactivate(); };
-  }, [userId, upsertMessage]);
+    setMessagesPageActive(true);
+    clearNewMessage();
+    return () => setMessagesPageActive(false);
+  }, [clearNewMessage, setMessagesPageActive]);
+
+  useEffect(() => {
+    if (selectedChat || !hasRequestedItem) {
+      setDraftItem(null);
+      setIsDraftLoading(false);
+      return;
+    }
+
+    let stale = false;
+    setIsDraftLoading(true);
+    itemApi.getItem(requestedItemId)
+      .then((item) => {
+        if (stale) return;
+        if (item.is_seller) {
+          toast.error("본인 상품에는 채팅할 수 없습니다.");
+          setSearchParams({}, { replace: true });
+          return;
+        }
+        setDraftItem(item);
+      })
+      .catch(() => {
+        if (!stale) {
+          toast.error("상품 정보를 불러오지 못했습니다.");
+          setSearchParams({}, { replace: true });
+        }
+      })
+      .finally(() => {
+        if (!stale) setIsDraftLoading(false);
+      });
+    return () => { stale = true; };
+  }, [hasRequestedItem, requestedItemId, selectedChat, setSearchParams]);
 
   useEffect(() => {
     if (!selectedChat) {
@@ -165,6 +198,7 @@ export function MessagesPage() {
   const selectChat = (chatRoomId: number | null) => {
     selectedChatRef.current = chatRoomId;
     setMessages([]);
+    setDraftItem(null);
     setSelectedChat(chatRoomId);
     if (chatRoomId) setSearchParams({ chatRoomId: String(chatRoomId) }, { replace: true });
     else setSearchParams({}, { replace: true });
@@ -197,10 +231,20 @@ export function MessagesPage() {
 
   const handleSend = async () => {
     const content = message.trim();
-    if (!selectedChat || !content || isSending) return;
+    if ((!selectedChat && !draftItem) || !content || isSending) return;
     setIsSending(true);
     try {
-      const sentMessage = await chatApi.sendMessage(selectedChat, content);
+      let chatRoomId = selectedChat;
+      if (!chatRoomId && draftItem) {
+        const room = await chatApi.openChatRoom(draftItem.item_id);
+        chatRoomId = room.chat_room_id;
+        selectedChatRef.current = chatRoomId;
+        setSelectedChat(chatRoomId);
+        setSearchParams({ chatRoomId: String(chatRoomId) }, { replace: true });
+      }
+
+      if (!chatRoomId) return;
+      const sentMessage = await chatApi.sendMessage(chatRoomId, content);
       setMessage("");
       upsertMessage(sentMessage);
     } catch (err) {
@@ -212,6 +256,11 @@ export function MessagesPage() {
   };
 
   const selectedChatData = chats.find((chat) => chat.chat_room_id === selectedChat);
+  const hasConversation = Boolean(selectedChat || draftItem || isDraftLoading);
+  const partnerNickname = selectedChatData?.partner_nickname ?? draftItem?.seller.nickname;
+  const partnerProfileImageUrl = selectedChatData?.partner_profile_image_url
+    ?? draftItem?.seller.profile_image_url;
+  const conversationItemTitle = selectedChatData?.item_title ?? draftItem?.title;
   const filteredChats = chats.filter((chat) =>
     activeTab === "all"
     || (activeTab === "buying" && chat.role === "BUYER")
@@ -222,7 +271,7 @@ export function MessagesPage() {
     <div className="min-h-screen bg-white pt-[196px]">
       <div className="mx-auto w-full max-w-[1400px] px-8">
       <div className="h-[calc(100vh-196px)] flex overflow-hidden border-x border-t border-stone-100">
-        <div className={`w-full md:w-[360px] flex-shrink-0 border-r border-stone-100 flex-col ${selectedChat ? "hidden md:flex" : "flex"}`}>
+        <div className={`w-full md:w-[360px] flex-shrink-0 border-r border-stone-100 flex-col ${hasConversation ? "hidden md:flex" : "flex"}`}>
           <div className="px-4 h-14 flex items-center gap-1 border-b border-stone-100">
             {(["all", "buying", "selling"] as const).map((tab) => (
               <button
@@ -272,19 +321,19 @@ export function MessagesPage() {
           </div>
         </div>
 
-        {selectedChat ? (
+        {hasConversation ? (
           <div className="relative flex flex-1 flex-col">
             <div className="px-4 h-14 border-b border-stone-100 flex items-center gap-2.5">
               <button onClick={() => selectChat(null)} className="md:hidden w-8 h-8 flex items-center justify-center rounded-full hover:bg-stone-100">
                 <ChevronLeft className="w-4 h-4 text-stone-500" />
               </button>
               <Avatar className="w-8 h-8 flex-shrink-0">
-                <AvatarImage src={selectedChatData?.partner_profile_image_url ?? undefined} />
-                <AvatarFallback className="bg-stone-100 text-sm text-stone-500">{selectedChatData?.partner_nickname.charAt(0)}</AvatarFallback>
+                <AvatarImage src={partnerProfileImageUrl ?? undefined} />
+                <AvatarFallback className="bg-stone-100 text-sm text-stone-500">{partnerNickname?.charAt(0)}</AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-stone-800">{selectedChatData?.partner_nickname}</p>
-                <p className="truncate text-[10px] text-stone-400">{selectedChatData?.item_title}</p>
+                <p className="text-xs font-semibold text-stone-800">{partnerNickname}</p>
+                <p className="truncate text-[10px] text-stone-400">{conversationItemTitle}</p>
               </div>
             </div>
 
@@ -294,7 +343,7 @@ export function MessagesPage() {
                   <button onClick={loadOlderMessages} disabled={isMessagesLoading} className="text-xs text-stone-400 hover:text-stone-700 disabled:opacity-50">이전 메시지 불러오기</button>
                 </div>
               )}
-              {isMessagesLoading && messages.length === 0 ? (
+              {(isMessagesLoading || isDraftLoading) && messages.length === 0 ? (
                 <div className="flex h-full items-center justify-center"><LoaderCircle className="h-5 w-5 animate-spin text-stone-300" /></div>
               ) : messages.length === 0 ? (
                 <div className="flex h-full items-center justify-center"><p className="text-xs text-stone-300">첫 메시지를 보내보세요.</p></div>
@@ -330,7 +379,7 @@ export function MessagesPage() {
                 />
                 <button
                   onClick={() => void handleSend()}
-                  disabled={!message.trim() || isSending}
+                  disabled={!message.trim() || isSending || isDraftLoading}
                   className="w-8 h-8 bg-stone-800 hover:bg-stone-700 disabled:opacity-30 disabled:cursor-not-allowed text-white rounded-full flex items-center justify-center transition-all flex-shrink-0"
                 >
                   {isSending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-[15px] w-[15px]" />}
