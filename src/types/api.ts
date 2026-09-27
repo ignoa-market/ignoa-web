@@ -158,9 +158,24 @@ export interface ChatRoomPreview {
   chat_room_id: number;
   item_id: number;
   item_title: string;
+  item_image_url: string | null;
   partner_id: number;
   partner_nickname: string;
   partner_profile_image_url: string | null;
   role: ChatRoomRole;
+  last_message: string | null;
+  last_message_at: string | null;
+  created_at: string;
+}
+
+export interface ChatRoomIdResponse {
+  chat_room_id: number;
+}
+
+export interface ChatMessageResponse {
+  message_id: number;
+  chat_room_id: number;
+  sender_id: number;
+  content: string;
   created_at: string;
 }

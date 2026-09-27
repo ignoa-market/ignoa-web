@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { motion, AnimatePresence } from "motion/react";
 import { itemApi, bidApi } from "@/api/item";
+import { chatApi } from "@/api/chat";
 import { wishStore } from "@/store/wishStore";
 import { useWishToggle } from "@/hooks/useWishToggle";
 import type { ItemDetailResponse, BidHistory } from "@/types/api";
@@ -22,6 +23,7 @@ export function ProductDetailPage() {
   const [bids, setBids] = useState<BidHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionPending, setActionPending] = useState(false);
+  const [chatOpening, setChatOpening] = useState(false);
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [slideDir, setSlideDir] = useState(1);
@@ -39,6 +41,25 @@ export function ProductDetailPage() {
   const countdownSpanRef = useRef<HTMLSpanElement>(null);
   const endTimeRef = useRef<Date | null>(null);
   const { wished, wishCount, toggle: handleWishToggle } = useWishToggle(numericId);
+
+  const handleOpenChat = async () => {
+    if (!isAuthenticated) {
+      navigate("/login");
+      return;
+    }
+    if (!item || item.is_seller || chatOpening) return;
+
+    setChatOpening(true);
+    try {
+      const room = await chatApi.openChatRoom(item.item_id);
+      navigate(`/app/messages?chatRoomId=${room.chat_room_id}`);
+    } catch (err) {
+      const error = err as { message?: string };
+      toast.error(error.message ?? "채팅방을 열지 못했습니다.");
+    } finally {
+      setChatOpening(false);
+    }
+  };
 
   // 상품 상세 조회
   useEffect(() => {
@@ -478,13 +499,16 @@ export function ProductDetailPage() {
               >
                 팔로우
               </button>
-              <button
-                onClick={() => !isAuthenticated && navigate("/login")}
-                className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-200 hover:bg-gray-50 transition-colors text-stone-500"
-                title="메시지 보내기"
-              >
-                <MessageCircle className="w-4 h-4" />
-              </button>
+              {!item.is_seller && (
+                <button
+                  onClick={handleOpenChat}
+                  disabled={chatOpening}
+                  className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-200 hover:bg-gray-50 transition-colors text-stone-500 disabled:cursor-wait disabled:opacity-50"
+                  title="메시지 보내기"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </div>
         </div>

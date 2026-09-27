@@ -20,7 +20,10 @@ export default defineConfig({
     port: 35173,
     proxy: {
       '/api': 'http://localhost:38080',
-      '/ws':  'http://localhost:38080',
+      '/ws': {
+        target: 'http://localhost:38080',
+        ws: true,
+      },
     },
   },
 })
