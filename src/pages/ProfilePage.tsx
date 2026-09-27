@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router";
-import { Mail, User, MapPin, Camera, Search, X, CheckCircle2, Trash2 } from "lucide-react";
+import { Mail, User, MapPin, Camera, Search, X, CheckCircle2, Trash2, Pencil } from "lucide-react";
 import { ProductCard } from "@/components/common/ProductCard";
 import { AddressModal } from "@/components/common/AddressModal";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
 import { userApi } from "@/api/auth";
-import { wishApi } from "@/api/item";
+import { itemApi, wishApi } from "@/api/item";
 import { wishStore } from "@/store/wishStore";
 import type { ApiError, ItemStatus, ItemSummary, WishSummary } from "@/types/api";
 
@@ -147,6 +147,19 @@ export function ProfilePage() {
     }
   };
 
+  const handleExtendAuction = useCallback(async (itemId: number) => {
+    try {
+      const result = await itemApi.extendAuction(itemId);
+      setMyItems((items) => items.map((item) =>
+        item.item_id === itemId ? { ...item, end_at: result.end_at } : item
+      ));
+      toast.success("경매 마감이 1일 연장되었습니다.");
+    } catch (err) {
+      const error = err as ApiError;
+      toast.error(error.message ?? "경매 마감 연장에 실패했습니다.");
+    }
+  }, []);
+
   type ProfileCard = {
     id: string;
     brand?: string;
@@ -250,7 +263,26 @@ export function ProfilePage() {
             </div>
 
             <div>
-              <h1 className="text-4xl font-black text-black leading-tight">{savedName}</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-4xl font-black text-black leading-tight">{savedName}</h1>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isEditing) {
+                      setUserName(savedName);
+                      setAddress(savedAddr);
+                      setIsNicknameAvailable(null);
+                      setNicknameError("");
+                    }
+                    setIsEditing(!isEditing);
+                  }}
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-black"
+                  title={isEditing ? "수정 취소" : "프로필 수정"}
+                  aria-label={isEditing ? "수정 취소" : "프로필 수정"}
+                >
+                  {isEditing ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+                </button>
+              </div>
               <p className="text-sm text-gray-400 mt-1">{email}</p>
               <div className="flex items-center gap-5 mt-3">
                 <button onClick={() => setShowFollowModal("followers")} className="flex items-center gap-1.5 hover:opacity-60 transition-opacity">
@@ -269,21 +301,6 @@ export function ProfilePage() {
             </div>
           </div>
 
-          {/* Right: Actions */}
-          <button
-            onClick={() => {
-              if (isEditing) {
-                setUserName(savedName);
-                setAddress(savedAddr);
-                setIsNicknameAvailable(null);
-                setNicknameError("");
-              }
-              setIsEditing(!isEditing);
-            }}
-            className="h-9 px-5 rounded-full border border-gray-200 text-sm font-medium text-gray-600 hover:border-black hover:text-black transition-all"
-          >
-            {isEditing ? "취소" : "프로필 수정"}
-          </button>
         </div>
 
         {/* Edit Form */}
@@ -426,7 +443,14 @@ export function ProfilePage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3, delay: index * 0.05 }}
                   >
-                    <ProductCard product={card} />
+                    <ProductCard
+                      product={card}
+                      onExtendAuction={
+                        activeTab === "products" && card.status === "ACTIVE"
+                          ? handleExtendAuction
+                          : undefined
+                      }
+                    />
                   </motion.div>
                 ))}
               </div>

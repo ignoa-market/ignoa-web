@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router";
 import { Upload, X, Clock3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { VideoMedia } from "@/components/common/VideoMedia";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,10 +15,16 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { itemApi } from "@/api/item";
-import type { ItemCondition } from "@/types/api";
+import type { ItemCondition, ItemMediaResponse, ItemMediaType } from "@/types/api";
 
 const categories = ["아우터", "상의", "하의", "신발", "가방", "액세서리", "시계", "모자", "기타"];
 const SUPPORTED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
+const SUPPORTED_VIDEO_TYPES = new Set(["video/mp4", "video/quicktime", "video/x-msvideo", "video/webm"]);
+
+interface MediaPreview {
+  url: string;
+  type: ItemMediaType;
+}
 
 const conditions: { value: ItemCondition; label: string }[] = [
   { value: "NEW", label: "새 상품 (미사용)" },
@@ -32,15 +39,13 @@ export function ProductEditPage() {
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [extending, setExtending] = useState(false);
 
   // 기존 데이터
-  const [existingImages, setExistingImages] = useState<{ item_media_id: number; url: string }[]>([]);
+  const [existingMedia, setExistingMedia] = useState<ItemMediaResponse[]>([]);
   const [deletedMediaIds, setDeletedMediaIds] = useState<number[]>([]);
   const [startPrice, setStartPrice] = useState(0);
   const [currentPrice, setCurrentPrice] = useState(0);
   const [endAt, setEndAt] = useState("");
-  const [extensionCount, setExtensionCount] = useState<number | null>(null);
   const [isActive, setIsActive] = useState(false);
 
   // 수정 가능한 필드
@@ -51,10 +56,16 @@ export function ProductEditPage() {
   const [description, setDescription] = useState("");
   const [buyNowPrice, setBuyNowPrice] = useState("");
 
-  // 새로 추가할 이미지
-  const [newPreviews, setNewPreviews] = useState<string[]>([]);
+  // 새로 추가할 미디어
+  const [newPreviews, setNewPreviews] = useState<MediaPreview[]>([]);
   const [newFiles, setNewFiles] = useState<File[]>([]);
+  const newFilesRef = useRef<File[]>([]);
+  const previewUrlsRef = useRef(new Set<string>());
   const [isDragging, setIsDragging] = useState(false);
+
+  useEffect(() => () => {
+    previewUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+  }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -76,7 +87,7 @@ export function ProductEditPage() {
         setCurrentPrice(data.current_price);
         setEndAt(data.end_at.slice(0, 16));
         setIsActive(data.status === "ACTIVE" && new Date(data.end_at).getTime() > Date.now());
-        setExistingImages(data.media_urls);
+        setExistingMedia(data.media_urls);
       })
       .catch(() => toast.error("상품 정보를 불러오지 못했습니다."))
       .finally(() => setLoading(false));
@@ -96,57 +107,52 @@ export function ProductEditPage() {
     if (e.target.files) handleFiles(Array.from(e.target.files));
   };
 
-  const handleFiles = async (files: File[]) => {
+  const handleFiles = (files: File[]) => {
+    let videoCount = existingMedia.filter((media) => media.item_media_type === "VIDEO").length
+      + newFilesRef.current.filter((file) => SUPPORTED_VIDEO_TYPES.has(file.type)).length;
     const validFiles = files.filter((file) => {
-      if (SUPPORTED_IMAGE_TYPES.has(file.type)) return true;
-      toast.error(`${file.name} — JPEG, PNG, GIF, WEBP 파일만 업로드할 수 있습니다.`);
-      return false;
+      if (!SUPPORTED_IMAGE_TYPES.has(file.type) && !SUPPORTED_VIDEO_TYPES.has(file.type)) {
+        toast.error(`${file.name} — JPEG, PNG, GIF, WEBP, MP4, MOV, AVI, WEBM 파일만 업로드할 수 있습니다.`);
+        return false;
+      }
+      if (SUPPORTED_VIDEO_TYPES.has(file.type) && ++videoCount > 1) {
+        toast.error("상품 동영상은 최대 1개까지 등록할 수 있습니다.");
+        return false;
+      }
+      return true;
     });
 
-    const previews = await Promise.all(
-      validFiles.map(
-        (file) =>
-          new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onload = (e) => resolve(e.target!.result as string);
-            reader.readAsDataURL(file);
-          })
-      )
-    );
+    const previews = validFiles.map((file): MediaPreview => {
+      const url = URL.createObjectURL(file);
+      previewUrlsRef.current.add(url);
+      return {
+        url,
+        type: SUPPORTED_VIDEO_TYPES.has(file.type) ? "VIDEO" : "IMAGE",
+      };
+    });
 
+    newFilesRef.current = [...newFilesRef.current, ...validFiles];
     setNewPreviews((prev) => [...prev, ...previews]);
-    setNewFiles((prev) => [...prev, ...validFiles]);
+    setNewFiles(newFilesRef.current);
   };
 
-  const removeExistingImage = (id: number) => {
-    setExistingImages((prev) => prev.filter((img) => img.item_media_id !== id));
+  const removeExistingMedia = (id: number) => {
+    setExistingMedia((prev) => prev.filter((media) => media.item_media_id !== id));
     setDeletedMediaIds((prev) => [...prev, id]);
   };
 
   const removeNewImage = (index: number) => {
+    const previewUrl = newPreviews[index]?.url;
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      previewUrlsRef.current.delete(previewUrl);
+    }
+    newFilesRef.current = newFilesRef.current.filter((_, i) => i !== index);
     setNewPreviews((prev) => prev.filter((_, i) => i !== index));
-    setNewFiles((prev) => prev.filter((_, i) => i !== index));
+    setNewFiles(newFilesRef.current);
   };
 
   const hasBid = currentPrice > startPrice;
-
-  const handleExtendAuction = async () => {
-    if (!id || extending || !isActive) return;
-    if (!window.confirm("경매 마감을 1일 연장하시겠습니까?\n마감 연장은 최대 3회까지 가능합니다.")) return;
-
-    setExtending(true);
-    try {
-      const result = await itemApi.extendAuction(Number(id));
-      setEndAt(result.end_at.slice(0, 16));
-      setExtensionCount(result.extension_count);
-      toast.success("경매 마감이 1일 연장되었습니다.");
-    } catch (err: unknown) {
-      const error = err as { message?: string };
-      toast.error(error?.message ?? "경매 마감 연장에 실패했습니다.");
-    } finally {
-      setExtending(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -156,6 +162,12 @@ export function ProductEditPage() {
     }
     if (!condition) {
       toast.error("상품 상태를 선택해주세요.");
+      return;
+    }
+    const hasImage = existingMedia.some((media) => media.item_media_type === "IMAGE")
+      || newFiles.some((file) => SUPPORTED_IMAGE_TYPES.has(file.type));
+    if (!hasImage) {
+      toast.error("상품 이미지는 최소 1개 이상 남아 있어야 합니다.");
       return;
     }
 
@@ -211,33 +223,37 @@ export function ProductEditPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* 이미지 */}
+          {/* 미디어 */}
           <div className="bg-white rounded-lg p-6 sm:p-8 border border-gray-200">
             <Label className="text-sm font-semibold text-black mb-4 block">
-              상품 이미지
+              상품 미디어
               <span className="text-xs text-gray-400 font-normal ml-2">
-                {existingImages.length + newPreviews.length}장
+                {existingMedia.length + newPreviews.length}개 · 동영상은 최대 1개
               </span>
             </Label>
 
             <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
-              {/* 기존 이미지 */}
-              {existingImages.map((img, idx) => (
+              {/* 기존 미디어 */}
+              {existingMedia.map((media, idx) => (
                 <div
-                  key={img.item_media_id}
+                  key={media.item_media_id}
                   className="relative group aspect-square rounded-lg overflow-hidden border-2 border-gray-200 hover:border-red-300 transition-all"
                 >
-                  {idx === 0 && (
+                  {media.item_media_type === "IMAGE" && existingMedia.findIndex((item) => item.item_media_type === "IMAGE") === idx && (
                     <div className="absolute top-1.5 left-1.5 z-10 bg-black text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
                       대표
                     </div>
                   )}
-                  <img src={img.url} alt="" className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
+                  {media.item_media_type === "VIDEO" ? (
+                    <VideoMedia src={media.url} className="w-full h-full object-cover" />
+                  ) : (
+                    <img src={media.url} alt="" className="w-full h-full object-cover" />
+                  )}
+                  <div className="pointer-events-none absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
                     <button
                       type="button"
-                      onClick={() => removeExistingImage(img.item_media_id)}
-                      className="opacity-0 group-hover:opacity-100 w-7 h-7 bg-red-500 rounded-full flex items-center justify-center text-white hover:bg-red-600 transition-all"
+                      onClick={() => removeExistingMedia(media.item_media_id)}
+                      className="pointer-events-auto opacity-0 group-hover:opacity-100 w-7 h-7 bg-red-500 rounded-full flex items-center justify-center text-white hover:bg-red-600 transition-all"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -245,8 +261,8 @@ export function ProductEditPage() {
                 </div>
               ))}
 
-              {/* 새로 추가한 이미지 */}
-              {newPreviews.map((img, idx) => (
+              {/* 새로 추가한 미디어 */}
+              {newPreviews.map((media, idx) => (
                 <div
                   key={`new-${idx}`}
                   className="relative group aspect-square rounded-lg overflow-hidden border-2 border-dashed border-stone-400"
@@ -254,12 +270,16 @@ export function ProductEditPage() {
                   <div className="absolute top-1.5 left-1.5 z-10 bg-stone-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
                     NEW
                   </div>
-                  <img src={img} alt="" className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
+                  {media.type === "VIDEO" ? (
+                    <VideoMedia src={media.url} className="w-full h-full object-cover" />
+                  ) : (
+                    <img src={media.url} alt="" className="w-full h-full object-cover" />
+                  )}
+                  <div className="pointer-events-none absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); removeNewImage(idx); }}
-                      className="opacity-0 group-hover:opacity-100 w-7 h-7 bg-red-500 rounded-full flex items-center justify-center text-white hover:bg-red-600 transition-all"
+                      className="pointer-events-auto opacity-0 group-hover:opacity-100 w-7 h-7 bg-red-500 rounded-full flex items-center justify-center text-white hover:bg-red-600 transition-all"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -284,7 +304,7 @@ export function ProductEditPage() {
                 <input
                   id="edit-file-input"
                   type="file"
-                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/x-msvideo,video/webm"
                   multiple
                   onChange={handleFileInput}
                   className="hidden"
@@ -428,43 +448,32 @@ export function ProductEditPage() {
                     }`}
                   />
                 </div>
+                <p className="mt-2 text-xs text-gray-400">
+                  입찰이 시작된 후에는 즉시 구매가를 변경할 수 없습니다.
+                </p>
               </div>
             </div>
 
             {/* 마감 시간 */}
             <div>
               <Label className="text-sm font-semibold text-black mb-3 block">경매 마감</Label>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Clock3 className="w-4 h-4 text-gray-500" />
-                  <span>
-                    {endAt
-                      ? new Date(endAt).toLocaleString("ko-KR", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                          weekday: "short",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
-                      : "마감 시간 확인 불가"}
-                  </span>
-                  {extensionCount !== null && (
-                    <span className="text-xs text-gray-400">({extensionCount}/3회 연장)</span>
-                  )}
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleExtendAuction}
-                  disabled={!isActive || extending || extensionCount === 3}
-                  className="shrink-0 border-stone-300 bg-white text-stone-700 hover:bg-stone-100"
-                >
-                  {extending ? "연장 중..." : "마감 1일 연장"}
-                </Button>
+              <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+                <Clock3 className="w-4 h-4 text-gray-500" />
+                <span>
+                  {endAt
+                    ? new Date(endAt).toLocaleString("ko-KR", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                        weekday: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : "마감 시간 확인 불가"}
+                </span>
               </div>
               <p className="mt-2 text-xs text-gray-400">
-                마감 시간은 직접 수정할 수 없으며, 진행 중인 경매에 한해 최대 3회 연장할 수 있습니다.
+                마감 연장은 마이페이지에서 가능합니다.
               </p>
             </div>
           </div>

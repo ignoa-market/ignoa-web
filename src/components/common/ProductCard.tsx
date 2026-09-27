@@ -1,9 +1,20 @@
 import { Heart, Eye } from "lucide-react";
 import { Link } from "react-router";
-import { memo } from "react";
+import { memo, useState } from "react";
+import type { MouseEvent } from "react";
 import { motion } from "motion/react";
 import { useWishToggle } from "@/hooks/useWishToggle";
 import type { ItemStatus } from "@/types/api";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface ProductCardProps {
   product: {
@@ -19,6 +30,7 @@ interface ProductCardProps {
     status?: ItemStatus;
     isEnded?: boolean;
   };
+  onExtendAuction?: (itemId: number) => Promise<void>;
 }
 
 function resolveOverlay(status?: ItemStatus, isEnded?: boolean): "SOLD" | "ENDED" | null {
@@ -28,7 +40,7 @@ function resolveOverlay(status?: ItemStatus, isEnded?: boolean): "SOLD" | "ENDED
   return null;
 }
 
-export const ProductCard = memo(function ProductCard({ product }: ProductCardProps) {
+export const ProductCard = memo(function ProductCard({ product, onExtendAuction }: ProductCardProps) {
   const { id, title, brand, currentPrice, size, imageUrl, viewCount } = product;
   const overlay = resolveOverlay(product.status, product.isEnded);
   const numericId = Number(id);
@@ -37,11 +49,34 @@ export const ProductCard = memo(function ProductCard({ product }: ProductCardPro
     product.isWished ?? false,
     product.wishCount ?? 0
   );
+  const [isExtending, setIsExtending] = useState(false);
+  const [isExtendDialogOpen, setIsExtendDialogOpen] = useState(false);
+
+  const openExtendDialog = (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!onExtendAuction || isExtending) return;
+
+    setIsExtendDialogOpen(true);
+  };
+
+  const handleExtendAuction = async () => {
+    if (!onExtendAuction || isExtending) return;
+
+    setIsExtending(true);
+    try {
+      await onExtendAuction(numericId);
+    } finally {
+      setIsExtending(false);
+      setIsExtendDialogOpen(false);
+    }
+  };
 
   return (
-    <Link to={`/app/products/${id}`} className="group block cursor-pointer">
+    <>
+      <Link to={`/app/products/${id}`} className="group relative block cursor-pointer">
       {/* Image */}
-      <div className="relative aspect-square overflow-hidden bg-gray-100 rounded-sm mb-2.5">
+      <div className="relative aspect-square overflow-hidden bg-gray-100 rounded-lg mb-2.5">
         <img
           src={imageUrl}
           alt={title}
@@ -76,7 +111,7 @@ export const ProductCard = memo(function ProductCard({ product }: ProductCardPro
       </div>
 
       {/* Info */}
-      <div className="space-y-0.5 px-0.5">
+      <div className="relative space-y-0.5 px-0.5">
         {(brand || size) && (
           <div className="flex items-center justify-between gap-2">
             {brand && (
@@ -108,7 +143,40 @@ export const ProductCard = memo(function ProductCard({ product }: ProductCardPro
             <span className="text-[10px]">{wishCount}</span>
           </div>
         </div>
+
+        {onExtendAuction && (
+          <button
+            type="button"
+            onClick={openExtendDialog}
+            disabled={isExtending}
+            className="absolute right-1 top-0 h-7 px-3 rounded-full border border-gray-200 bg-white text-[11px] font-semibold text-gray-500 transition-colors hover:border-gray-400 hover:text-black disabled:cursor-wait disabled:opacity-50"
+          >
+            {isExtending ? "연장 중" : "연장"}
+          </button>
+        )}
       </div>
-    </Link>
+      </Link>
+
+      <AlertDialog open={isExtendDialogOpen} onOpenChange={setIsExtendDialogOpen}>
+        <AlertDialogContent className="rounded-2xl p-8 sm:max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>경매 마감 연장</AlertDialogTitle>
+            <AlertDialogDescription>
+              경매 마감을 1일 연장하시겠습니까?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-full" disabled={isExtending}>취소</AlertDialogCancel>
+            <AlertDialogAction
+              className="rounded-full border border-gray-200 bg-white text-gray-500 hover:bg-black hover:text-white"
+              onClick={handleExtendAuction}
+              disabled={isExtending}
+            >
+              {isExtending ? "연장 중..." : "연장"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 });

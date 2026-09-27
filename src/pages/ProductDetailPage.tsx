@@ -4,6 +4,7 @@ import { ChevronDown, ChevronLeft, ChevronRight, Check, ShieldCheck, MessageCirc
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { VideoMedia } from "@/components/common/VideoMedia";
 import { toast } from "sonner";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { motion, AnimatePresence } from "motion/react";
@@ -207,15 +208,15 @@ export function ProductDetailPage() {
     );
   }
 
-  const images = item.media_urls.map((m) => m.url);
+  const media = item.media_urls;
 
   const goToImage = (idx: number) => {
     setSlideDir(idx > currentImageIndex ? 1 : -1);
     setCurrentImageIndex(idx);
     setIsSliding(true);
   };
-  const prevImage = () => goToImage(currentImageIndex === 0 ? images.length - 1 : currentImageIndex - 1);
-  const nextImage = () => goToImage(currentImageIndex === images.length - 1 ? 0 : currentImageIndex + 1);
+  const prevImage = () => goToImage(currentImageIndex === 0 ? media.length - 1 : currentImageIndex - 1);
+  const nextImage = () => goToImage(currentImageIndex === media.length - 1 ? 0 : currentImageIndex + 1);
 
   return (
     <div className="min-h-screen bg-white pt-[196px]">
@@ -230,7 +231,7 @@ export function ProductDetailPage() {
             style={{ aspectRatio: "1/1" }}
           >
             <AnimatePresence mode="wait" custom={slideDir} initial={false}>
-              <motion.img
+              <motion.div
                 key={currentImageIndex}
                 custom={slideDir}
                 variants={{
@@ -243,13 +244,25 @@ export function ProductDetailPage() {
                 exit="exit"
                 transition={{ duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] }}
                 onAnimationComplete={() => setIsSliding(false)}
-                src={images[currentImageIndex]}
-                alt={item.title}
                 className="absolute inset-0 w-full h-full object-cover"
-              />
+              >
+                {media[currentImageIndex]?.item_media_type === "VIDEO" ? (
+                  <VideoMedia
+                    src={media[currentImageIndex].url}
+                    controls
+                    className="w-full h-full object-contain bg-black"
+                  />
+                ) : (
+                  <img
+                    src={media[currentImageIndex]?.url}
+                    alt={item.title}
+                    className="w-full h-full object-cover"
+                  />
+                )}
+              </motion.div>
             </AnimatePresence>
 
-            {images.length > 1 && (
+            {media.length > 1 && (
               <>
                 {/* 화살표 버튼 */}
                 <button
@@ -267,7 +280,7 @@ export function ProductDetailPage() {
 
                 {/* 인디케이터 점 */}
                 <div className={`absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10 transition-opacity duration-150 ${isSliding ? "opacity-0" : "opacity-100"}`}>
-                  {images.map((_, idx) => (
+                  {media.map((_, idx) => (
                     <button
                       key={idx}
                       onClick={() => goToImage(idx)}
@@ -454,7 +467,13 @@ export function ProductDetailPage() {
             </div>
             <div className="ml-6 flex items-center gap-3 self-center">
               <button
-                onClick={() => !isAuthenticated && navigate("/login")}
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    navigate("/login");
+                    return;
+                  }
+                  toast.info("아직 준비 중인 기능입니다.");
+                }}
                 className="text-xs text-white bg-stone-800 hover:bg-stone-700 transition-colors px-4 h-8 rounded-full"
               >
                 팔로우

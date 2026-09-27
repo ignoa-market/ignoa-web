@@ -43,6 +43,7 @@ export interface UserMeResponse {
 export type ItemStatus = "ACTIVE" | "BID_CLOSED" | "NO_BID_CLOSED" | "BUY_NOW_CLOSED";
 export type ItemCondition = "NEW" | "LIKE_NEW" | "GOOD" | "FAIR";
 export type ItemViewType = "ALL" | "POPULAR" | "ENDING_SOON" | "LATEST";
+export type ItemMediaType = "IMAGE" | "VIDEO";
 
 export interface ItemSummary {
   item_id: number;
@@ -59,6 +60,7 @@ export interface ItemSummary {
 export interface ItemMediaResponse {
   item_media_id: number;
   url: string;
+  item_media_type: ItemMediaType;
 }
 
 export interface SellerProfile {

@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { Upload, X, CheckCircle2 } from "lucide-react";
 import { DateTimePicker } from "@/components/common/DateTimePicker";
+import { VideoMedia } from "@/components/common/VideoMedia";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,10 +16,16 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { itemApi } from "@/api/item";
-import type { ItemCondition } from "@/types/api";
+import type { ItemCondition, ItemMediaType } from "@/types/api";
 
 const categories = ["아우터", "상의", "하의", "신발", "가방", "액세서리", "시계", "모자", "기타"];
 const SUPPORTED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
+const SUPPORTED_VIDEO_TYPES = new Set(["video/mp4", "video/quicktime", "video/x-msvideo", "video/webm"]);
+
+interface MediaPreview {
+  url: string;
+  type: ItemMediaType;
+}
 
 const conditions: { value: ItemCondition; label: string }[] = [
   { value: "NEW", label: "새 상품 (미사용)" },
@@ -38,11 +45,17 @@ export function ProductRegistrationPage() {
   const [buyNowPrice, setBuyNowPrice] = useState("");
   const [endDate, setEndDate] = useState("");
   const [endTime, setEndTime] = useState("");
-  const [previews, setPreviews] = useState<string[]>([]);
-  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<MediaPreview[]>([]);
+  const [mediaFiles, setMediaFiles] = useState<File[]>([]);
+  const mediaFilesRef = useRef<File[]>([]);
+  const previewUrlsRef = useRef(new Set<string>());
   const [isDragging, setIsDragging] = useState(false);
   const [quickDuration, setQuickDuration] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => () => {
+    previewUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+  }, []);
 
   const handleCategoryChange = (value: string) => {
     setCategory(value);
@@ -75,37 +88,47 @@ export function ProductRegistrationPage() {
     );
   };
 
-  const handleFiles = async (files: File[]) => {
+  const handleFiles = (files: File[]) => {
+    let videoCount = mediaFilesRef.current.filter((file) => SUPPORTED_VIDEO_TYPES.has(file.type)).length;
     const validFiles = files.filter((file) => {
       if (isHeic(file)) {
         toast.error(`${file.name} — iPhone HEIC 포맷은 미리보기가 지원되지 않습니다. 설정 → 카메라 → 포맷 → '호환성 최고'로 변경 후 JPEG로 올려주세요.`);
         return false;
       }
-      if (!SUPPORTED_IMAGE_TYPES.has(file.type)) {
-        toast.error(`${file.name} — JPEG, PNG, GIF, WEBP 파일만 업로드할 수 있습니다.`);
+      if (!SUPPORTED_IMAGE_TYPES.has(file.type) && !SUPPORTED_VIDEO_TYPES.has(file.type)) {
+        toast.error(`${file.name} — JPEG, PNG, GIF, WEBP, MP4, MOV, AVI, WEBM 파일만 업로드할 수 있습니다.`);
+        return false;
+      }
+      if (SUPPORTED_VIDEO_TYPES.has(file.type) && ++videoCount > 1) {
+        toast.error("상품 동영상은 최대 1개까지 등록할 수 있습니다.");
         return false;
       }
       return true;
     });
 
-    const previews = await Promise.all(
-      validFiles.map(
-        (file) =>
-          new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onload = (e) => resolve(e.target!.result as string);
-            reader.readAsDataURL(file);
-          })
-      )
-    );
+    const nextPreviews = validFiles.map((file): MediaPreview => {
+      const url = URL.createObjectURL(file);
+      previewUrlsRef.current.add(url);
+      return {
+        url,
+        type: SUPPORTED_VIDEO_TYPES.has(file.type) ? "VIDEO" : "IMAGE",
+      };
+    });
 
-    setPreviews((prev) => [...prev, ...previews]);
-    setImageFiles((prev) => [...prev, ...validFiles]);
+    mediaFilesRef.current = [...mediaFilesRef.current, ...validFiles];
+    setPreviews((prev) => [...prev, ...nextPreviews]);
+    setMediaFiles(mediaFilesRef.current);
   };
 
   const removeImage = (index: number) => {
+    const previewUrl = previews[index]?.url;
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      previewUrlsRef.current.delete(previewUrl);
+    }
+    mediaFilesRef.current = mediaFilesRef.current.filter((_, i) => i !== index);
     setPreviews((prev) => prev.filter((_, i) => i !== index));
-    setImageFiles((prev) => prev.filter((_, i) => i !== index));
+    setMediaFiles(mediaFilesRef.current);
   };
 
   const handleQuickDuration = (ms: number, key: string) => {
@@ -140,7 +163,7 @@ export function ProductRegistrationPage() {
       toast.error("상품 상태를 선택해주세요.");
       return;
     }
-    if (imageFiles.length === 0) {
+    if (!mediaFiles.some((file) => SUPPORTED_IMAGE_TYPES.has(file.type))) {
       toast.error("상품 이미지를 1개 이상 등록해주세요.");
       return;
     }
@@ -185,7 +208,7 @@ export function ProductRegistrationPage() {
           buy_now_price: buyNowPriceNum,
           end_at: `${endDate}T${endTime}:00`,
         },
-        imageFiles
+        mediaFiles
       );
       toast.success("상품이 등록되었습니다!");
       navigate("/app");
@@ -206,36 +229,41 @@ export function ProductRegistrationPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Image Upload */}
-          <div className="bg-white rounded-lg p-6 sm:p-8 border border-gray-200">
-            {/* 이미지 업로드 */}
+          {/* Media Upload */}
+          <div className="bg-white rounded-xl p-6 sm:p-8 border border-gray-200">
+            {/* 미디어 업로드 */}
             <div
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
               onClick={() => document.getElementById("file-input")?.click()}
-              className={`border-2 border-dashed rounded-lg p-6 text-center transition-all cursor-pointer ${
+              className={`border-2 border-dashed rounded-xl p-6 text-center transition-all cursor-pointer ${
                 isDragging ? "border-black bg-gray-50 scale-[1.01]" : "border-gray-300 bg-gray-50 hover:border-black"
               }`}
             >
               <Upload className={`w-8 h-8 text-black mx-auto mb-2 transition-transform ${isDragging ? "scale-110" : ""}`} />
               <p className="text-sm font-medium text-black">
-                {previews.length > 0 ? `사진 추가 (${previews.length}/10)` : "사진을 드래그하거나 클릭하세요"}
+                {previews.length > 0 ? `미디어 추가 (${previews.length})` : "사진 또는 동영상을 드래그하거나 클릭하세요"}
               </p>
-              <input id="file-input" type="file" accept="image/jpeg,image/png,image/gif,image/webp" multiple onChange={handleFileInput} className="hidden" />
+              <p className="mt-1 text-xs text-gray-400">동영상은 최대 1개, 사진은 최소 1개 필요합니다.</p>
+              <input id="file-input" type="file" accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/x-msvideo,video/webm" multiple onChange={handleFileInput} className="hidden" />
             </div>
 
             {previews.length > 0 && (
               <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 mt-3">
-                {previews.map((img, idx) => (
+                {previews.map((media, idx) => (
                   <div key={idx} className="relative group aspect-square rounded-lg overflow-hidden border-2 border-gray-200 hover:border-black transition-all">
-                    {idx === 0 && (
+                    {media.type === "IMAGE" && previews.findIndex((preview) => preview.type === "IMAGE") === idx && (
                       <div className="absolute top-1.5 left-1.5 z-10 bg-black text-white text-[10px] font-bold px-1.5 py-0.5 rounded">대표</div>
                     )}
-                    <img src={img} alt="" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
+                    {media.type === "VIDEO" ? (
+                      <VideoMedia src={media.url} className="w-full h-full object-cover" />
+                    ) : (
+                      <img src={media.url} alt="" className="w-full h-full object-cover" />
+                    )}
+                    <div className="pointer-events-none absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
                       <button type="button" onClick={(e) => { e.stopPropagation(); removeImage(idx); }}
-                        className="opacity-0 group-hover:opacity-100 w-7 h-7 bg-red-500 rounded-full flex items-center justify-center text-white hover:bg-red-600 transition-all">
+                        className="pointer-events-auto opacity-0 group-hover:opacity-100 w-7 h-7 bg-red-500 rounded-full flex items-center justify-center text-white hover:bg-red-600 transition-all">
                         <X className="w-4 h-4" />
                       </button>
                     </div>
@@ -246,18 +274,18 @@ export function ProductRegistrationPage() {
           </div>
 
           {/* 상품 정보 */}
-          <div className="bg-white rounded-lg p-6 sm:p-8 border border-gray-200 space-y-5">
+          <div className="bg-white rounded-xl p-6 sm:p-8 border border-gray-200 space-y-5">
             {/* 브랜드 · 카테고리 · 상태 */}
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <Label className="text-sm font-semibold text-black mb-2 block">브랜드 <span className="text-red-500">*</span></Label>
                 <Input placeholder="예) Our Legacy" value={brand} onChange={(e) => setBrand(e.target.value)}
-                  className="text-sm focus-visible:ring-2 focus-visible:ring-black border-gray-300" required />
+                  className="rounded-lg text-sm focus-visible:ring-2 focus-visible:ring-black border-gray-300" required />
               </div>
               <div>
                 <Label className="text-sm font-semibold text-black mb-2 block">카테고리 <span className="text-red-500">*</span></Label>
                 <Select value={category} onValueChange={handleCategoryChange} required>
-                  <SelectTrigger className="text-sm focus:ring-2 focus:ring-black border-gray-300">
+                  <SelectTrigger className="rounded-lg text-sm focus:ring-2 focus:ring-black border-gray-300">
                     <SelectValue placeholder="선택" />
                   </SelectTrigger>
                   <SelectContent>
@@ -268,7 +296,7 @@ export function ProductRegistrationPage() {
               <div>
                 <Label className="text-sm font-semibold text-black mb-2 block">상태 <span className="text-red-500">*</span></Label>
                 <Select value={condition} onValueChange={(v) => setCondition(v as ItemCondition)} required>
-                  <SelectTrigger className="text-sm focus:ring-2 focus:ring-black border-gray-300">
+                  <SelectTrigger className="rounded-lg text-sm focus:ring-2 focus:ring-black border-gray-300">
                     <SelectValue placeholder="선택" />
                   </SelectTrigger>
                   <SelectContent>
@@ -283,7 +311,7 @@ export function ProductRegistrationPage() {
               <Label className="text-sm font-semibold text-black mb-2 block">상품 제목 <span className="text-red-500">*</span></Label>
               <Input placeholder="예) Rick Owens Vintage Leather Jacket" value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="h-11 text-sm focus-visible:ring-2 focus-visible:ring-black border-gray-300" required />
+                className="h-11 rounded-lg text-sm focus-visible:ring-2 focus-visible:ring-black border-gray-300" required />
               <p className="text-xs text-gray-400 mt-1.5 text-right">{title.length}/50</p>
             </div>
 
@@ -292,13 +320,13 @@ export function ProductRegistrationPage() {
               <Label className="text-sm font-semibold text-black mb-2 block">상품 설명 <span className="text-red-500">*</span></Label>
               <Textarea placeholder="상품 상태, 구매 시기, 사용감 등을 작성해주세요." value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="min-h-[160px] text-sm focus-visible:ring-2 focus-visible:ring-black border-gray-300 resize-none" required />
+                className="min-h-[160px] rounded-lg text-sm focus-visible:ring-2 focus-visible:ring-black border-gray-300 resize-none" required />
               <p className="text-xs text-gray-400 mt-1.5 text-right">{description.length}/1000</p>
             </div>
           </div>
 
           {/* 가격 & 경매 */}
-          <div className="bg-white rounded-lg p-6 sm:p-8 border border-gray-200 space-y-5">
+          <div className="bg-white rounded-xl p-6 sm:p-8 border border-gray-200 space-y-5">
             {/* 시작가 + 즉시구매가 */}
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -307,7 +335,7 @@ export function ProductRegistrationPage() {
                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₩</span>
                   <Input type="text" placeholder="500,000" value={startPrice}
                     onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, ""); setStartPrice(v ? parseInt(v).toLocaleString() : ""); }}
-                    className="pl-8 h-11 text-sm font-semibold focus-visible:ring-2 focus-visible:ring-black border-gray-300" required />
+                    className="pl-8 h-11 rounded-lg text-sm font-semibold focus-visible:ring-2 focus-visible:ring-black border-gray-300" required />
                 </div>
               </div>
               <div>
@@ -316,7 +344,7 @@ export function ProductRegistrationPage() {
                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₩</span>
                   <Input type="text" placeholder="1,200,000" value={buyNowPrice}
                     onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, ""); setBuyNowPrice(v ? parseInt(v).toLocaleString() : ""); }}
-                    className={`pl-8 h-11 text-sm font-semibold focus-visible:ring-2 focus-visible:ring-black ${
+                    className={`pl-8 h-11 rounded-lg text-sm font-semibold focus-visible:ring-2 focus-visible:ring-black ${
                       buyNowPrice && startPrice && parseInt(buyNowPrice.replace(/,/g, "")) <= parseInt(startPrice.replace(/,/g, ""))
                         ? "border-red-300 focus-visible:ring-red-400"
                         : "border-gray-300"
