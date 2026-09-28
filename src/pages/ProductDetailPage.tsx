@@ -347,7 +347,7 @@ export function ProductDetailPage() {
           {/* Column 2: Info + Actions */}
           <div className="flex flex-col relative">
             {item.brand && (
-              <p className="text-sm font-semibold uppercase tracking-widest text-stone-600 mb-2 mt-8">
+              <p className="text-base font-semibold uppercase tracking-widest text-black underline decoration-1 underline-offset-2 mb-2 mt-8">
                 {item.brand}
               </p>
             )}
@@ -382,7 +382,7 @@ export function ProductDetailPage() {
             </div>
 
             {/* Price */}
-            <div className="mb-5">
+            <div className="mt-3 mb-5">
               <div className={`flex ${item.buy_now_price ? "justify-around" : ""}`}>
                 <div className="text-center">
                   <p className="text-xs text-stone-400 mb-1.5">현재가</p>
@@ -418,7 +418,7 @@ export function ProductDetailPage() {
             <hr className="border-t border-stone-100 mb-5" />
 
             {/* Description */}
-            <p className="text-sm font-light text-stone-600 leading-relaxed whitespace-pre-line mb-5">
+            <p className="text-sm font-light text-stone-900 leading-relaxed whitespace-pre-line mb-5">
               {item.description}
             </p>
 
