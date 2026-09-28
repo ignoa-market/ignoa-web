@@ -109,7 +109,7 @@ export function ProductDetailPage() {
 
     const client = createBidSocket(numericId, (bid) => {
       if (!active) return;
-      setDisplayPrice(bid.currentPrice);
+      setDisplayPrice(bid.current_price);
       setPriceAnimKey((key) => key + 1);
       bidApi.getBids(numericId).then((result) => {
         if (active) setBids(result);

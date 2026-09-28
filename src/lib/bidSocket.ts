@@ -2,10 +2,10 @@ import { Client, type IMessage } from "@stomp/stompjs";
 import { getBrokerUrl } from "@/lib/chatSocket";
 
 export interface BidBroadcast {
-  itemId: number;
-  currentPrice: number;
-  bidderNickname: string;
-  createdAt: string;
+  item_id: number;
+  current_price: number;
+  bidder_nickname: string;
+  created_at: string;
 }
 
 export function createBidSocket(
@@ -21,7 +21,7 @@ export function createBidSocket(
       client.subscribe(`/topic/items/${itemId}`, (frame: IMessage) => {
         try {
           const bid = JSON.parse(frame.body) as BidBroadcast;
-          if (bid.itemId === itemId) onBid(bid);
+          if (bid.item_id === itemId) onBid(bid);
         } catch {
           // Ignore malformed broker messages and keep the connection alive.
         }
