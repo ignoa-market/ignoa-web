@@ -363,7 +363,7 @@ export function HomePage() {
 
           {!allLoading && allItems.length === 0 && (
             <div className="flex flex-col items-center justify-center py-24 text-gray-300">
-              <p className="text-sm font-medium">등록된 상품이 없습니다</p>
+              <p className="text-sm font-normal">등록된 상품이 없습니다.</p>
             </div>
           )}
         </motion.div>
