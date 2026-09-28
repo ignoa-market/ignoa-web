@@ -407,7 +407,7 @@ export function ProfilePage() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`pb-5 text-[11px] font-normal transition-colors border-b-2 -mb-px ${
+              className={`min-h-10 px-1 pb-5 text-[11px] font-normal transition-colors border-b-2 -mb-px cursor-pointer touch-manipulation ${
                 activeTab === tab.id
                   ? "border-black text-black"
                   : "border-transparent text-gray-400 hover:text-black"
@@ -420,13 +420,13 @@ export function ProfilePage() {
         </div>
 
         {/* Product Grid */}
-        <AnimatePresence mode="wait">
+        <AnimatePresence>
           <motion.div
             key={activeTab}
-            initial={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.15 }}
           >
             {tabLoading ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
