@@ -71,11 +71,9 @@ export function HomePage() {
   const [allReload, setAllReload] = useState(0);
 
   const popularRef = useRef(null);
-  const promoRef = useRef(null);
   const allProductsRef = useRef(null);
 
   const popularInView = useInView(popularRef, { once: true, amount: 0.1 });
-  const promoInView = useInView(promoRef, { once: true, amount: 0.15 });
   const allProductsInView = useInView(allProductsRef, { once: true, amount: 0.1 });
 
   useEffect(() => {
@@ -108,21 +106,10 @@ export function HomePage() {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.6 }}
-      className="min-h-screen bg-white pt-[170px]"
-    >
+    <div className="min-h-screen bg-white pt-[170px]">
       <div style={{ zoom: 0.8 }}>
       {/* Section 1: Main Banner Slider */}
-      <motion.div
-        ref={promoRef}
-        initial={{ opacity: 0 }}
-        animate={promoInView ? { opacity: 1 } : {}}
-        transition={{ duration: 0.6 }}
-        className="relative w-full overflow-hidden h-[420px] md:h-[500px] mb-8"
-      >
+      <div className="relative mb-8 h-[420px] w-full overflow-hidden md:h-[500px]">
         <AnimatePresence mode="sync" custom={slideDir} initial={false}>
           {bannerSlides.map((slide, i) =>
             ctaSlide === i ? (
@@ -262,7 +249,7 @@ export function HomePage() {
             </button>
           </div>
         </div>
-      </motion.div>
+      </div>
 
       {/* Section 2: Popular Listings */}
       <div className="max-w-[1400px] mx-auto px-8 pt-7 pb-8">
@@ -292,15 +279,10 @@ export function HomePage() {
             </div>
           ) : popularItems.length > 0 ? (
             <div className="grid grid-cols-5 gap-3 md:gap-4">
-              {popularItems.map((item, index) => (
-                <motion.div
-                  key={item.item_id}
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={popularInView ? { opacity: 1, y: 0 } : {}}
-                  transition={{ duration: 0.4, delay: 0.05 * index, ease: "easeOut" }}
-                >
-                  <ProductCard product={toProductCardProps(item)} />
-                </motion.div>
+              {popularItems.map((item) => (
+                <div key={item.item_id}>
+                  <ProductCard product={toProductCardProps(item)} imageLoading="eager" />
+                </div>
               ))}
             </div>
           ) : (
@@ -370,15 +352,10 @@ export function HomePage() {
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
-              {allItems.map((item, index) => (
-                <motion.div
-                  key={item.item_id}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.3, delay: Math.min(index * 0.02, 0.3) }}
-                >
+              {allItems.map((item) => (
+                <div key={item.item_id}>
                   <ProductCard product={toProductCardProps(item)} />
-                </motion.div>
+                </div>
               ))}
             </div>
           )}
@@ -391,6 +368,6 @@ export function HomePage() {
         </motion.div>
       </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

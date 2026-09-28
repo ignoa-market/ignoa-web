@@ -225,12 +225,7 @@ export function ProfilePage() {
   const followList = showFollowModal === "followers" ? followers : following;
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-      className="min-h-screen bg-white pt-[170px] pb-28"
-    >
+    <div className="min-h-screen bg-white pt-[170px] pb-28">
       {/* Profile Hero */}
       <div className="max-w-[1120px] mx-auto px-8" style={{ zoom: 0.9 }}>
         <div className="flex items-center justify-between py-8">
@@ -530,6 +525,6 @@ export function ProfilePage() {
           />
         )}
       </AnimatePresence>
-    </motion.div>
+    </div>
   );
 }

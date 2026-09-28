@@ -42,6 +42,7 @@ interface ProductCardProps {
   };
   onExtendAuction?: (itemId: number) => Promise<void>;
   compactTypography?: boolean;
+  imageLoading?: "eager" | "lazy";
 }
 
 function resolveOverlay(status?: ItemStatus, isEnded?: boolean): "SOLD" | "ENDED" | null {
@@ -51,7 +52,12 @@ function resolveOverlay(status?: ItemStatus, isEnded?: boolean): "SOLD" | "ENDED
   return null;
 }
 
-export const ProductCard = memo(function ProductCard({ product, onExtendAuction, compactTypography = false }: ProductCardProps) {
+export const ProductCard = memo(function ProductCard({
+  product,
+  onExtendAuction,
+  compactTypography = false,
+  imageLoading = "lazy",
+}: ProductCardProps) {
   const { id, title, brand, currentPrice, size, imageUrl, viewCount } = product;
   const overlay = resolveOverlay(product.status, product.isEnded);
   const numericId = Number(id);
@@ -106,7 +112,8 @@ export const ProductCard = memo(function ProductCard({ product, onExtendAuction,
         <ImageWithFallback
           src={imageUrl}
           alt={title}
-          loading="lazy"
+          loading={imageLoading}
+          decoding="async"
           className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
         />
         {overlay && (
