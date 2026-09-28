@@ -2,7 +2,7 @@ import { Link, useNavigate } from "react-router";
 import { Menu, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useRef, useEffect } from "react";
-import logoImage from "@/assets/logo.png";
+import logoImage from "@/assets/logo-optimized.png";
 import { useAuth } from "@/context/AuthContext";
 import { useChat } from "@/context/ChatContext";
 import { authApi } from "@/api/auth";

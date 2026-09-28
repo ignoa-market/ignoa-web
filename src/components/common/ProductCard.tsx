@@ -4,6 +4,7 @@ import { memo, useState } from "react";
 import type { MouseEvent } from "react";
 import { motion } from "motion/react";
 import { useWishToggle } from "@/hooks/useWishToggle";
+import { ImageWithFallback } from "@/components/common/ImageWithFallback";
 import type { ItemStatus } from "@/types/api";
 import {
   AlertDialog,
@@ -77,7 +78,7 @@ export const ProductCard = memo(function ProductCard({ product, onExtendAuction 
       <Link to={`/app/products/${id}`} className="group relative block cursor-pointer">
       {/* Image */}
       <div className="relative aspect-square overflow-hidden bg-gray-100 rounded-lg mb-2.5">
-        <img
+        <ImageWithFallback
           src={imageUrl}
           alt={title}
           loading="lazy"

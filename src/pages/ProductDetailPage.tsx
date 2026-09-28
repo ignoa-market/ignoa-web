@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { VideoMedia } from "@/components/common/VideoMedia";
+import { ImageWithFallback } from "@/components/common/ImageWithFallback";
 import { toast } from "sonner";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { motion, AnimatePresence } from "motion/react";
@@ -38,9 +39,13 @@ export function ProductDetailPage() {
   const [priceAnimKey, setPriceAnimKey] = useState(0);
   const [shippingOpen, setShippingOpen] = useState(false);
   const [returnOpen, setReturnOpen] = useState(false);
+  const [auctionExpired, setAuctionExpired] = useState(false);
   const numericId = Number(id);
   const countdownSpanRef = useRef<HTMLSpanElement>(null);
   const endTimeRef = useRef<Date | null>(null);
+  const bidRefreshRef = useRef(0);
+  const itemReconnectRef = useRef(0);
+  const livePriceVersionRef = useRef(0);
   const { wished, wishCount, toggle: handleWishToggle } = useWishToggle(numericId);
 
   const handleOpenChat = async () => {
@@ -77,6 +82,7 @@ export function ProductDetailPage() {
         setItem(data);
         setDisplayPrice(data.current_price);
         endTimeRef.current = new Date(data.end_at);
+        setAuctionExpired(new Date(data.end_at).getTime() <= Date.now());
         wishStore.sync(data.item_id, data.is_wished, data.wish_count);
       })
       .catch(() => {
@@ -96,10 +102,15 @@ export function ProductDetailPage() {
   // 입찰 내역 조회
   useEffect(() => {
     if (!id) return;
+    const requestId = ++bidRefreshRef.current;
     bidApi
       .getBids(numericId)
-      .then((res) => setBids(res))
-      .catch(() => setBids([]));
+      .then((res) => {
+        if (requestId === bidRefreshRef.current) setBids(res);
+      })
+      .catch(() => {
+        if (requestId === bidRefreshRef.current) setBids([]);
+      });
   }, [id]);
 
   // 공개 입찰 토픽 구독 — 로그인 여부와 관계없이 현재가와 입찰 내역을 실시간 갱신
@@ -107,14 +118,43 @@ export function ProductDetailPage() {
     if (!id || !Number.isFinite(numericId)) return;
     let active = true;
 
-    const client = createBidSocket(numericId, (bid) => {
-      if (!active) return;
-      setDisplayPrice(bid.current_price);
-      setPriceAnimKey((key) => key + 1);
-      bidApi.getBids(numericId).then((result) => {
-        if (active) setBids(result);
-      }).catch(() => {});
-    });
+    const client = createBidSocket(
+      numericId,
+      (bid) => {
+        if (!active) return;
+        livePriceVersionRef.current += 1;
+        setDisplayPrice(bid.current_price);
+        setPriceAnimKey((key) => key + 1);
+        const requestId = ++bidRefreshRef.current;
+        bidApi.getBids(numericId).then((result) => {
+          if (active && requestId === bidRefreshRef.current) setBids(result);
+        }).catch(() => {});
+      },
+      (reconnected) => {
+        if (!reconnected) return;
+        const itemRequestId = ++itemReconnectRef.current;
+        const priceVersion = livePriceVersionRef.current;
+        itemApi.getItem(numericId)
+          .then((nextItem) => {
+            if (!active || itemRequestId !== itemReconnectRef.current) return;
+            setItem(nextItem);
+            if (priceVersion === livePriceVersionRef.current) {
+              setDisplayPrice(nextItem.current_price);
+            }
+            endTimeRef.current = new Date(nextItem.end_at);
+            setAuctionExpired(new Date(nextItem.end_at).getTime() <= Date.now());
+            wishStore.sync(nextItem.item_id, nextItem.is_wished, nextItem.wish_count);
+          })
+          .catch(() => {});
+
+        const bidRequestId = ++bidRefreshRef.current;
+        bidApi.getBids(numericId)
+          .then((nextBids) => {
+            if (active && bidRequestId === bidRefreshRef.current) setBids(nextBids);
+          })
+          .catch(() => {});
+      }
+    );
 
     client.activate();
     return () => {
@@ -131,6 +171,7 @@ export function ProductDetailPage() {
       let text: string;
       if (diff <= 0) {
         text = "마감";
+        setAuctionExpired(true);
       } else {
         const days = Math.floor(diff / (1000 * 60 * 60 * 24));
         const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
@@ -149,6 +190,12 @@ export function ProductDetailPage() {
     const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (!auctionExpired) return;
+    setBidModalOpen(false);
+    setBuyNowModalOpen(false);
+  }, [auctionExpired]);
 
 
   const handleShare = async () => {
@@ -255,6 +302,7 @@ export function ProductDetailPage() {
   }
 
   const media = item.media_urls;
+  const auctionActive = item.status === "ACTIVE" && !auctionExpired;
 
   const goToImage = (idx: number) => {
     setSlideDir(idx > currentImageIndex ? 1 : -1);
@@ -299,7 +347,7 @@ export function ProductDetailPage() {
                     className="w-full h-full object-contain bg-black"
                   />
                 ) : (
-                  <img
+                  <ImageWithFallback
                     src={media[currentImageIndex]?.url}
                     alt={item.title}
                     className="w-full h-full object-cover"
@@ -432,14 +480,14 @@ export function ProductDetailPage() {
               <div className="flex gap-2">
                 <Button
                   onClick={() => navigate(`/app/products/${id}/edit`)}
-                  disabled={item.status !== "ACTIVE"}
+                  disabled={!auctionActive}
                   className="flex-1 bg-stone-800 hover:bg-stone-700 text-white h-11 text-sm font-medium rounded transition-colors disabled:opacity-40"
                 >
                   상품 수정
                 </Button>
                 <Button
                   onClick={handleDeleteItem}
-                  disabled={item.status !== "ACTIVE" || item.current_price > item.start_price}
+                  disabled={!auctionActive || displayPrice > item.start_price}
                   variant="outline"
                   className="flex-1 border-red-200 text-red-500 h-11 text-sm font-medium rounded hover:bg-red-50 hover:border-red-300 transition-colors disabled:opacity-40"
                 >
@@ -456,10 +504,10 @@ export function ProductDetailPage() {
                     }
                     setBidModalOpen(true);
                   }}
-                  disabled={item.status !== "ACTIVE"}
+                  disabled={!auctionActive}
                   className="flex-1 bg-black hover:bg-stone-900 text-white h-11 text-sm font-medium rounded transition-colors disabled:opacity-50"
                 >
-                  {item.status !== "ACTIVE" ? "경매 종료" : "입찰하기"}
+                  {!auctionActive ? "경매 종료" : "입찰하기"}
                 </Button>
                 {item.buy_now_price && (
                   <Button
@@ -470,7 +518,7 @@ export function ProductDetailPage() {
                       }
                       setBuyNowModalOpen(true);
                     }}
-                    disabled={item.status !== "ACTIVE"}
+                    disabled={!auctionActive}
                     variant="outline"
                     className="flex-1 border-stone-200 text-stone-600 h-11 text-sm font-medium rounded hover:bg-stone-50 hover:border-stone-300 transition-colors disabled:opacity-50"
                   >

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router";
 import { Mail, User, MapPin, Camera, Search, X, CheckCircle2, Trash2, Pencil } from "lucide-react";
 import { ProductCard } from "@/components/common/ProductCard";
+import { ImageWithFallback } from "@/components/common/ImageWithFallback";
 import { AddressModal } from "@/components/common/AddressModal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -229,7 +230,7 @@ export function ProfilePage() {
               <input type="file" id="profileImageInput" accept="image/*" onChange={handleImageChange} className="hidden" />
               <div className="w-24 h-24 rounded-full bg-gray-100 overflow-hidden relative">
                 {profileImage ? (
-                  <img
+                  <ImageWithFallback
                     src={profileImage}
                     alt=""
                     className="w-full h-full object-cover"

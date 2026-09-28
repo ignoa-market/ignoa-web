@@ -1,4 +1,4 @@
-import logoImage from "@/assets/logo.png";
+import logoImage from "@/assets/logo-optimized.png";
 import { Link } from "react-router";
 
 export function AnnouncementBanner() {

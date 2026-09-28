@@ -46,13 +46,16 @@ export interface ItemUpdatePayload {
 }
 
 export const itemApi = {
-  getItems: (params: ItemListParams = {}) => {
+  getItems: (params: ItemListParams = {}, options?: { public?: boolean }) => {
     const query = new URLSearchParams();
     if (params.view) query.set("view", params.view);
     if (params.category) query.set("category", params.category);
     if (params.page !== undefined) query.set("page", String(params.page));
     if (params.size !== undefined) query.set("size", String(params.size));
-    return api.get<SliceResponse<ItemSummary>>(`/api/items?${query}`);
+    const path = `/api/items?${query}`;
+    return options?.public
+      ? api.publicGet<SliceResponse<ItemSummary>>(path)
+      : api.get<SliceResponse<ItemSummary>>(path);
   },
 
   getItem: (itemId: number) =>

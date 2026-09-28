@@ -3,6 +3,7 @@ import { CheckCircle2, ChevronLeft, CreditCard, LoaderCircle, MapPin, MessageSqu
 import { useSearchParams } from "react-router";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
+import { ImageWithFallback } from "@/components/common/ImageWithFallback";
 import { chatApi } from "@/api/chat";
 import { itemApi } from "@/api/item";
 import { useAuth } from "@/context/AuthContext";
@@ -16,9 +17,37 @@ const formatRoomTime = (value: string | null, fallback: string) =>
 const formatMessageTime = (value: string) =>
   new Date(value).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
 
+const mergeMessages = (...groups: ChatMessageResponse[][]) => {
+  const merged = new Map<number, ChatMessageResponse>();
+  groups.flat().forEach((message) => merged.set(message.message_id, message));
+  return [...merged.values()].sort((a, b) => a.message_id - b.message_id);
+};
+
+const roomActivityTime = (room: ChatRoomPreview) =>
+  new Date(room.last_message_at ?? room.created_at).getTime();
+
+const mergeChatRooms = (fetchedRooms: ChatRoomPreview[], localRooms: ChatRoomPreview[]) => {
+  const merged = new Map(fetchedRooms.map((room) => [room.chat_room_id, room]));
+  localRooms.forEach((localRoom) => {
+    const fetchedRoom = merged.get(localRoom.chat_room_id);
+    if (!fetchedRoom) {
+      merged.set(localRoom.chat_room_id, localRoom);
+      return;
+    }
+    if (roomActivityTime(localRoom) > roomActivityTime(fetchedRoom)) {
+      merged.set(localRoom.chat_room_id, {
+        ...fetchedRoom,
+        last_message: localRoom.last_message,
+        last_message_at: localRoom.last_message_at,
+      });
+    }
+  });
+  return [...merged.values()].sort((a, b) => roomActivityTime(b) - roomActivityTime(a));
+};
+
 export function MessagesPage() {
   const { userId } = useAuth();
-  const { clearNewMessage, setMessagesPageActive, subscribe } = useChat();
+  const { clearNewMessage, reconnectVersion, setMessagesPageActive, subscribe } = useChat();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedRoomId = Number(searchParams.get("chatRoomId"));
   const requestedItemId = Number(searchParams.get("itemId"));
@@ -39,7 +68,9 @@ export function MessagesPage() {
   const [hasOlderMessages, setHasOlderMessages] = useState(false);
   const selectedChatRef = useRef<number | null>(selectedChat);
   const chatsRef = useRef<ChatRoomPreview[]>([]);
+  const messagesRef = useRef<ChatMessageResponse[]>([]);
   const pendingRoomIdsRef = useRef(new Set<number>());
+  const messageLoadGenerationRef = useRef(0);
   const messageScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -49,6 +80,10 @@ export function MessagesPage() {
   useEffect(() => {
     chatsRef.current = chats;
   }, [chats]);
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   const scrollToBottom = useCallback(() => {
     requestAnimationFrame(() => {
@@ -60,10 +95,7 @@ export function MessagesPage() {
 
   const upsertMessage = useCallback((incoming: ChatMessageResponse) => {
     if (selectedChatRef.current === incoming.chat_room_id) {
-      setMessages((current) => current.some((item) => item.message_id === incoming.message_id)
-        ? current
-        : [...current, incoming]
-      );
+      setMessages((current) => mergeMessages(current, [incoming]));
       scrollToBottom();
     }
 
@@ -99,22 +131,13 @@ export function MessagesPage() {
       .then(async (rooms) => {
         if (stale) return;
         let nextRooms = rooms;
-        if (selectedChat && !rooms.some((room) => room.chat_room_id === selectedChat)) {
-          const room = await chatApi.getChatRoom(selectedChat);
+        const currentChatId = selectedChatRef.current;
+        if (currentChatId && !rooms.some((room) => room.chat_room_id === currentChatId)) {
+          const room = await chatApi.getChatRoom(currentChatId);
           nextRooms = [room, ...rooms];
         }
         if (!stale) {
-          setChats((current) => {
-            const merged = new Map(nextRooms.map((room) => [room.chat_room_id, room]));
-            current.forEach((room) => {
-              const fetched = merged.get(room.chat_room_id);
-              merged.set(room.chat_room_id, fetched ? { ...fetched, ...room } : room);
-            });
-            return [...merged.values()].sort((a, b) =>
-              new Date(b.last_message_at ?? b.created_at).getTime()
-              - new Date(a.last_message_at ?? a.created_at).getTime()
-            );
-          });
+          setChats((current) => mergeChatRooms(nextRooms, current));
         }
       })
       .catch(() => {
@@ -124,9 +147,7 @@ export function MessagesPage() {
         if (!stale) setIsLoading(false);
       });
     return () => { stale = true; };
-    // Only load the room list on page entry. The selected room is read from the initial URL.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [reconnectVersion]);
 
   useEffect(() => subscribe(upsertMessage), [subscribe, upsertMessage]);
 
@@ -174,29 +195,41 @@ export function MessagesPage() {
     }
 
     let stale = false;
+    const loadGeneration = ++messageLoadGenerationRef.current;
+    const messageIdsAtRequestStart = new Set(
+      messagesRef.current
+        .filter((item) => item.chat_room_id === selectedChat)
+        .map((item) => item.message_id)
+    );
     setIsMessagesLoading(true);
     chatApi.getMessages(selectedChat)
       .then((result) => {
-        if (stale) return;
+        if (stale || loadGeneration !== messageLoadGenerationRef.current) return;
         const fetched = [...result.content].reverse();
-        setMessages((current) => {
-          const liveMessages = current.filter((item) => item.chat_room_id === selectedChat);
-          const merged = new Map([...fetched, ...liveMessages].map((item) => [item.message_id, item]));
-          return [...merged.values()].sort((a, b) => a.message_id - b.message_id);
-        });
+        setMessages((current) => mergeMessages(
+          fetched,
+          current.filter((item) =>
+            item.chat_room_id === selectedChat && !messageIdsAtRequestStart.has(item.message_id)
+          )
+        ));
         setHasOlderMessages(result.has_next);
         scrollToBottom();
       })
       .catch(() => {
-        if (!stale) toast.error("메시지를 불러오지 못했습니다.");
+        if (!stale && loadGeneration === messageLoadGenerationRef.current) {
+          toast.error("메시지를 불러오지 못했습니다.");
+        }
       })
       .finally(() => {
-        if (!stale) setIsMessagesLoading(false);
+        if (!stale && loadGeneration === messageLoadGenerationRef.current) {
+          setIsMessagesLoading(false);
+        }
       });
     return () => { stale = true; };
-  }, [selectedChat, scrollToBottom]);
+  }, [selectedChat, scrollToBottom, reconnectVersion]);
 
   const selectChat = (chatRoomId: number | null) => {
+    messageLoadGenerationRef.current += 1;
     selectedChatRef.current = chatRoomId;
     setMessages([]);
     setDraftItem(null);
@@ -208,23 +241,27 @@ export function MessagesPage() {
   const loadOlderMessages = async () => {
     if (!selectedChat || !messages[0] || isMessagesLoading) return;
     const requestedChatRoomId = selectedChat;
+    const loadGeneration = messageLoadGenerationRef.current;
     const scrollContainer = messageScrollRef.current;
     const previousScrollHeight = scrollContainer?.scrollHeight ?? 0;
     setIsMessagesLoading(true);
     try {
       const result = await chatApi.getMessages(selectedChat, messages[0].message_id);
-      if (selectedChatRef.current !== requestedChatRoomId) return;
-      setMessages((current) => [...result.content].reverse().concat(current));
+      if (selectedChatRef.current !== requestedChatRoomId
+        || loadGeneration !== messageLoadGenerationRef.current) return;
+      setMessages((current) => mergeMessages([...result.content].reverse(), current));
       setHasOlderMessages(result.has_next);
       requestAnimationFrame(() => {
         if (scrollContainer) scrollContainer.scrollTop += scrollContainer.scrollHeight - previousScrollHeight;
       });
     } catch {
-      if (selectedChatRef.current === requestedChatRoomId) {
+      if (selectedChatRef.current === requestedChatRoomId
+        && loadGeneration === messageLoadGenerationRef.current) {
         toast.error("이전 메시지를 불러오지 못했습니다.");
       }
     } finally {
-      if (selectedChatRef.current === requestedChatRoomId) {
+      if (selectedChatRef.current === requestedChatRoomId
+        && loadGeneration === messageLoadGenerationRef.current) {
         setIsMessagesLoading(false);
       }
     }
@@ -318,7 +355,7 @@ export function MessagesPage() {
                 </div>
                 <div className="h-9 w-9 flex-shrink-0 overflow-hidden rounded bg-stone-100">
                   {chat.item_image_url
-                    ? <img src={chat.item_image_url} alt="" className="h-full w-full object-cover" />
+                    ? <ImageWithFallback src={chat.item_image_url} alt={chat.item_title} loading="lazy" className="h-full w-full object-cover" />
                     : <div className="flex h-full w-full items-center justify-center"><MessageSquare className="h-4 w-4 text-stone-300" /></div>}
                 </div>
               </button>

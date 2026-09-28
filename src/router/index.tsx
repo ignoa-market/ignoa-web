@@ -1,17 +1,14 @@
 import { createBrowserRouter, Navigate } from "react-router";
-import { HomePage } from "@/pages/HomePage";
-import { ProductDetailPage } from "@/pages/ProductDetailPage";
-import { ProductRegistrationPage } from "@/pages/ProductRegistrationPage";
-import { ProductEditPage } from "@/pages/ProductEditPage";
-import { ProfilePage } from "@/pages/ProfilePage";
-import { MessagesPage } from "@/pages/MessagesPage";
-import { LoginPage } from "@/pages/LoginPage";
-import { SignUpPage } from "@/pages/SignUpPage";
-import { OAuthKakaoCallbackPage } from "@/pages/OAuthKakaoCallbackPage";
-import { AppDownloadPage } from "@/pages/AppDownloadPage";
-import { SupportPage } from "@/pages/SupportPage";
 import { Root } from "@/components/layout/RootLayout";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
+
+function RouteLoadingFallback() {
+  return (
+    <div className="flex min-h-[50vh] items-center justify-center text-sm text-gray-500">
+      불러오는 중입니다.
+    </div>
+  );
+}
 
 export const router = createBrowserRouter([
   {
@@ -22,15 +19,39 @@ export const router = createBrowserRouter([
     path: "/app",
     Component: Root,
     children: [
-      { index: true, Component: HomePage },
-      { path: "products/:id", Component: ProductDetailPage },
+      {
+        index: true,
+        HydrateFallback: RouteLoadingFallback,
+        lazy: async () => ({ Component: (await import("@/pages/HomePage")).HomePage }),
+      },
+      {
+        path: "products/:id",
+        HydrateFallback: RouteLoadingFallback,
+        lazy: async () => ({ Component: (await import("@/pages/ProductDetailPage")).ProductDetailPage }),
+      },
       {
         Component: ProtectedRoute,
         children: [
-          { path: "register-product", Component: ProductRegistrationPage },
-          { path: "products/:id/edit", Component: ProductEditPage },
-          { path: "profile", Component: ProfilePage },
-          { path: "messages", Component: MessagesPage },
+          {
+            path: "register-product",
+            HydrateFallback: RouteLoadingFallback,
+            lazy: async () => ({ Component: (await import("@/pages/ProductRegistrationPage")).ProductRegistrationPage }),
+          },
+          {
+            path: "products/:id/edit",
+            HydrateFallback: RouteLoadingFallback,
+            lazy: async () => ({ Component: (await import("@/pages/ProductEditPage")).ProductEditPage }),
+          },
+          {
+            path: "profile",
+            HydrateFallback: RouteLoadingFallback,
+            lazy: async () => ({ Component: (await import("@/pages/ProfilePage")).ProfilePage }),
+          },
+          {
+            path: "messages",
+            HydrateFallback: RouteLoadingFallback,
+            lazy: async () => ({ Component: (await import("@/pages/MessagesPage")).MessagesPage }),
+          },
         ],
       },
     ],
@@ -39,32 +60,49 @@ export const router = createBrowserRouter([
     path: "/download",
     Component: Root,
     children: [
-      { index: true, Component: AppDownloadPage },
+      {
+        index: true,
+        HydrateFallback: RouteLoadingFallback,
+        lazy: async () => ({ Component: (await import("@/pages/AppDownloadPage")).AppDownloadPage }),
+      },
     ],
   },
   {
     path: "/support",
     Component: Root,
     children: [
-      { index: true, Component: SupportPage },
+      {
+        index: true,
+        HydrateFallback: RouteLoadingFallback,
+        lazy: async () => ({ Component: (await import("@/pages/SupportPage")).SupportPage }),
+      },
     ],
   },
   {
     path: "/login",
     Component: Root,
     children: [
-      { index: true, Component: LoginPage },
+      {
+        index: true,
+        HydrateFallback: RouteLoadingFallback,
+        lazy: async () => ({ Component: (await import("@/pages/LoginPage")).LoginPage }),
+      },
     ],
   },
   {
     path: "/signup",
     Component: Root,
     children: [
-      { index: true, Component: SignUpPage },
+      {
+        index: true,
+        HydrateFallback: RouteLoadingFallback,
+        lazy: async () => ({ Component: (await import("@/pages/SignUpPage")).SignUpPage }),
+      },
     ],
   },
   {
     path: "/oauth/kakao/callback",
-    Component: OAuthKakaoCallbackPage,
+    HydrateFallback: RouteLoadingFallback,
+    lazy: async () => ({ Component: (await import("@/pages/OAuthKakaoCallbackPage")).OAuthKakaoCallbackPage }),
   },
 ]);

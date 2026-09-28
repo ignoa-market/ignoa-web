@@ -1,5 +1,5 @@
 import { Star } from "lucide-react";
-import logoImage from "@/assets/logo.png";
+import logoImage from "@/assets/logo-optimized.png";
 import appStoreBadge from "@/assets/download-on-app-store.svg";
 import googlePlayBadge from "@/assets/get-it-on-google-play.png";
 import { toast } from "sonner";

@@ -17,8 +17,10 @@ export function getBrokerUrl() {
 
 export function createChatSocket(
   onMessage: (message: ChatMessageResponse) => void,
-  onConnectionError?: () => void
+  onConnectionError?: () => void,
+  onConnected?: (reconnected: boolean) => void
 ) {
+  let connectedOnce = false;
   const client = new Client({
     brokerURL: getBrokerUrl(),
     reconnectDelay: 3000,
@@ -40,6 +42,8 @@ export function createChatSocket(
           // Ignore malformed broker messages and keep the connection alive.
         }
       });
+      onConnected?.(connectedOnce);
+      connectedOnce = true;
     },
     onStompError: () => onConnectionError?.(),
     onWebSocketError: () => onConnectionError?.(),

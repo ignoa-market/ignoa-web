@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router";
 import { Upload, X, Clock3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { VideoMedia } from "@/components/common/VideoMedia";
+import { ImageWithFallback } from "@/components/common/ImageWithFallback";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -247,7 +248,7 @@ export function ProductEditPage() {
                   {media.item_media_type === "VIDEO" ? (
                     <VideoMedia src={media.url} className="w-full h-full object-cover" />
                   ) : (
-                    <img src={media.url} alt="" className="w-full h-full object-cover" />
+                    <ImageWithFallback src={media.url} alt="기존 상품 이미지" loading="lazy" className="w-full h-full object-cover" />
                   )}
                   <div className="pointer-events-none absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
                     <button
@@ -273,7 +274,7 @@ export function ProductEditPage() {
                   {media.type === "VIDEO" ? (
                     <VideoMedia src={media.url} className="w-full h-full object-cover" />
                   ) : (
-                    <img src={media.url} alt="" className="w-full h-full object-cover" />
+                    <ImageWithFallback src={media.url} alt="추가할 상품 이미지" className="w-full h-full object-cover" />
                   )}
                   <div className="pointer-events-none absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
                     <button

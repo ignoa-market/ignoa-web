@@ -17,6 +17,7 @@ type MessageListener = (message: ChatMessageResponse) => void;
 
 interface ChatContextType {
   hasNewMessage: boolean;
+  reconnectVersion: number;
   clearNewMessage: () => void;
   setMessagesPageActive: (active: boolean) => void;
   subscribe: (listener: MessageListener) => () => void;
@@ -27,6 +28,7 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined);
 export function ChatProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated, userId } = useAuth();
   const [hasNewMessage, setHasNewMessage] = useState(false);
+  const [reconnectVersion, setReconnectVersion] = useState(0);
   const listenersRef = useRef(new Set<MessageListener>());
   const messagesPageActiveRef = useRef(false);
   const socketErrorShownRef = useRef(false);
@@ -50,16 +52,23 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
 
     socketErrorShownRef.current = false;
-    const client = createChatSocket((message) => {
-      listenersRef.current.forEach((listener) => listener(message));
-      if (message.sender_id !== userId && !messagesPageActiveRef.current) {
-        setHasNewMessage(true);
+    const client = createChatSocket(
+      (message) => {
+        listenersRef.current.forEach((listener) => listener(message));
+        if (message.sender_id !== userId && !messagesPageActiveRef.current) {
+          setHasNewMessage(true);
+        }
+      },
+      () => {
+        if (socketErrorShownRef.current) return;
+        socketErrorShownRef.current = true;
+        toast.error("실시간 채팅 연결이 끊겼습니다. 다시 연결하고 있습니다.");
+      },
+      (reconnected) => {
+        socketErrorShownRef.current = false;
+        if (reconnected) setReconnectVersion((version) => version + 1);
       }
-    }, () => {
-      if (socketErrorShownRef.current) return;
-      socketErrorShownRef.current = true;
-      toast.error("실시간 채팅 연결이 끊겼습니다. 다시 연결하고 있습니다.");
-    });
+    );
 
     client.activate();
     return () => { void client.deactivate(); };
@@ -67,10 +76,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(() => ({
     hasNewMessage,
+    reconnectVersion,
     clearNewMessage,
     setMessagesPageActive,
     subscribe,
-  }), [hasNewMessage, clearNewMessage, setMessagesPageActive, subscribe]);
+  }), [hasNewMessage, reconnectVersion, clearNewMessage, setMessagesPageActive, subscribe]);
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
 }

@@ -10,8 +10,10 @@ export interface BidBroadcast {
 
 export function createBidSocket(
   itemId: number,
-  onBid: (bid: BidBroadcast) => void
+  onBid: (bid: BidBroadcast) => void,
+  onConnected?: (reconnected: boolean) => void
 ) {
+  let connectedOnce = false;
   const client = new Client({
     brokerURL: getBrokerUrl(),
     reconnectDelay: 3000,
@@ -26,6 +28,8 @@ export function createBidSocket(
           // Ignore malformed broker messages and keep the connection alive.
         }
       });
+      onConnected?.(connectedOnce);
+      connectedOnce = true;
     },
   });
 

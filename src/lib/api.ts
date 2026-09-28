@@ -88,9 +88,24 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return json.data as T;
 }
 
+async function publicRequest<T>(path: string): Promise<T> {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: "GET",
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    throw await parseError(res);
+  }
+
+  const json = await res.json();
+  return json.data as T;
+}
+
 
 export const api = {
   get: <T>(path: string) => request<T>(path, { method: "GET" }),
+  publicGet: <T>(path: string) => publicRequest<T>(path),
   post: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "POST", body: body ? JSON.stringify(body) : undefined }),
   patch: <T>(path: string, body?: unknown) =>

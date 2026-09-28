@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { itemApi } from "@/api/item";
 import { useAuth } from "@/context/AuthContext";
 import type { ItemSummary } from "@/types/api";
-import lightweightPufferBanner from "@/assets/banner-lightweight-puffer.png";
+import lightweightPufferBanner from "@/assets/banner-lightweight-puffer-optimized.jpg";
 import { toast } from "sonner";
 
 const bannerSlides = [
@@ -58,13 +58,17 @@ function toProductCardProps(item: ItemSummary) {
 }
 
 export function HomePage() {
-  const { isInitializing, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [ctaSlide, setCtaSlide] = useState(0);
   const [slideDir, setSlideDir] = useState(1);
   const [popularItems, setPopularItems] = useState<ItemSummary[]>([]);
   const [allItems, setAllItems] = useState<ItemSummary[]>([]);
   const [popularLoading, setPopularLoading] = useState(true);
   const [allLoading, setAllLoading] = useState(true);
+  const [popularError, setPopularError] = useState(false);
+  const [allError, setAllError] = useState(false);
+  const [popularReload, setPopularReload] = useState(0);
+  const [allReload, setAllReload] = useState(0);
 
   const popularRef = useRef(null);
   const promoRef = useRef(null);
@@ -75,26 +79,28 @@ export function HomePage() {
   const allProductsInView = useInView(allProductsRef, { once: true, amount: 0.1 });
 
   useEffect(() => {
-    if (isInitializing) return;
+    let stale = false;
     setPopularLoading(true);
+    setPopularError(false);
     itemApi
-      .getItems({ view: "POPULAR", size: 5 })
-      .then((res) => setPopularItems(res.content))
-      .catch(() => setPopularItems([]))
-      .finally(() => setPopularLoading(false));
-  }, [isInitializing, isAuthenticated]);
+      .getItems({ view: "POPULAR", size: 5 }, { public: !isAuthenticated })
+      .then((res) => { if (!stale) setPopularItems(res.content); })
+      .catch(() => { if (!stale) setPopularError(true); })
+      .finally(() => { if (!stale) setPopularLoading(false); });
+    return () => { stale = true; };
+  }, [isAuthenticated, popularReload]);
 
   useEffect(() => {
-    if (isInitializing) return;
     let stale = false;
     setAllLoading(true);
+    setAllError(false);
     itemApi
-      .getItems({ view: "ALL", size: 20 })
+      .getItems({ view: "ALL", size: 20 }, { public: !isAuthenticated })
       .then((res) => { if (!stale) setAllItems(res.content); })
-      .catch(() => { if (!stale) setAllItems([]); })
+      .catch(() => { if (!stale) setAllError(true); })
       .finally(() => { if (!stale) setAllLoading(false); });
     return () => { stale = true; };
-  }, [isInitializing, isAuthenticated]);
+  }, [isAuthenticated, allReload]);
 
   const goToSlide = (next: number) => {
     setSlideDir(next > ctaSlide ? 1 : -1);
@@ -277,7 +283,14 @@ export function HomePage() {
                 <div key={i} className="aspect-square bg-gray-100 rounded-lg animate-pulse" />
               ))}
             </div>
-          ) : (
+          ) : popularError ? (
+            <div className="flex flex-col items-center justify-center gap-3 py-16 text-sm text-gray-400">
+              <p>인기 상품을 불러오지 못했습니다.</p>
+              <button type="button" onClick={() => setPopularReload((value) => value + 1)} className="text-black underline underline-offset-4">
+                다시 시도
+              </button>
+            </div>
+          ) : popularItems.length > 0 ? (
             <div className="grid grid-cols-5 gap-3 md:gap-4">
               {popularItems.map((item, index) => (
                 <motion.div
@@ -290,6 +303,8 @@ export function HomePage() {
                 </motion.div>
               ))}
             </div>
+          ) : (
+            <div className="py-16 text-center text-sm text-gray-300">등록된 인기 상품이 없습니다.</div>
           )}
         </motion.div>
       </div>
@@ -346,6 +361,13 @@ export function HomePage() {
                 <div key={i} className="aspect-square bg-gray-100 rounded-lg animate-pulse" />
               ))}
             </div>
+          ) : allError ? (
+            <div className="flex flex-col items-center justify-center gap-3 py-24 text-sm text-gray-400">
+              <p>상품을 불러오지 못했습니다.</p>
+              <button type="button" onClick={() => setAllReload((value) => value + 1)} className="text-black underline underline-offset-4">
+                다시 시도
+              </button>
+            </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
               {allItems.map((item, index) => (
@@ -361,7 +383,7 @@ export function HomePage() {
             </div>
           )}
 
-          {!allLoading && allItems.length === 0 && (
+          {!allLoading && !allError && allItems.length === 0 && (
             <div className="flex flex-col items-center justify-center py-24 text-gray-300">
               <p className="text-sm font-normal">등록된 상품이 없습니다.</p>
             </div>
