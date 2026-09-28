@@ -418,7 +418,7 @@ export function ProductDetailPage() {
             <hr className="border-t border-stone-100 mb-5" />
 
             {/* Description */}
-            <p className="text-sm font-light text-stone-900 leading-relaxed whitespace-pre-line mb-5">
+            <p className="text-sm font-light text-black leading-relaxed whitespace-pre-line mb-5">
               {item.description}
             </p>
 
