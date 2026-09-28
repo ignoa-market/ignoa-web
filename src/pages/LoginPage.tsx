@@ -6,6 +6,13 @@ import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { authApi } from "@/api/auth";
 import type { ApiError } from "@/types/api";
+import {
+  ACTION_MODAL_ACTION_CLASS,
+  ACTION_MODAL_CANCEL_CLASS,
+  ACTION_MODAL_CONTENT_CLASS,
+  ACTION_MODAL_FOOTER_CLASS,
+  ACTION_MODAL_TITLE_CLASS,
+} from "@/constants/actionModal";
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -15,6 +22,8 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [recoverModalOpen, setRecoverModalOpen] = useState(false);
+  const [isRecovering, setIsRecovering] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
   const handleLogin = async () => {
@@ -30,20 +39,7 @@ export function LoginPage() {
     } catch (err) {
       const error = err as ApiError;
       if (error.code === "ACCOUNT_PENDING_DELETION") {
-        const shouldRecover = window.confirm(
-          "탈퇴 처리 중인 계정입니다. 탈퇴를 취소하고 계정을 복구하시겠습니까?"
-        );
-        if (shouldRecover) {
-          try {
-            const res = await authApi.recover(email, password);
-            login(res.user_id, res.access_token);
-            toast.success("계정이 복구되었습니다.");
-            navigate("/app");
-          } catch (recoverErr) {
-            const recoverError = recoverErr as ApiError;
-            toast.error(recoverError.message ?? "계정 복구에 실패했습니다");
-          }
-        }
+        setRecoverModalOpen(true);
       } else if (error.code === "INVALID_CREDENTIALS") {
         setErrors({ email: "이메일 또는 비밀번호가 올바르지 않습니다" });
       } else {
@@ -51,6 +47,22 @@ export function LoginPage() {
       }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleRecover = async () => {
+    if (isRecovering) return;
+    setIsRecovering(true);
+    try {
+      const res = await authApi.recover(email, password);
+      login(res.user_id, res.access_token);
+      toast.success("계정이 복구되었습니다.");
+      navigate("/app");
+    } catch (recoverErr) {
+      const recoverError = recoverErr as ApiError;
+      toast.error(recoverError.message ?? "계정 복구에 실패했습니다.");
+    } finally {
+      setIsRecovering(false);
     }
   };
 
@@ -173,6 +185,50 @@ export function LoginPage() {
             </button>
           </div>
         </motion.div>
+
+        <AnimatePresence>
+          {recoverModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="absolute inset-0 bg-black/30"
+                onClick={() => !isRecovering && setRecoverModalOpen(false)}
+              />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.96, y: 16 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.96, y: 16 }}
+                transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
+                className={ACTION_MODAL_CONTENT_CLASS}
+                style={{ fontFamily: "Pretendard, sans-serif" }}
+              >
+                <h2 className={ACTION_MODAL_TITLE_CLASS}>계정 복구</h2>
+                <p className="text-[13px] leading-5 text-gray-500">
+                  탈퇴 처리 중인 계정입니다. 탈퇴를 취소하고 계정을 복구하시겠습니까?
+                </p>
+                <div className={ACTION_MODAL_FOOTER_CLASS}>
+                  <button
+                    onClick={() => setRecoverModalOpen(false)}
+                    disabled={isRecovering}
+                    className={ACTION_MODAL_CANCEL_CLASS}
+                  >
+                    취소
+                  </button>
+                  <button
+                    onClick={handleRecover}
+                    disabled={isRecovering}
+                    className={ACTION_MODAL_ACTION_CLASS}
+                  >
+                    {isRecovering ? "처리 중..." : "복구하기"}
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
     </div>
   );
 }

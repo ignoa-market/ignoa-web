@@ -12,6 +12,7 @@ import { userApi } from "@/api/auth";
 import { itemApi, wishApi } from "@/api/item";
 import { wishStore } from "@/store/wishStore";
 import type { ApiError, ItemStatus, ItemSummary, WishSummary } from "@/types/api";
+import { MAX_AUCTION_EXTENSION_COUNT } from "@/constants/auction";
 
 
 const TAB_IDS = ["products", "bidding", "wishlist"] as const;
@@ -152,9 +153,15 @@ export function ProfilePage() {
     try {
       const result = await itemApi.extendAuction(itemId);
       setMyItems((items) => items.map((item) =>
-        item.item_id === itemId ? { ...item, end_at: result.end_at } : item
+        item.item_id === itemId
+          ? { ...item, end_at: result.end_at, extension_count: result.extension_count }
+          : item
       ));
-      toast.success("경매 마감이 1일 연장되었습니다.");
+      const remainingCount = Math.max(0, MAX_AUCTION_EXTENSION_COUNT - result.extension_count);
+      toast.success(remainingCount > 0
+        ? `경매 마감이 1일 연장되었습니다. 앞으로 ${remainingCount}회 더 연장할 수 있습니다.`
+        : "경매 마감이 1일 연장되었습니다. 연장 가능 횟수를 모두 사용했습니다."
+      );
     } catch (err) {
       const error = err as ApiError;
       toast.error(error.message ?? "경매 마감 연장에 실패했습니다.");
@@ -172,6 +179,8 @@ export function ProfilePage() {
     isWished?: boolean;
     status?: ItemStatus;
     isEnded?: boolean;
+    endAt?: string;
+    extensionCount?: number;
   };
 
   const itemToCard = (item: ItemSummary): ProfileCard => ({
@@ -184,6 +193,8 @@ export function ProfilePage() {
     wishCount: item.wish_count,
     status: item.status,
     isEnded: new Date(item.end_at) < new Date(),
+    endAt: item.end_at,
+    extensionCount: item.extension_count,
   });
 
   const wishToCard = (w: WishSummary): ProfileCard => ({
@@ -446,8 +457,9 @@ export function ProfilePage() {
                   >
                     <ProductCard
                       product={card}
+                      compactTypography
                       onExtendAuction={
-                        activeTab === "products" && card.status === "ACTIVE"
+                        activeTab === "products" && card.status === "ACTIVE" && !card.isEnded
                           ? handleExtendAuction
                           : undefined
                       }
@@ -471,7 +483,7 @@ export function ProfilePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
             onClick={() => setShowFollowModal(null)}
           >
             <motion.div
@@ -479,11 +491,12 @@ export function ProfilePage() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 12 }}
               transition={{ duration: 0.2 }}
-              className="bg-white w-full max-w-sm mx-4 rounded-2xl shadow-xl overflow-hidden"
+              className="w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-xl"
+              style={{ fontFamily: "Pretendard, sans-serif" }}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
-                <p className="text-[11px] font-semibold tracking-[0.3em] text-black uppercase">
+                <p className="text-lg font-medium tracking-[-0.02em] text-black">
                   {showFollowModal === "followers" ? "Followers" : "Following"}
                 </p>
                 <button

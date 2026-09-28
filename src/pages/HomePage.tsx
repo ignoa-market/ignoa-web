@@ -273,8 +273,8 @@ export function HomePage() {
           transition={{ duration: 0.6, ease: "easeOut" }}
         >
           <div className="mb-8">
-            <h2 className="text-2xl md:text-3xl font-bold text-black">인기 상품</h2>
-            <p className="text-sm text-gray-500 mt-1">Popular Listings</p>
+            <p className="text-[13px] font-normal uppercase tracking-[0.2em] text-gray-400">Popular Listings</p>
+            <h2 className="mt-1 text-2xl font-bold text-black md:text-3xl">인기 상품</h2>
           </div>
 
           {popularLoading ? (
@@ -318,10 +318,10 @@ export function HomePage() {
         className="mt-12 bg-stone-100/80 py-16 md:py-20"
       >
         <div className="max-w-[1400px] mx-auto px-8">
-          <p className="text-[11px] font-semibold tracking-[0.28em] text-gray-400 uppercase mb-3">
+          <p className="text-[13px] font-normal uppercase tracking-[0.2em] text-gray-400">
             Popular Brands
           </p>
-          <h2 className="text-2xl md:text-3xl font-bold text-black">인기 브랜드</h2>
+          <h2 className="mt-1 text-2xl font-bold text-black md:text-3xl">인기 브랜드</h2>
 
           <div className="mt-12 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <div className="flex min-w-max items-center">
@@ -351,7 +351,7 @@ export function HomePage() {
           transition={{ duration: 0.6, ease: "easeOut" }}
         >
           <div className="mb-8">
-            <p className="text-[11px] font-normal tracking-[0.2em] text-gray-400">WE LOVE</p>
+            <p className="text-[13px] font-normal uppercase tracking-[0.2em] text-gray-400">WE LOVE</p>
             <h2 className="mt-1 text-2xl font-bold text-black md:text-3xl">지금 사랑받는 아이템</h2>
           </div>
 

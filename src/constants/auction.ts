@@ -1,0 +1,1 @@
+export const MAX_AUCTION_EXTENSION_COUNT = 3;

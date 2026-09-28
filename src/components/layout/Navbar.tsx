@@ -42,7 +42,7 @@ export function Navbar() {
   return (
     <>
       <nav className="fixed top-[54px] left-0 right-0 z-50 flex h-[116px] flex-col bg-white">
-        <div className="w-full max-w-[1120px] mx-auto px-8 py-3.5">
+        <div className="mx-auto w-full max-w-[1120px] px-8 pb-2 pt-3.5">
           <div className="flex items-center gap-8">
             {/* Logo + Logo Name */}
             <Link
@@ -177,15 +177,15 @@ export function Navbar() {
         </div>
 
         {/* Category Bar */}
-        <div className="flex flex-1 items-center border-b border-gray-200">
-          <div className="w-full max-w-[1120px] mx-auto px-8">
+        <div className="flex flex-1 items-center border-y border-gray-200">
+          <div className="mx-auto w-full max-w-[1120px] px-8">
             <div className="flex items-center gap-3" style={{ zoom: 0.9 }}>
               {["카테고리", "한정판", "빈티지", "콜라보", "라이프", "브랜드", "기획전"].map((cat) => (
                 <button
                   key={cat}
                   type="button"
                   onClick={() => toast.info("아직 준비 중인 기능입니다.")}
-                  className="my-1 flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 rounded-full whitespace-nowrap transition-all duration-200 hover:-translate-y-0.5 hover:bg-gray-100 hover:text-black active:translate-y-0"
+                  className="my-1 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[15px] font-medium text-gray-700 whitespace-nowrap transition-all duration-200 hover:-translate-y-0.5 hover:bg-gray-100 hover:text-black active:translate-y-0"
                 >
                   {cat === "카테고리" && <Menu className="h-4 w-4" />}
                   {cat}

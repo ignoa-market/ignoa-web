@@ -55,30 +55,28 @@ export function AddressModal({ onSelect, onClose }: AddressModalProps) {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 12 }}
         transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
-        className="bg-white w-full max-w-[500px] mx-4 shadow-2xl overflow-hidden"
+        className="mx-4 w-full max-w-[500px] overflow-hidden rounded-2xl bg-white shadow-2xl"
+        style={{ fontFamily: "Pretendard, sans-serif" }}
       >
         <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
-          <div>
-            <p className="text-[11px] font-semibold tracking-[0.3em] text-gray-400 uppercase mb-0.5">Address</p>
-            <p className="text-sm font-bold text-black">주소 검색</p>
-          </div>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 transition-colors">
+          <h2 className="text-lg font-medium tracking-[-0.02em] text-black">주소 검색</h2>
+          <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-gray-100">
             <X className="w-4 h-4 text-gray-500" />
           </button>
         </div>
         {loadError ? (
           <div className="h-[500px] flex flex-col items-center justify-center gap-3 px-6 text-center">
-            <p className="text-sm text-gray-600">주소 검색 서비스를 불러오지 못했습니다.</p>
+            <p className="text-[13px] leading-5 text-gray-500">주소 검색 서비스를 불러오지 못했습니다.</p>
             <button
               type="button"
               onClick={onClose}
-              className="h-9 px-4 border border-gray-300 text-sm hover:border-black transition-colors"
+              className="h-11 rounded-full border border-gray-200 px-6 text-sm text-gray-500 transition-colors hover:border-gray-400 hover:text-gray-700"
             >
               닫기
             </button>

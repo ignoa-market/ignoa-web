@@ -15,6 +15,13 @@ import { createBidSocket } from "@/lib/bidSocket";
 import { wishStore } from "@/store/wishStore";
 import { useWishToggle } from "@/hooks/useWishToggle";
 import type { ItemDetailResponse, BidHistory } from "@/types/api";
+import {
+  ACTION_MODAL_ACTION_CLASS,
+  ACTION_MODAL_CANCEL_CLASS,
+  ACTION_MODAL_CONTENT_CLASS,
+  ACTION_MODAL_FOOTER_CLASS,
+  ACTION_MODAL_TITLE_CLASS,
+} from "@/constants/actionModal";
 
 export function ProductDetailPage() {
   const { id } = useParams();
@@ -33,6 +40,7 @@ export function ProductDetailPage() {
   const [bidModalOpen, setBidModalOpen] = useState(false);
   const [bidStep, setBidStep] = useState<"input" | "confirm">("input");
   const [buyNowModalOpen, setBuyNowModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [buyNowAgreed, setBuyNowAgreed] = useState(false);
   const [bidAmount, setBidAmount] = useState("");
   const [displayPrice, setDisplayPrice] = useState(0);
@@ -209,7 +217,8 @@ export function ProductDetailPage() {
   };
 
   const handleDeleteItem = async () => {
-    if (!window.confirm("상품을 삭제하시겠습니까?\n삭제된 상품은 복구할 수 없습니다.")) return;
+    if (actionPending) return;
+    setActionPending(true);
     try {
       await itemApi.deleteItem(numericId);
       toast.success("상품이 삭제되었습니다.");
@@ -217,6 +226,8 @@ export function ProductDetailPage() {
     } catch (err: unknown) {
       const error = err as { message?: string };
       toast.error(error?.message ?? "상품 삭제에 실패했습니다.");
+    } finally {
+      setActionPending(false);
     }
   };
 
@@ -303,6 +314,8 @@ export function ProductDetailPage() {
 
   const media = item.media_urls;
   const auctionActive = item.status === "ACTIVE" && !auctionExpired;
+  const enteredBidAmount = Number(bidAmount.replace(/,/g, ""));
+  const isBidAmountTooLow = bidAmount.length > 0 && enteredBidAmount <= displayPrice;
 
   const goToImage = (idx: number) => {
     setSlideDir(idx > currentImageIndex ? 1 : -1);
@@ -481,15 +494,15 @@ export function ProductDetailPage() {
                 <Button
                   onClick={() => navigate(`/app/products/${id}/edit`)}
                   disabled={!auctionActive}
-                  className="flex-1 bg-stone-800 hover:bg-stone-700 text-white h-11 text-sm font-medium rounded transition-colors disabled:opacity-40"
+                  className="flex-1 bg-black hover:bg-stone-900 text-white h-11 text-sm font-medium rounded transition-colors disabled:opacity-40"
                 >
                   상품 수정
                 </Button>
                 <Button
-                  onClick={handleDeleteItem}
+                  onClick={() => setDeleteModalOpen(true)}
                   disabled={!auctionActive || displayPrice > item.start_price}
                   variant="outline"
-                  className="flex-1 border-red-200 text-red-500 h-11 text-sm font-medium rounded hover:bg-red-50 hover:border-red-300 transition-colors disabled:opacity-40"
+                  className="flex-1 border-stone-200 text-stone-600 h-11 text-sm font-medium rounded hover:bg-stone-50 hover:border-stone-300 transition-colors disabled:opacity-40"
                 >
                   상품 삭제
                 </Button>
@@ -550,7 +563,7 @@ export function ProductDetailPage() {
               <div className="flex items-center gap-2 text-xs text-gray-400">
                 <span>매너 <span className="font-semibold text-stone-600">4.5</span></span>
                 <span className="text-gray-200">·</span>
-                <span>팔로워 <span className="text-stone-600 font-semibold">5</span></span>
+                <span>팔로워 <span className="text-stone-600 font-semibold">0</span></span>
                 {item.seller.address && (
                   <>
                     <span className="text-gray-200">·</span>
@@ -750,7 +763,8 @@ export function ProductDetailPage() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 16 }}
               transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
-              className="relative bg-white w-full max-w-sm rounded-2xl p-8 overflow-hidden"
+              className={`${ACTION_MODAL_CONTENT_CLASS} overflow-hidden`}
+              style={{ fontFamily: "Pretendard, sans-serif" }}
             >
               <AnimatePresence mode="wait" initial={false}>
                 {bidStep === "input" ? (
@@ -761,7 +775,9 @@ export function ProductDetailPage() {
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
                   >
-                    <div className="mb-8">
+                    <h2 className={ACTION_MODAL_TITLE_CLASS}>입찰하기</h2>
+                    <p className="mb-5 text-[13px] leading-5 text-gray-500">입찰할 금액을 입력해주세요.</p>
+                    <div>
                       <input
                         type="text"
                         placeholder="입찰 금액 입력"
@@ -771,27 +787,33 @@ export function ProductDetailPage() {
                           const value = e.target.value.replace(/[^0-9]/g, "");
                           setBidAmount(value ? parseInt(value).toLocaleString() : "");
                         }}
-                        className="w-full text-2xl font-semibold text-stone-800 border-0 border-b border-gray-200 pb-2 bg-transparent outline-none focus:border-stone-600 transition-colors placeholder:text-gray-200"
+                        className={`w-full border-0 border-b bg-transparent pb-2 text-2xl font-semibold outline-none transition-colors placeholder:text-gray-200 ${
+                          isBidAmountTooLow
+                            ? "border-gray-200 text-red-500 focus:border-stone-600"
+                            : "border-gray-200 text-stone-800 focus:border-stone-600"
+                        }`}
                       />
-                      <p className="text-xs text-gray-400 mt-2.5">
-                        최소 {(displayPrice + 1).toLocaleString()}원 이상
+                      <p className="mt-2.5 text-xs text-black">
+                        {isBidAmountTooLow
+                          ? `최소 ${(displayPrice + 1).toLocaleString()}원 이상 입력해주세요.`
+                          : `최소 ${(displayPrice + 1).toLocaleString()}원 이상`}
                       </p>
                     </div>
-                    <div className="flex gap-3">
-                      <button
-                        onClick={handleBidNext}
-                        className="flex-1 h-11 bg-stone-800 hover:bg-stone-700 text-white text-sm font-medium rounded-full transition-colors"
-                      >
-                        입찰하기
-                      </button>
+                    <div className={ACTION_MODAL_FOOTER_CLASS}>
                       <button
                         onClick={() => {
                           setBidModalOpen(false);
                           setBidAmount("");
                         }}
-                        className="flex-1 h-11 text-sm text-gray-500 border border-gray-200 hover:border-gray-400 hover:text-gray-700 rounded-full transition-colors"
+                        className={ACTION_MODAL_CANCEL_CLASS}
                       >
                         취소
+                      </button>
+                      <button
+                        onClick={handleBidNext}
+                        className={ACTION_MODAL_ACTION_CLASS}
+                      >
+                        입찰하기
                       </button>
                     </div>
                   </motion.div>
@@ -808,9 +830,9 @@ export function ProductDetailPage() {
                       const willBuyNow = item?.buy_now_price != null && !isNaN(amount) && amount >= item.buy_now_price;
                       return (
                         <>
-                          <p className="text-xs text-gray-400 mb-6">{willBuyNow ? "즉시 구매 확인" : "입찰 금액 확인"}</p>
-                          <p className="text-3xl font-semibold text-stone-800 mb-2">{bidAmount}원</p>
-                          <p className="text-sm text-gray-400 mb-10">
+                          <h2 className={ACTION_MODAL_TITLE_CLASS}>{willBuyNow ? "즉시 구매 확인" : "입찰 확인"}</h2>
+                          <p className="mb-3 text-2xl font-semibold text-stone-800">{bidAmount}원</p>
+                          <p className="text-[13px] leading-5 text-gray-500">
                             {willBuyNow
                               ? "즉시구매가 이상으로 즉시 구매로 처리됩니다."
                               : "이 금액으로 입찰하시겠습니까?"}
@@ -818,19 +840,19 @@ export function ProductDetailPage() {
                         </>
                       );
                     })()}
-                    <div className="flex gap-3">
+                    <div className={ACTION_MODAL_FOOTER_CLASS}>
+                      <button
+                        onClick={() => setBidStep("input")}
+                        className={ACTION_MODAL_CANCEL_CLASS}
+                      >
+                        수정
+                      </button>
                       <button
                         onClick={handleBidConfirm}
                         disabled={actionPending}
-                        className="flex-1 h-11 bg-stone-800 hover:bg-stone-700 text-white text-sm font-medium rounded-full transition-colors"
+                        className={ACTION_MODAL_ACTION_CLASS}
                       >
                         {actionPending ? "처리 중..." : "확인"}
-                      </button>
-                      <button
-                        onClick={() => setBidStep("input")}
-                        className="flex-1 h-11 text-sm text-gray-500 border border-gray-200 hover:border-gray-400 hover:text-gray-700 rounded-full transition-colors"
-                      >
-                        수정
                       </button>
                     </div>
                   </motion.div>
@@ -858,16 +880,18 @@ export function ProductDetailPage() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 16 }}
               transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
-              className="relative bg-white w-full max-w-sm rounded-2xl p-8"
+              className={ACTION_MODAL_CONTENT_CLASS}
+              style={{ fontFamily: "Pretendard, sans-serif" }}
             >
-              <div className="mb-5">
-                <p className="text-xs text-gray-400 mb-1.5">즉시 구매가</p>
-                <p className="text-3xl font-semibold text-stone-800">
+              <h2 className={ACTION_MODAL_TITLE_CLASS}>즉시 구매</h2>
+              <p className="mb-3 text-[13px] leading-5 text-gray-500">구매 금액을 확인해주세요.</p>
+              <div className="pb-3">
+                <p className="text-2xl font-semibold text-stone-800">
                   {item.buy_now_price?.toLocaleString()}원
                 </p>
               </div>
 
-              <label className="flex items-center gap-3 cursor-pointer mb-8">
+              <label className="mt-1 flex cursor-pointer items-center gap-3">
                 <button
                   onClick={() => setBuyNowAgreed(!buyNowAgreed)}
                   className={`w-5 h-5 rounded flex-shrink-0 border flex items-center justify-center transition-colors ${
@@ -876,24 +900,71 @@ export function ProductDetailPage() {
                 >
                   {buyNowAgreed && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
                 </button>
-                <span className="text-xs text-gray-400 leading-relaxed">
+                <span className={`text-xs font-normal leading-relaxed transition-colors ${
+                  buyNowAgreed ? "text-black" : "text-gray-400"
+                }`}>
                   구매 후 취소 및 환불이 제한될 수 있음을 확인했습니다.
                 </span>
               </label>
 
-              <div className="flex gap-3">
+              <div className={ACTION_MODAL_FOOTER_CLASS}>
+                <button
+                  onClick={() => { setBuyNowModalOpen(false); setBuyNowAgreed(false); }}
+                  className={ACTION_MODAL_CANCEL_CLASS}
+                >
+                  취소
+                </button>
                 <button
                   onClick={handleBuyNow}
                   disabled={!buyNowAgreed || actionPending}
-                  className="flex-1 h-11 bg-stone-800 hover:bg-stone-700 disabled:opacity-30 disabled:cursor-not-allowed text-white text-sm font-medium rounded-full transition-colors"
+                  className={ACTION_MODAL_ACTION_CLASS}
                 >
                   {actionPending ? "처리 중..." : "구매하기"}
                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Item Modal */}
+      <AnimatePresence>
+        {deleteModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="absolute inset-0 bg-black/30"
+              onClick={() => !actionPending && setDeleteModalOpen(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 16 }}
+              transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
+              className={ACTION_MODAL_CONTENT_CLASS}
+              style={{ fontFamily: "Pretendard, sans-serif" }}
+            >
+              <h2 className={ACTION_MODAL_TITLE_CLASS}>상품 삭제</h2>
+              <p className="text-[13px] leading-5 text-gray-500">
+                상품을 삭제하면 복구할 수 없습니다. 삭제하시겠습니까?
+              </p>
+              <div className={ACTION_MODAL_FOOTER_CLASS}>
                 <button
-                  onClick={() => { setBuyNowModalOpen(false); setBuyNowAgreed(false); }}
-                  className="flex-1 h-11 text-sm text-gray-500 border border-gray-200 hover:border-gray-400 hover:text-gray-700 rounded-full transition-colors"
+                  onClick={() => setDeleteModalOpen(false)}
+                  disabled={actionPending}
+                  className={ACTION_MODAL_CANCEL_CLASS}
                 >
                   취소
+                </button>
+                <button
+                  onClick={handleDeleteItem}
+                  disabled={actionPending}
+                  className={ACTION_MODAL_ACTION_CLASS}
+                >
+                  {actionPending ? "처리 중..." : "삭제하기"}
                 </button>
               </div>
             </motion.div>

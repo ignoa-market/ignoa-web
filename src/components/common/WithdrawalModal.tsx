@@ -1,9 +1,15 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { X, Check } from "lucide-react";
+import { Check } from "lucide-react";
 import { toast } from "sonner";
 import { userApi } from "@/api/auth";
 import type { ApiError } from "@/types/api";
+import {
+  ACTION_MODAL_CANCEL_CLASS,
+  ACTION_MODAL_ACTION_CLASS,
+  ACTION_MODAL_FOOTER_CLASS,
+  ACTION_MODAL_TITLE_CLASS,
+} from "@/constants/actionModal";
 
 interface WithdrawalModalProps {
   onClose: () => void;
@@ -64,17 +70,15 @@ export function WithdrawalModal({ onClose, onWithdrawn }: WithdrawalModalProps) 
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 16 }}
           transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
-          className="bg-white w-full max-w-sm p-7"
+          className="w-full max-w-sm rounded-2xl bg-white px-7 pb-6 pt-7"
+          style={{ fontFamily: "Pretendard, sans-serif" }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between mb-1">
-            <h2 className="text-base font-bold text-black">회원탈퇴</h2>
-            <button onClick={onClose} className="text-gray-400 hover:text-black transition-colors">
-              <X className="w-4 h-4" />
-            </button>
+          <div>
+            <h2 className={ACTION_MODAL_TITLE_CLASS}>회원탈퇴</h2>
           </div>
-          <p className="text-xs text-gray-400 mb-7">아래 내용을 모두 확인하고 동의해주세요.</p>
+          <p className="mb-7 text-[13px] leading-5 text-gray-500">아래 내용을 모두 확인하고 동의해주세요.</p>
 
           {/* Checkboxes */}
           <div className="space-y-5 mb-8">
@@ -90,25 +94,27 @@ export function WithdrawalModal({ onClose, onWithdrawn }: WithdrawalModalProps) 
                   {checked[i] && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-gray-700 mb-0.5">{item.label}</p>
-                  <p className="text-xs text-gray-400 leading-relaxed">{item.desc}</p>
+                  <p className="mb-0.5 text-[13px] font-medium leading-5 text-gray-700">{item.label}</p>
+                  <p className={`text-[11px] font-normal leading-4 transition-colors ${
+                    checked[i] ? "text-black" : "text-gray-400"
+                  }`}>{item.desc}</p>
                 </div>
               </button>
             ))}
           </div>
 
           {/* Actions */}
-          <div className="flex gap-2">
+          <div className={ACTION_MODAL_FOOTER_CLASS}>
             <button
               onClick={onClose}
-              className="flex-1 h-10 border border-gray-200 text-xs text-gray-600 hover:border-black hover:text-black transition-colors"
+              className={ACTION_MODAL_CANCEL_CLASS}
             >
               취소
             </button>
             <button
               onClick={handleWithdraw}
               disabled={!allChecked || submitting}
-              className="flex-1 h-10 text-xs font-semibold bg-black text-white hover:bg-gray-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              className={ACTION_MODAL_ACTION_CLASS}
             >
               {submitting ? "처리 중..." : "탈퇴하기"}
             </button>

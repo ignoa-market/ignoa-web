@@ -216,20 +216,20 @@ export function ProductEditPage() {
 
   return (
     <div className="min-h-screen bg-white pt-[170px] pb-24">
-      <div className="max-w-[800px] mx-auto px-4 sm:px-6 py-6 sm:py-10">
+      <div className="max-w-[800px] mx-auto px-4 sm:px-6 py-6 sm:py-10" style={{ zoom: 0.8 }}>
         {/* Header */}
         <div className="mb-5">
           <h1 className="text-3xl sm:text-4xl font-bold text-black mb-1">상품 수정</h1>
-          <p className="text-gray-600">수정할 항목만 변경해주세요</p>
+          <p className="text-gray-600">수정할 항목만 변경해주세요.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* 미디어 */}
-          <div className="bg-white rounded-lg p-6 sm:p-8 border border-gray-200">
+          <div className="bg-white rounded-2xl p-6 sm:p-8 border border-gray-200">
             <Label className="text-sm font-semibold text-black mb-4 block">
               상품 미디어
               <span className="text-xs text-gray-400 font-normal ml-2">
-                {existingMedia.length + newPreviews.length}개 · 동영상은 최대 1개
+                {existingMedia.length + newPreviews.length}개 · 동영상은 최대 1개입니다.
               </span>
             </Label>
 
@@ -315,7 +315,7 @@ export function ProductEditPage() {
           </div>
 
           {/* 상품 정보 */}
-          <div className="bg-white rounded-lg p-6 sm:p-8 border border-gray-200 space-y-5">
+          <div className="bg-white rounded-2xl p-6 sm:p-8 border border-gray-200 space-y-5">
             {/* 브랜드 · 카테고리 · 상태 */}
             <div className="grid grid-cols-3 gap-4">
               <div>
@@ -326,7 +326,7 @@ export function ProductEditPage() {
                   placeholder="예) Our Legacy"
                   value={brand}
                   onChange={(e) => setBrand(e.target.value)}
-                  className="text-sm focus-visible:ring-2 focus-visible:ring-black border-gray-300"
+                  className="rounded-xl text-sm focus-visible:ring-2 focus-visible:ring-black border-gray-300"
                   required
                 />
               </div>
@@ -335,7 +335,7 @@ export function ProductEditPage() {
                   카테고리 <span className="text-red-500">*</span>
                 </Label>
                 <Select value={category} onValueChange={setCategory} required>
-                  <SelectTrigger className="text-sm focus:ring-2 focus:ring-black border-gray-300">
+                  <SelectTrigger className="rounded-xl text-sm focus:ring-2 focus:ring-black border-gray-300">
                     <SelectValue placeholder="선택" />
                   </SelectTrigger>
                   <SelectContent position="popper" side="bottom">
@@ -356,7 +356,7 @@ export function ProductEditPage() {
                   onValueChange={(v) => setCondition(v as ItemCondition)}
                   required
                 >
-                  <SelectTrigger className="text-sm focus:ring-2 focus:ring-black border-gray-300">
+                  <SelectTrigger className="rounded-xl text-sm focus:ring-2 focus:ring-black border-gray-300">
                     <SelectValue placeholder="선택" />
                   </SelectTrigger>
                   <SelectContent position="popper" side="bottom">
@@ -379,7 +379,7 @@ export function ProductEditPage() {
                 placeholder="예) Rick Owens Vintage Leather Jacket"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="h-11 text-sm focus-visible:ring-2 focus-visible:ring-black border-gray-300"
+                className="h-11 rounded-xl text-sm focus-visible:ring-2 focus-visible:ring-black border-gray-300"
                 required
               />
               <p className="text-xs text-gray-400 mt-1.5 text-right">{title.length}/50</p>
@@ -394,7 +394,7 @@ export function ProductEditPage() {
                 placeholder="상품 상태, 구매 시기, 사용감 등을 작성해주세요."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="min-h-[160px] text-sm focus-visible:ring-2 focus-visible:ring-black border-gray-300 resize-none"
+                className="min-h-[160px] rounded-xl text-sm focus-visible:ring-2 focus-visible:ring-black border-gray-300 resize-none"
                 required
               />
               <p className="text-xs text-gray-400 mt-1.5 text-right">{description.length}/1000</p>
@@ -402,7 +402,7 @@ export function ProductEditPage() {
           </div>
 
           {/* 가격 정보 */}
-          <div className="bg-white rounded-lg p-6 sm:p-8 border border-gray-200 space-y-5">
+          <div className="bg-white rounded-2xl p-6 sm:p-8 border border-gray-200 space-y-5">
             {/* 시작가 (읽기 전용) + 즉시구매가 */}
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -414,7 +414,7 @@ export function ProductEditPage() {
                   <Input
                     value={startPrice.toLocaleString()}
                     readOnly
-                    className="pl-8 h-11 text-sm font-semibold border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed"
+                    className="pl-8 h-11 rounded-xl text-sm font-semibold border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -427,7 +427,7 @@ export function ProductEditPage() {
                     </span>
                   ) : (
                     <span className="text-xs text-gray-400 font-normal ml-1">
-                      (현재 입찰가 {currentPrice.toLocaleString()}원보다 높게 설정해주세요)
+                      (현재 입찰가 {currentPrice.toLocaleString()}원보다 높게 설정해주세요.)
                     </span>
                   )}
                 </Label>
@@ -442,7 +442,7 @@ export function ProductEditPage() {
                       const v = e.target.value.replace(/[^0-9]/g, "");
                       setBuyNowPrice(v ? parseInt(v).toLocaleString() : "");
                     }}
-                    className={`pl-8 h-11 text-sm ${
+                    className={`pl-8 h-11 rounded-xl text-sm ${
                       hasBid
                         ? "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed"
                         : "focus-visible:ring-2 focus-visible:ring-black border-gray-300"
@@ -458,7 +458,7 @@ export function ProductEditPage() {
             {/* 마감 시간 */}
             <div>
               <Label className="text-sm font-semibold text-black mb-3 block">경매 마감</Label>
-              <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+              <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
                 <Clock3 className="w-4 h-4 text-gray-500" />
                 <span>
                   {endAt
@@ -485,14 +485,14 @@ export function ProductEditPage() {
               type="button"
               onClick={() => navigate(`/app/products/${id}`)}
               variant="outline"
-              className="flex-1 h-12 font-semibold rounded-lg"
+              className="flex-1 h-12 font-semibold rounded-xl"
             >
               취소하기
             </Button>
             <Button
               type="submit"
               disabled={!isActive || submitting}
-              className="flex-1 h-12 bg-black hover:bg-gray-800 text-white font-semibold rounded-lg disabled:opacity-50"
+              className="flex-1 h-12 bg-black hover:bg-gray-800 text-white font-semibold rounded-xl disabled:opacity-50"
             >
               {submitting ? "저장 중..." : "수정 완료"}
             </Button>
@@ -502,20 +502,20 @@ export function ProductEditPage() {
 
       {/* Desktop sticky bottom */}
       <div className="hidden md:block fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
-        <div className="max-w-[800px] mx-auto px-6 py-4 flex items-center justify-between">
-          <p className="text-sm text-gray-400">변경된 항목만 반영됩니다</p>
+        <div className="max-w-[800px] mx-auto px-6 py-4 flex items-center justify-between" style={{ zoom: 0.8 }}>
+          <p className="text-sm text-gray-400">변경된 항목만 반영됩니다.</p>
           <div className="flex gap-3">
             <Button
               onClick={() => navigate(`/app/products/${id}`)}
               variant="outline"
-              className="px-6 h-11 font-semibold rounded-lg"
+              className="px-6 h-11 font-semibold rounded-xl"
             >
               취소하기
             </Button>
             <Button
               onClick={handleSubmit}
               disabled={!isActive || submitting}
-              className="bg-black hover:bg-gray-800 text-white px-8 h-11 font-semibold rounded-lg disabled:opacity-50"
+              className="bg-black hover:bg-gray-800 text-white px-8 h-11 font-semibold rounded-xl disabled:opacity-50"
             >
               {submitting ? "저장 중..." : "수정 완료"}
             </Button>

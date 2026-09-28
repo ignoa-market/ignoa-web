@@ -55,6 +55,7 @@ export interface ItemSummary {
   wish_count: number;
   status: ItemStatus;
   end_at: string;
+  extension_count: number;
 }
 
 export interface ItemMediaResponse {
