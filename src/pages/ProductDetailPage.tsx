@@ -10,6 +10,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { motion, AnimatePresence } from "motion/react";
 import { itemApi, bidApi } from "@/api/item";
 import { chatApi } from "@/api/chat";
+import { createBidSocket } from "@/lib/bidSocket";
 import { wishStore } from "@/store/wishStore";
 import { useWishToggle } from "@/hooks/useWishToggle";
 import type { ItemDetailResponse, BidHistory } from "@/types/api";
@@ -100,6 +101,27 @@ export function ProductDetailPage() {
       .then((res) => setBids(res))
       .catch(() => setBids([]));
   }, [id]);
+
+  // 공개 입찰 토픽 구독 — 로그인 여부와 관계없이 현재가와 입찰 내역을 실시간 갱신
+  useEffect(() => {
+    if (!id || !Number.isFinite(numericId)) return;
+    let active = true;
+
+    const client = createBidSocket(numericId, (bid) => {
+      if (!active) return;
+      setDisplayPrice(bid.currentPrice);
+      setPriceAnimKey((key) => key + 1);
+      bidApi.getBids(numericId).then((result) => {
+        if (active) setBids(result);
+      }).catch(() => {});
+    });
+
+    client.activate();
+    return () => {
+      active = false;
+      void client.deactivate();
+    };
+  }, [id, numericId]);
 
   // 카운트다운 타이머 — state 대신 DOM ref 직접 업데이트로 매초 리렌더 방지
   useEffect(() => {

@@ -2,7 +2,7 @@ import { Client, type IMessage } from "@stomp/stompjs";
 import { refreshAccessToken } from "@/lib/api";
 import type { ChatMessageResponse } from "@/types/api";
 
-function getBrokerUrl() {
+export function getBrokerUrl() {
   const configuredUrl = import.meta.env.VITE_WS_URL as string | undefined;
   if (configuredUrl) return configuredUrl;
 
