@@ -144,9 +144,9 @@ export const ProductCard = memo(function ProductCard({
       </div>
 
       {/* Info */}
-      <div className="relative space-y-0.5 px-0.5">
-        {(brand || size) && (
-          <div className="flex items-center justify-between gap-2">
+      <div className="space-y-0.5 px-0.5">
+        {(compactTypography || brand || size || onExtendAuction) && (
+          <div className={`flex items-center gap-2 ${compactTypography ? "min-h-7" : ""}`}>
             {brand && (
               <p className={`${compactTypography ? "text-xs" : "text-[13px]"} truncate font-bold uppercase tracking-wide text-black`}>
                 {brand}
@@ -154,6 +154,16 @@ export const ProductCard = memo(function ProductCard({
             )}
             {size && (
               <span className={`${compactTypography ? "text-[10px]" : "text-[11px]"} ml-auto flex-shrink-0 font-medium text-gray-400`}>{size}</span>
+            )}
+            {onExtendAuction && (
+              <button
+                type="button"
+                onClick={openExtendDialog}
+                disabled={isExtending || isExtensionLimitReached}
+                className="ml-auto h-7 flex-shrink-0 rounded-full border border-gray-200 bg-white px-3 text-[11px] font-semibold text-gray-500 transition-colors hover:border-gray-400 hover:text-black disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isExtending ? "연장 중" : isExtensionLimitReached ? "연장 완료" : "연장"}
+              </button>
             )}
           </div>
         )}
@@ -177,16 +187,6 @@ export const ProductCard = memo(function ProductCard({
           </div>
         </div>
 
-        {onExtendAuction && (
-          <button
-            type="button"
-            onClick={openExtendDialog}
-            disabled={isExtending || isExtensionLimitReached}
-            className="absolute right-1 top-0 h-7 px-3 rounded-full border border-gray-200 bg-white text-[11px] font-semibold text-gray-500 transition-colors hover:border-gray-400 hover:text-black disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isExtending ? "연장 중" : isExtensionLimitReached ? "연장 완료" : "연장"}
-          </button>
-        )}
       </div>
       </Link>
 
