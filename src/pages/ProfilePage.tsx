@@ -436,13 +436,13 @@ export function ProfilePage() {
             transition={{ duration: 0.1 }}
           >
             {tabLoading ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 md:gap-4 lg:grid-cols-5">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <div key={i} className="aspect-square bg-gray-100 rounded-lg animate-pulse" />
                 ))}
               </div>
             ) : currentCards.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 md:gap-4 lg:grid-cols-5">
                 {currentCards.map((card, index) => (
                   <motion.div
                     key={card.id}
@@ -452,7 +452,12 @@ export function ProfilePage() {
                   >
                     <ProductCard
                       product={card}
-                      compactTypography
+                      editHref={
+                        activeTab === "products" && card.status === "ACTIVE" && !card.isEnded
+                          ? `/app/products/${card.id}/edit`
+                          : undefined
+                      }
+                      editCancelTo="/app/profile?tab=products"
                       onExtendAuction={
                         activeTab === "products" && card.status === "ACTIVE" && !card.isEnded
                           ? handleExtendAuction

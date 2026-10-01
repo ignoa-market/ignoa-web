@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate } from "react-router";
+import { useLocation, useNavigate, useParams } from "react-router";
 import { Upload, X, Clock3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { VideoMedia } from "@/components/common/VideoMedia";
@@ -37,6 +37,10 @@ const conditions: { value: ItemCondition; label: string }[] = [
 export function ProductEditPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const cancelTo = location.state?.cancelTo === "/app/profile?tab=products"
+    ? location.state.cancelTo
+    : `/app/products/${id}`;
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -483,7 +487,7 @@ export function ProductEditPage() {
           <div className="md:hidden pt-2 flex gap-3">
             <Button
               type="button"
-              onClick={() => navigate(`/app/products/${id}`)}
+              onClick={() => navigate(cancelTo, { replace: true })}
               variant="outline"
               className="flex-1 h-12 font-semibold rounded-xl"
             >
@@ -501,12 +505,12 @@ export function ProductEditPage() {
       </div>
 
       {/* Desktop sticky bottom */}
-      <div className="hidden md:block fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
+      <div className="width-before-scroll-bar hidden md:block fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
         <div className="max-w-[800px] mx-auto px-6 py-4 flex items-center justify-between" style={{ zoom: 0.8 }}>
           <p className="text-sm text-gray-400">변경된 항목만 반영됩니다.</p>
           <div className="flex gap-3">
             <Button
-              onClick={() => navigate(`/app/products/${id}`)}
+              onClick={() => navigate(cancelTo, { replace: true })}
               variant="outline"
               className="px-6 h-11 font-semibold rounded-xl"
             >

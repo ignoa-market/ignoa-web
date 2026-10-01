@@ -1,7 +1,6 @@
-import { Heart, Eye } from "lucide-react";
+import { Ellipsis, Eye, Heart } from "lucide-react";
 import { Link } from "react-router";
 import { memo, useState } from "react";
-import type { MouseEvent } from "react";
 import { motion } from "motion/react";
 import { useWishToggle } from "@/hooks/useWishToggle";
 import { ImageWithFallback } from "@/components/common/ImageWithFallback";
@@ -23,6 +22,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface ProductCardProps {
   product: {
@@ -40,6 +45,8 @@ interface ProductCardProps {
     endAt?: string;
     extensionCount?: number;
   };
+  editHref?: string;
+  editCancelTo?: string;
   onExtendAuction?: (itemId: number) => Promise<void>;
   compactTypography?: boolean;
   imageLoading?: "eager" | "lazy";
@@ -54,6 +61,8 @@ function resolveOverlay(status?: ItemStatus, isEnded?: boolean): "SOLD" | "ENDED
 
 export const ProductCard = memo(function ProductCard({
   product,
+  editHref,
+  editCancelTo,
   onExtendAuction,
   compactTypography = false,
   imageLoading = "lazy",
@@ -84,9 +93,7 @@ export const ProductCard = memo(function ProductCard({
     hour12: false,
   }).format(new Date(value));
 
-  const openExtendDialog = (event: MouseEvent<HTMLButtonElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
+  const openExtendDialog = () => {
     if (!onExtendAuction || isExtending || isExtensionLimitReached) return;
 
     setIsExtendDialogOpen(true);
@@ -105,7 +112,7 @@ export const ProductCard = memo(function ProductCard({
   };
 
   return (
-    <>
+    <div className="relative">
       <Link to={`/app/products/${id}`} className="group relative block cursor-pointer">
       {/* Image */}
       <div className="relative aspect-square overflow-hidden bg-gray-100 rounded-lg mb-2.5">
@@ -142,53 +149,86 @@ export const ProductCard = memo(function ProductCard({
           <span className={`${compactTypography ? "text-[11px]" : "text-xs"} font-medium leading-none text-gray-600`}>{wishCount}</span>
         </motion.button>
       </div>
+      </Link>
 
       {/* Info */}
       <div className="space-y-0.5 px-0.5">
-        {(compactTypography || brand || size || onExtendAuction) && (
+        {(compactTypography || brand || size || editHref || onExtendAuction) && (
           <div className={`flex items-center gap-2 ${compactTypography ? "min-h-7" : ""}`}>
             {brand && (
-              <p className={`${compactTypography ? "text-xs" : "text-[13px]"} truncate font-bold uppercase tracking-wide text-black`}>
+              <p className={`${compactTypography ? "text-xs" : "text-[13px]"} min-w-0 truncate font-bold uppercase tracking-wide text-black`}>
                 {brand}
               </p>
             )}
             {size && (
-              <span className={`${compactTypography ? "text-[10px]" : "text-[11px]"} ml-auto flex-shrink-0 font-medium text-gray-400`}>{size}</span>
+              <span className={`${compactTypography ? "text-[10px]" : "text-[11px]"} flex-shrink-0 font-medium text-gray-400`}>{size}</span>
             )}
-            {onExtendAuction && (
-              <button
-                type="button"
-                onClick={openExtendDialog}
-                disabled={isExtending || isExtensionLimitReached}
-                className="ml-auto h-7 flex-shrink-0 rounded-full border border-gray-200 bg-white px-3 text-[11px] font-semibold text-gray-500 transition-colors hover:border-gray-400 hover:text-black disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isExtending ? "연장 중" : isExtensionLimitReached ? "연장 완료" : "연장"}
-              </button>
+            {(editHref || onExtendAuction) && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="상품 관리 메뉴"
+                    className="ml-auto flex size-7 flex-shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20 data-[state=open]:bg-black data-[state=open]:text-white"
+                  >
+                    <Ellipsis className="size-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  sideOffset={5}
+                  className="min-w-36 rounded-xl border-gray-100 bg-white p-1.5 shadow-lg shadow-black/10"
+                  style={{ fontFamily: "Pretendard, sans-serif" }}
+                >
+                  {editHref && (
+                    <DropdownMenuItem asChild className="h-9 cursor-pointer rounded-lg px-2.5 text-xs font-medium text-black focus:bg-gray-50 focus:text-black">
+                      <Link to={editHref} state={editCancelTo ? { cancelTo: editCancelTo } : undefined}>
+                        <span>상품 수정</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  {onExtendAuction && (
+                    <DropdownMenuItem
+                      disabled={isExtending || isExtensionLimitReached}
+                      onSelect={openExtendDialog}
+                      className="h-9 cursor-pointer rounded-lg px-2.5 text-xs font-normal text-gray-500 focus:bg-gray-50 focus:text-black"
+                    >
+                      <span>{isExtending ? "연장 중" : isExtensionLimitReached ? "연장 완료" : "1일 연장"}</span>
+                      {remainingExtensionCount !== null && (
+                        <span className="ml-auto text-[10px] font-normal text-gray-400">
+                          {remainingExtensionCount}회 남음
+                        </span>
+                      )}
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
           </div>
         )}
 
-        <h3 className={`${compactTypography ? "text-xs" : "text-[13px]"} line-clamp-1 text-gray-500`}>{title}</h3>
+        <Link to={`/app/products/${id}`} className="block space-y-0.5">
+          <h3 className={`${compactTypography ? "text-xs" : "text-[13px]"} line-clamp-1 text-gray-500`}>{title}</h3>
 
-        <p className={`${compactTypography ? "text-sm" : "text-base"} pt-0.5 font-bold text-black`}>
-          {currentPrice.toLocaleString()}원
-        </p>
+          <p className={`${compactTypography ? "text-sm" : "text-base"} pt-0.5 font-bold text-black`}>
+            {currentPrice.toLocaleString()}원
+          </p>
 
-        <div className="flex items-center gap-2.5 text-gray-400 pt-0.5">
-          {viewCount !== undefined && (
+          <div className="flex items-center gap-2.5 text-gray-400 pt-0.5">
+            {viewCount !== undefined && (
+              <div className="flex items-center gap-1">
+                <Eye className="w-3 h-3" />
+                <span className={compactTypography ? "text-[10px]" : "text-[11px]"}>{viewCount}</span>
+              </div>
+            )}
             <div className="flex items-center gap-1">
-              <Eye className="w-3 h-3" />
-              <span className={compactTypography ? "text-[10px]" : "text-[11px]"}>{viewCount}</span>
+              <Heart className={`w-3 h-3 ${wished ? "fill-rose-400 text-rose-400" : "text-gray-400"}`} />
+              <span className={compactTypography ? "text-[10px]" : "text-[11px]"}>{wishCount}</span>
             </div>
-          )}
-          <div className="flex items-center gap-1">
-            <Heart className={`w-3 h-3 ${wished ? "fill-rose-400 text-rose-400" : "text-gray-400"}`} />
-            <span className={compactTypography ? "text-[10px]" : "text-[11px]"}>{wishCount}</span>
           </div>
-        </div>
+        </Link>
 
       </div>
-      </Link>
 
       <AlertDialog open={isExtendDialogOpen} onOpenChange={setIsExtendDialogOpen}>
         <AlertDialogContent
@@ -232,6 +272,6 @@ export const ProductCard = memo(function ProductCard({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </div>
   );
 });
