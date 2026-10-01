@@ -8,7 +8,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { createChatSocket } from "@/lib/chatSocket";
 import type { ChatMessageResponse } from "@/types/api";
@@ -31,7 +30,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [reconnectVersion, setReconnectVersion] = useState(0);
   const listenersRef = useRef(new Set<MessageListener>());
   const messagesPageActiveRef = useRef(false);
-  const socketErrorShownRef = useRef(false);
 
   const clearNewMessage = useCallback(() => setHasNewMessage(false), []);
 
@@ -51,7 +49,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    socketErrorShownRef.current = false;
     const client = createChatSocket(
       (message) => {
         listenersRef.current.forEach((listener) => listener(message));
@@ -59,13 +56,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           setHasNewMessage(true);
         }
       },
-      () => {
-        if (socketErrorShownRef.current) return;
-        socketErrorShownRef.current = true;
-        toast.error("실시간 채팅 연결이 끊겼습니다. 다시 연결하고 있습니다.");
-      },
+      undefined,
       (reconnected) => {
-        socketErrorShownRef.current = false;
         if (reconnected) setReconnectVersion((version) => version + 1);
       }
     );
