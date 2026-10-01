@@ -41,7 +41,7 @@ export function Navbar() {
 
   return (
     <>
-      <nav className="fixed top-[54px] left-0 right-0 z-50 flex h-[116px] flex-col bg-white">
+      <nav className="width-before-scroll-bar fixed top-[54px] left-0 right-0 z-50 flex h-[116px] flex-col bg-white">
         <div className="mx-auto w-full max-w-[1120px] px-8 pb-2 pt-3.5">
           <div className="flex items-center gap-8">
             {/* Logo + Logo Name */}

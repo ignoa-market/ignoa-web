@@ -423,7 +423,7 @@ export function ProductRegistrationPage() {
       </div>
 
       {/* Desktop sticky bottom */}
-      <div className="hidden md:block fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
+      <div className="width-before-scroll-bar hidden md:block fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
         <div className="max-w-[800px] mx-auto px-6 py-4 flex items-center justify-between" style={{ zoom: 0.8 }}>
           <p className="text-sm text-gray-400">필수 항목을 모두 입력해주세요.</p>
           <div className="flex gap-3">
