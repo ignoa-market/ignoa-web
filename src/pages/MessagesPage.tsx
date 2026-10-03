@@ -176,7 +176,7 @@ export function MessagesPage() {
         if (stale) return;
         if (item.is_seller) {
           toast.error("본인 상품에는 채팅할 수 없습니다.");
-          setSearchParams({}, { replace: true });
+          setSearchParams({}, { replace: true, preventScrollReset: true });
           return;
         }
         setDraftItem(item);
@@ -184,7 +184,7 @@ export function MessagesPage() {
       .catch(() => {
         if (!stale) {
           toast.error("상품 정보를 불러오지 못했습니다.");
-          setSearchParams({}, { replace: true });
+          setSearchParams({}, { replace: true, preventScrollReset: true });
         }
       })
       .finally(() => {
@@ -239,8 +239,8 @@ export function MessagesPage() {
     setMessages([]);
     setDraftItem(null);
     setSelectedChat(chatRoomId);
-    if (chatRoomId) setSearchParams({ chatRoomId: String(chatRoomId) }, { replace: true });
-    else setSearchParams({}, { replace: true });
+    if (chatRoomId) setSearchParams({ chatRoomId: String(chatRoomId) }, { replace: true, preventScrollReset: true });
+    else setSearchParams({}, { replace: true, preventScrollReset: true });
   };
 
   const loadOlderMessages = async () => {
@@ -290,7 +290,7 @@ export function MessagesPage() {
         chatRoomId = room.chat_room_id;
         selectedChatRef.current = chatRoomId;
         setSelectedChat(chatRoomId);
-        setSearchParams({ chatRoomId: String(chatRoomId) }, { replace: true });
+        setSearchParams({ chatRoomId: String(chatRoomId) }, { replace: true, preventScrollReset: true });
       }
 
       if (!chatRoomId) return false;

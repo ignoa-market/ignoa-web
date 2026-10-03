@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect } from "react";
+import { homeItemsCache } from "@/store/homeItemsCache";
+import { wishStore } from "@/store/wishStore";
 import { ProductCard } from "@/components/common/ProductCard";
 import { motion, AnimatePresence, useInView } from "motion/react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -57,14 +59,21 @@ function toProductCardProps(item: ItemSummary) {
   };
 }
 
+// 서버 목록의 찜 상태가 기준이다. 카드가 먼저 넣어 둔 값(seed)을 덮어쓴다
+function syncWishes(items: ItemSummary[]) {
+  items.forEach((item) => wishStore.sync(item.item_id, item.is_wished, item.wish_count));
+}
+
 export function HomePage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isInitializing } = useAuth();
   const [ctaSlide, setCtaSlide] = useState(0);
   const [slideDir, setSlideDir] = useState(1);
-  const [popularItems, setPopularItems] = useState<ItemSummary[]>([]);
-  const [allItems, setAllItems] = useState<ItemSummary[]>([]);
-  const [popularLoading, setPopularLoading] = useState(true);
-  const [allLoading, setAllLoading] = useState(true);
+  // 뒤로가기로 돌아온 경우 캐시한 목록을 바로 그린다(로딩·등장 애니메이션 없이)
+  const [cached] = useState(() => homeItemsCache.get(isAuthenticated));
+  const [popularItems, setPopularItems] = useState<ItemSummary[]>(cached?.popular ?? []);
+  const [allItems, setAllItems] = useState<ItemSummary[]>(cached?.all ?? []);
+  const [popularLoading, setPopularLoading] = useState(!cached?.popular);
+  const [allLoading, setAllLoading] = useState(!cached?.all);
   const [popularError, setPopularError] = useState(false);
   const [allError, setAllError] = useState(false);
   const [popularReload, setPopularReload] = useState(0);
@@ -77,28 +86,44 @@ export function HomePage() {
   const allProductsInView = useInView(allProductsRef, { once: true, amount: 0.1 });
 
   useEffect(() => {
+    // 로그인 확인 전에 비로그인 목록(찜 여부 없음)을 받지 않는다
+    if (isInitializing) return;
     let stale = false;
-    setPopularLoading(true);
+    // 캐시가 있으면 화면을 유지한 채 뒤에서 새로 고친다
+    const hasCache = Boolean(homeItemsCache.get(isAuthenticated)?.popular);
+    if (!hasCache) setPopularLoading(true);
     setPopularError(false);
     itemApi
       .getItems({ view: "POPULAR", size: 5 }, { public: !isAuthenticated })
-      .then((res) => { if (!stale) setPopularItems(res.content); })
-      .catch(() => { if (!stale) setPopularError(true); })
+      .then((res) => {
+        if (stale) return;
+        setPopularItems(res.content);
+        homeItemsCache.set(isAuthenticated, { popular: res.content });
+        syncWishes(res.content);
+      })
+      .catch(() => { if (!stale && !hasCache) setPopularError(true); })
       .finally(() => { if (!stale) setPopularLoading(false); });
     return () => { stale = true; };
-  }, [isAuthenticated, popularReload]);
+  }, [isAuthenticated, isInitializing, popularReload]);
 
   useEffect(() => {
+    if (isInitializing) return;
     let stale = false;
-    setAllLoading(true);
+    const hasCache = Boolean(homeItemsCache.get(isAuthenticated)?.all);
+    if (!hasCache) setAllLoading(true);
     setAllError(false);
     itemApi
       .getItems({ view: "ALL", size: 20 }, { public: !isAuthenticated })
-      .then((res) => { if (!stale) setAllItems(res.content); })
-      .catch(() => { if (!stale) setAllError(true); })
+      .then((res) => {
+        if (stale) return;
+        setAllItems(res.content);
+        homeItemsCache.set(isAuthenticated, { all: res.content });
+        syncWishes(res.content);
+      })
+      .catch(() => { if (!stale && !hasCache) setAllError(true); })
       .finally(() => { if (!stale) setAllLoading(false); });
     return () => { stale = true; };
-  }, [isAuthenticated, allReload]);
+  }, [isAuthenticated, isInitializing, allReload]);
 
   const goToSlide = (next: number) => {
     setSlideDir(next > ctaSlide ? 1 : -1);
@@ -255,7 +280,7 @@ export function HomePage() {
       <div className="max-w-[1400px] mx-auto px-8 pt-7 pb-8">
         <motion.div
           ref={popularRef}
-          initial={{ opacity: 0, y: 40 }}
+          initial={cached ? false : { opacity: 0, y: 40 }}
           animate={popularInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, ease: "easeOut" }}
         >
@@ -293,7 +318,7 @@ export function HomePage() {
 
       {/* Section 3: Popular Brands */}
       <motion.section
-        initial={{ opacity: 0, y: 24 }}
+        initial={cached ? false : { opacity: 0, y: 24 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.25 }}
         transition={{ duration: 0.55, ease: "easeOut" }}
@@ -328,7 +353,7 @@ export function HomePage() {
       <div className="max-w-[1400px] mx-auto px-8 pt-24 pb-24">
         <motion.div
           ref={allProductsRef}
-          initial={{ opacity: 0, y: 40 }}
+          initial={cached ? false : { opacity: 0, y: 40 }}
           animate={allProductsInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, ease: "easeOut" }}
         >

@@ -11,8 +11,8 @@ export function Root() {
   return (
     <>
       {/* 새 페이지는 맨 위에서, 뒤로가기는 이전 스크롤 위치에서 시작한다.
-          경로 기준으로 기억해 쿼리만 바뀔 때(채팅방 선택 등)는 스크롤이 튀지 않는다 */}
-      <ScrollRestoration getKey={(location) => location.pathname} />
+          쿼리만 바꾸는 이동(채팅방 선택 등)은 preventScrollReset으로 스크롤을 유지한다 */}
+      <ScrollRestoration />
       {shouldShowNavbar && <AnnouncementBanner />}
       {shouldShowNavbar && <Navbar />}
       <Outlet />
