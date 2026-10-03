@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useParams, useNavigate } from "react-router";
 import { ChevronDown, ChevronLeft, ChevronRight, Check, ShieldCheck, MessageCircle, Heart, Share2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -7,7 +7,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { VideoMedia } from "@/components/common/VideoMedia";
 import { ImageWithFallback } from "@/components/common/ImageWithFallback";
 import { toast } from "sonner";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { motion, AnimatePresence } from "motion/react";
 import { itemApi, bidApi } from "@/api/item";
 import { chatApi } from "@/api/chat";
@@ -22,6 +21,17 @@ import {
   ACTION_MODAL_FOOTER_CLASS,
   ACTION_MODAL_TITLE_CLASS,
 } from "@/constants/actionModal";
+
+// recharts는 그래프 영역이 화면에 보일 때만 불러온다
+const BidChart = lazy(() => import("@/components/product/BidChart"));
+
+// 서버 목록에 소켓으로 먼저 받은 입찰(임시 id < 0) 중 아직 반영되지 않은 것을 합친다
+function mergeBids(server: BidHistory[], local: BidHistory[]) {
+  const pending = local.filter((item) => item.bid_id < 0
+    && !server.some((s) => s.price === item.price && s.created_at === item.created_at));
+  if (pending.length === 0) return server;
+  return [...pending, ...server].sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
 
 // 즉시구매 실패 메시지: 다른 구매자가 결제 중이면 그 사실을 알려준다
 function buyNowErrorMessage(err: unknown, fallback: string) {
@@ -62,6 +72,9 @@ export function ProductDetailPage() {
   const itemReconnectRef = useRef(0);
   const livePriceVersionRef = useRef(0);
   const { wished, wishCount, toggle: handleWishToggle } = useWishToggle(numericId);
+  const chartAreaRef = useRef<HTMLDivElement>(null);
+  const [chartVisible, setChartVisible] = useState(false);
+  const loadedItemIdRef = useRef<number | null>(null);
 
   const handleOpenChat = async () => {
     if (!isAuthenticated) {
@@ -85,15 +98,32 @@ export function ProductDetailPage() {
     }
   };
 
+  // 그래프 영역이 화면 근처에 오면 차트 코드를 불러온다
+  useEffect(() => {
+    if (chartVisible) return;
+    const target = chartAreaRef.current;
+    if (!target) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        setChartVisible(true);
+        observer.disconnect();
+      }
+    }, { rootMargin: "200px" });
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [chartVisible, loading]);
+
   // 상품 상세 조회
   useEffect(() => {
     if (!id || isInitializing) return;
     let stale = false;
-    setLoading(true);
+    // 같은 상품을 다시 불러올 때(로그인 상태 갱신 등)는 로딩 화면으로 바꾸지 않는다
+    if (loadedItemIdRef.current !== numericId) setLoading(true);
     itemApi
       .getItem(numericId)
       .then((data) => {
         if (stale) return;
+        loadedItemIdRef.current = data.item_id;
         setItem(data);
         setDisplayPrice(data.current_price);
         endTimeRef.current = new Date(data.end_at);
@@ -121,7 +151,7 @@ export function ProductDetailPage() {
     bidApi
       .getBids(numericId)
       .then((res) => {
-        if (requestId === bidRefreshRef.current) setBids(res);
+        if (requestId === bidRefreshRef.current) setBids((prev) => mergeBids(res, prev));
       })
       .catch(() => {
         if (requestId === bidRefreshRef.current) setBids([]);
@@ -140,10 +170,20 @@ export function ProductDetailPage() {
         livePriceVersionRef.current += 1;
         setDisplayPrice(bid.current_price);
         setPriceAnimKey((key) => key + 1);
-        const requestId = ++bidRefreshRef.current;
-        bidApi.getBids(numericId).then((result) => {
-          if (active && requestId === bidRefreshRef.current) setBids(result);
-        }).catch(() => {});
+        // 알림에 담긴 값으로 목록을 바로 갱신한다(재조회 없음). 경매 중 입찰 상태는 항상 ACTIVE
+        setBids((prev) => {
+          const duplicated = prev.some((item) =>
+            item.price === bid.current_price && item.created_at === bid.created_at);
+          if (duplicated) return prev;
+          const next: BidHistory = {
+            bid_id: -(prev.length + 1) - Date.now(),
+            bidder_nickname: bid.bidder_nickname,
+            price: bid.current_price,
+            status: "ACTIVE",
+            created_at: bid.created_at,
+          };
+          return [next, ...prev].sort((a, b) => b.created_at.localeCompare(a.created_at));
+        });
       },
       (reconnected) => {
         if (!reconnected) return;
@@ -165,7 +205,7 @@ export function ProductDetailPage() {
         const bidRequestId = ++bidRefreshRef.current;
         bidApi.getBids(numericId)
           .then((nextBids) => {
-            if (active && bidRequestId === bidRefreshRef.current) setBids(nextBids);
+            if (active && bidRequestId === bidRefreshRef.current) setBids((prev) => mergeBids(nextBids, prev));
           })
           .catch(() => {});
       }
@@ -285,7 +325,13 @@ export function ProductDetailPage() {
         toast.success(`입찰 완료: ${amount.toLocaleString()}원`);
         setDisplayPrice(amount);
         setPriceAnimKey((k) => k + 1);
-        bidApi.getBids(numericId).then((res) => setBids(res));
+        // 소켓이 끊긴 경우를 대비해 내 입찰 직후 한 번 맞춘다
+        const requestId = ++bidRefreshRef.current;
+        bidApi.getBids(numericId)
+          .then((res) => {
+            if (requestId === bidRefreshRef.current) setBids((prev) => mergeBids(res, prev));
+          })
+          .catch(() => {});
       }
       setBidModalOpen(false);
       setBidStep("input");
@@ -622,45 +668,13 @@ export function ProductDetailPage() {
               {/* Chart */}
               <div className="lg:col-span-3 overflow-x-auto">
                 <div className="min-w-[600px]">
-                  <ResponsiveContainer width="100%" height={280}>
-                    <LineChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-                      <XAxis
-                        dataKey="time"
-                        stroke="#9ca3af"
-                        style={{ fontSize: "11px" }}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <YAxis
-                        stroke="#9ca3af"
-                        style={{ fontSize: "11px" }}
-                        tickFormatter={(value) => `${(value / 1000).toFixed(0)}K`}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "white",
-                          border: "1px solid #e5e7eb",
-                          borderRadius: "4px",
-                          fontSize: "12px",
-                          padding: "8px 12px",
-                        }}
-                        formatter={(value: number) => [`${value.toLocaleString()}원`, "입찰가"]}
-                        labelStyle={{ fontWeight: "600", marginBottom: "4px", fontSize: "11px" }}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="price"
-                        stroke="#000"
-                        strokeWidth={2}
-                        dot={false}
-                        activeDot={{ r: 5 }}
-                        isAnimationActive={false}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  <div ref={chartAreaRef} className="h-[280px]">
+                    {chartVisible && (
+                      <Suspense fallback={null}>
+                        <BidChart data={chartData} />
+                      </Suspense>
+                    )}
+                  </div>
                 </div>
               </div>
 

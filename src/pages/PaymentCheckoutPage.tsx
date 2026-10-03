@@ -39,10 +39,13 @@ export function PaymentCheckoutPage() {
 
     (async () => {
       try {
-        const prepared = await tradeApi.preparePayment(tradeId);
+        // 결제 준비와 Toss SDK 로딩은 서로 독립이라 동시에 시작한다
+        const [prepared, tossPayments] = await Promise.all([
+          tradeApi.preparePayment(tradeId),
+          loadTossPayments(TOSS_CLIENT_KEY),
+        ]);
         setOrder(prepared);
 
-        const tossPayments = await loadTossPayments(TOSS_CLIENT_KEY);
         const widgets = tossPayments.widgets({ customerKey: ANONYMOUS });
         // setAmount는 렌더링보다 먼저 호출해야 한다(Toss 공식 가이드)
         await widgets.setAmount({ currency: "KRW", value: prepared.amount });

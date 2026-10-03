@@ -16,6 +16,19 @@ export default defineConfig({
 
   assetsInclude: ['**/*.svg', '**/*.csv'],
 
+  build: {
+    rollupOptions: {
+      output: {
+        // 자주 바뀌지 않는 라이브러리를 앱 코드와 분리해 배포 후에도 브라우저 캐시를 재사용한다
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router'],
+          motion: ['motion'],
+          stomp: ['@stomp/stompjs'],
+        },
+      },
+    },
+  },
+
   server: {
     port: 35173,
     proxy: {
