@@ -5,6 +5,7 @@ services:
       args:
         VITE_KAKAO_CLIENT_ID: ${VITE_KAKAO_CLIENT_ID}
         VITE_KAKAO_REDIRECT_URI: ${VITE_KAKAO_REDIRECT_URI}
+        VITE_TOSS_CLIENT_KEY: ${VITE_TOSS_CLIENT_KEY}
     container_name: ignoa-web
     platform: linux/arm64
     ports:

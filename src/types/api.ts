@@ -40,7 +40,8 @@ export interface UserMeResponse {
 // Item
 // ────────────────────────────────────────────────
 
-export type ItemStatus = "ACTIVE" | "BID_CLOSED" | "NO_BID_CLOSED" | "BUY_NOW_CLOSED";
+// BUY_NOW_PENDING: 즉시구매 결제 중. 화면에서는 판매 중(ACTIVE)과 같게 보여준다
+export type ItemStatus = "ACTIVE" | "BUY_NOW_PENDING" | "BID_CLOSED" | "NO_BID_CLOSED" | "BUY_NOW_CLOSED";
 export type ItemCondition = "NEW" | "LIKE_NEW" | "GOOD" | "FAIR";
 export type ItemViewType = "ALL" | "POPULAR" | "ENDING_SOON" | "LATEST";
 export type ItemMediaType = "IMAGE" | "VIDEO";
@@ -98,10 +99,10 @@ export interface ItemResponse {
 }
 
 export interface BuyNowResponse {
+  trade_id: number;
   item_id: number;
-  buyer_id: number;
   price: number;
-  status: ItemStatus;
+  payment_deadline: string;
 }
 
 export interface AuctionExtensionResponse {
@@ -183,4 +184,37 @@ export interface ChatMessageResponse {
   sender_id: number;
   content: string;
   created_at: string;
+}
+
+// ────────────────────────────────────────────────
+// Trade / Payment
+// ────────────────────────────────────────────────
+
+export type TradeType = "AUCTION" | "BUY_NOW";
+export type TradeStatus = "PAYMENT_PENDING" | "CONFIRMING" | "PAID" | "CANCELED";
+export type PaymentResultStatus = "DONE" | "FAILED" | "UNKNOWN";
+
+export interface TradePrepareResponse {
+  trade_id: number;
+  order_id: string;
+  amount: number;
+  order_name: string;
+}
+
+export interface TradeConfirmResponse {
+  trade_id: number;
+  order_id: string;
+  status: PaymentResultStatus;
+  failure_code: string | null;
+  failure_message: string | null;
+}
+
+export interface MyTradeResponse {
+  trade_id: number;
+  item_id: number;
+  type: TradeType;
+  status: TradeStatus;
+  amount: number;
+  payment_deadline: string;
+  paid_at: string | null;
 }

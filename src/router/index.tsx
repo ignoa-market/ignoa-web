@@ -52,6 +52,21 @@ export const router = createBrowserRouter([
             HydrateFallback: RouteLoadingFallback,
             lazy: async () => ({ Component: (await import("@/pages/MessagesPage")).MessagesPage }),
           },
+          {
+            path: "payments/checkout",
+            HydrateFallback: RouteLoadingFallback,
+            lazy: async () => ({ Component: (await import("@/pages/PaymentCheckoutPage")).PaymentCheckoutPage }),
+          },
+          {
+            path: "payments/success",
+            HydrateFallback: RouteLoadingFallback,
+            lazy: async () => ({ Component: (await import("@/pages/PaymentSuccessPage")).PaymentSuccessPage }),
+          },
+          {
+            path: "payments/fail",
+            HydrateFallback: RouteLoadingFallback,
+            lazy: async () => ({ Component: (await import("@/pages/PaymentFailPage")).PaymentFailPage }),
+          },
         ],
       },
     ],

@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CheckCircle2, ChevronLeft, CreditCard, LoaderCircle, MapPin, MessageSquare, Plus, Send } from "lucide-react";
-import { useSearchParams } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { ImageWithFallback } from "@/components/common/ImageWithFallback";
 import { chatApi } from "@/api/chat";
 import { itemApi } from "@/api/item";
+import { tradeApi } from "@/api/trade";
 import { useAuth } from "@/context/AuthContext";
 import { useChat } from "@/context/ChatContext";
-import type { ApiError, ChatMessageResponse, ChatRoomPreview, ItemDetailResponse } from "@/types/api";
+import type { ApiError, ChatMessageResponse, ChatRoomPreview, ItemDetailResponse, MyTradeResponse } from "@/types/api";
 import { toast } from "sonner";
 
 const formatRoomTime = (value: string | null, fallback: string) =>
@@ -49,6 +50,7 @@ export function MessagesPage() {
   const { userId } = useAuth();
   const { clearNewMessage, reconnectVersion, setMessagesPageActive, subscribe } = useChat();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const requestedRoomId = Number(searchParams.get("chatRoomId"));
   const requestedItemId = Number(searchParams.get("itemId"));
   const hasRequestedItem = Number.isFinite(requestedItemId) && requestedItemId > 0;
@@ -63,6 +65,7 @@ export function MessagesPage() {
   const [isMessagesLoading, setIsMessagesLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [actionMenuOpen, setActionMenuOpen] = useState(false);
+  const [payableTrade, setPayableTrade] = useState<MyTradeResponse | null>(null);
   const [draftItem, setDraftItem] = useState<ItemDetailResponse | null>(null);
   const [isDraftLoading, setIsDraftLoading] = useState(hasRequestedItem && !selectedChat);
   const [hasOlderMessages, setHasOlderMessages] = useState(false);
@@ -269,7 +272,12 @@ export function MessagesPage() {
 
   const handleSend = async () => {
     const content = message.trim();
-    if ((!selectedChat && !draftItem) || !content || isSending) return;
+    if (await sendContent(content)) setMessage("");
+  };
+
+  // 입력창 메시지와 메뉴 안내 메시지가 함께 쓰는 전송 로직
+  const sendContent = async (content: string) => {
+    if ((!selectedChat && !draftItem) || !content || isSending) return false;
     setIsSending(true);
     try {
       let chatRoomId = selectedChat;
@@ -281,19 +289,52 @@ export function MessagesPage() {
         setSearchParams({ chatRoomId: String(chatRoomId) }, { replace: true });
       }
 
-      if (!chatRoomId) return;
+      if (!chatRoomId) return false;
       const sentMessage = await chatApi.sendMessage(chatRoomId, content);
-      setMessage("");
       upsertMessage(sentMessage);
+      return true;
     } catch (err) {
       const error = err as ApiError;
       toast.error(error.message ?? "메시지를 전송하지 못했습니다.");
+      return false;
     } finally {
       setIsSending(false);
     }
   };
 
+  // 판매자 결제 요청: 구매자에게 결제 안내 메시지를 보낸다
+  const handleRequestPayment = () => {
+    void sendContent("결제를 요청했습니다. 입력창 왼쪽 + 버튼의 [결제하기]로 결제해 주세요.");
+  };
+
   const selectedChatData = chats.find((chat) => chat.chat_room_id === selectedChat);
+  // 방이 생기기 전(상품에서 문의 시작)은 항상 구매자다
+  const myRole = selectedChatData?.role ?? (draftItem ? "BUYER" : undefined);
+
+  // 낙찰자 결제: 결제 대기 중인 경매 거래가 있을 때만 [결제하기]를 보여준다
+  const payItemId = myRole === "BUYER" ? selectedChatData?.item_id : undefined;
+  useEffect(() => {
+    setPayableTrade(null);
+    if (!payItemId) return;
+    let stale = false;
+    tradeApi.getMyTrade(payItemId)
+      .then((trade) => {
+        if (stale) return;
+        const payable = trade.type === "AUCTION" && trade.status === "PAYMENT_PENDING";
+        setPayableTrade(payable ? trade : null);
+      })
+      .catch(() => {
+        // 거래가 없는 문의방(TRADE_NOT_FOUND)은 결제 버튼을 보여주지 않는다
+      });
+    return () => {
+      stale = true;
+    };
+  }, [payItemId]);
+
+  const handlePay = () => {
+    if (!payableTrade) return;
+    navigate(`/app/payments/checkout?tradeId=${payableTrade.trade_id}&itemId=${payableTrade.item_id}`);
+  };
   const hasConversation = Boolean(selectedChat || draftItem || isDraftLoading);
   const partnerNickname = selectedChatData?.partner_nickname ?? draftItem?.seller.nickname;
   const partnerProfileImageUrl = selectedChatData?.partner_profile_image_url
@@ -422,16 +463,29 @@ export function MessagesPage() {
 
                 {actionMenuOpen && (
                   <div className="absolute bottom-full left-0 z-20 mb-3 w-48 overflow-hidden rounded-2xl border border-stone-200 bg-white p-1.5 shadow-lg">
-                    {[
-                      { label: "결제 요청", icon: CreditCard },
-                      { label: "배송지 요청", icon: MapPin },
-                      { label: "거래 완료 요청", icon: CheckCircle2 },
-                    ].map(({ label, icon: Icon }) => (
+                    {(myRole === "BUYER"
+                      ? [
+                          ...(payableTrade
+                            ? [{ label: "결제하기", icon: CreditCard, onSelect: handlePay }]
+                            : []),
+                          { label: "배송지 보내기", icon: MapPin, onSelect: undefined },
+                          { label: "구매 확정", icon: CheckCircle2, onSelect: undefined },
+                        ]
+                      : [
+                          { label: "결제 요청", icon: CreditCard, onSelect: handleRequestPayment },
+                          { label: "배송지 요청", icon: MapPin, onSelect: undefined },
+                          { label: "발송 완료", icon: CheckCircle2, onSelect: undefined },
+                        ]
+                    ).map(({ label, icon: Icon, onSelect }) => (
                       <button
                         key={label}
                         type="button"
                         onClick={() => {
                           setActionMenuOpen(false);
+                          if (onSelect) {
+                            onSelect();
+                            return;
+                          }
                           toast.info(`${label} 기능은 준비 중입니다.`);
                         }}
                         className="flex h-10 w-full items-center gap-3 rounded-xl px-3 text-left text-xs font-medium text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-900"

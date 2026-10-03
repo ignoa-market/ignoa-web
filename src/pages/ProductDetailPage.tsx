@@ -23,6 +23,13 @@ import {
   ACTION_MODAL_TITLE_CLASS,
 } from "@/constants/actionModal";
 
+// 즉시구매 실패 메시지: 다른 구매자가 결제 중이면 그 사실을 알려준다
+function buyNowErrorMessage(err: unknown, fallback: string) {
+  const error = err as { code?: string; message?: string };
+  if (error?.code === "BUY_NOW_CONFLICT") return "다른 구매자가 결제 중이거나 이미 판매된 상품입니다.";
+  return error?.message ?? fallback;
+}
+
 export function ProductDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -231,6 +238,10 @@ export function ProductDetailPage() {
     }
   };
 
+  const goToCheckout = (tradeId: number) => {
+    navigate(`/app/payments/checkout?tradeId=${tradeId}&itemId=${numericId}`);
+  };
+
   const handleBidNext = () => {
     const amount = parseInt(bidAmount.replace(/,/g, ""));
     if (!bidAmount || isNaN(amount) || amount <= displayPrice) {
@@ -244,15 +255,13 @@ export function ProductDetailPage() {
     if (item?.buy_now_price == null || actionPending) return;
     setActionPending(true);
     try {
-      await itemApi.buyNow(numericId, item.buy_now_price);
-      toast.success("즉시 구매가 완료되었습니다!");
-      setItem((prev) => prev ? { ...prev, status: "BUY_NOW_CLOSED" } : prev);
-      setDisplayPrice(item.buy_now_price);
+      // 즉시구매는 결제 대기 거래만 만든다. 결제가 끝나야 상품이 마감된다
+      const trade = await itemApi.buyNow(numericId, item.buy_now_price);
       setBuyNowModalOpen(false);
       setBuyNowAgreed(false);
+      goToCheckout(trade.trade_id);
     } catch (err: unknown) {
-      const error = err as { message?: string };
-      toast.error(error?.message ?? "즉시 구매에 실패했습니다.");
+      toast.error(buyNowErrorMessage(err, "즉시 구매에 실패했습니다."));
     } finally {
       setActionPending(false);
     }
@@ -265,10 +274,12 @@ export function ProductDetailPage() {
     setActionPending(true);
     try {
       if (willBuyNow) {
-        await itemApi.buyNow(numericId, item!.buy_now_price!);
-        toast.success("즉시 구매가 완료되었습니다!");
-        setItem((prev) => prev ? { ...prev, status: "BUY_NOW_CLOSED" } : prev);
-        setDisplayPrice(item!.buy_now_price!);
+        const trade = await itemApi.buyNow(numericId, item!.buy_now_price!);
+        setBidModalOpen(false);
+        setBidStep("input");
+        setBidAmount("");
+        goToCheckout(trade.trade_id);
+        return;
       } else {
         await bidApi.placeBid(numericId, amount);
         toast.success(`입찰 완료: ${amount.toLocaleString()}원`);
@@ -280,8 +291,7 @@ export function ProductDetailPage() {
       setBidStep("input");
       setBidAmount("");
     } catch (err: unknown) {
-      const error = err as { message?: string };
-      toast.error(error?.message ?? "처리에 실패했습니다.");
+      toast.error(buyNowErrorMessage(err, "처리에 실패했습니다."));
     } finally {
       setActionPending(false);
     }
@@ -313,7 +323,10 @@ export function ProductDetailPage() {
   }
 
   const media = item.media_urls;
-  const auctionActive = item.status === "ACTIVE" && !auctionExpired;
+  // 즉시구매 결제 중(BUY_NOW_PENDING)에도 입찰은 받으므로 판매 중과 같게 본다
+  const auctionActive = (item.status === "ACTIVE" || item.status === "BUY_NOW_PENDING") && !auctionExpired;
+  // 결제 중인 상품은 판매자가 수정·삭제할 수 없다
+  const sellerEditable = item.status === "ACTIVE" && !auctionExpired;
   const enteredBidAmount = Number(bidAmount.replace(/,/g, ""));
   const isBidAmountTooLow = bidAmount.length > 0 && enteredBidAmount <= displayPrice;
 
@@ -493,14 +506,14 @@ export function ProductDetailPage() {
               <div className="flex gap-2">
                 <Button
                   onClick={() => navigate(`/app/products/${id}/edit`)}
-                  disabled={!auctionActive}
+                  disabled={!sellerEditable}
                   className="flex-1 bg-black hover:bg-stone-900 text-white h-11 text-sm font-medium rounded transition-colors disabled:opacity-40"
                 >
                   상품 수정
                 </Button>
                 <Button
                   onClick={() => setDeleteModalOpen(true)}
-                  disabled={!auctionActive || displayPrice > item.start_price}
+                  disabled={!sellerEditable || displayPrice > item.start_price}
                   variant="outline"
                   className="flex-1 border-stone-200 text-stone-600 h-11 text-sm font-medium rounded hover:bg-stone-50 hover:border-stone-300 transition-colors disabled:opacity-40"
                 >
