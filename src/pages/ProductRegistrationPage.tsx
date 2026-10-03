@@ -288,7 +288,7 @@ export function ProductRegistrationPage() {
                   <SelectTrigger className="rounded-xl text-sm focus:ring-2 focus:ring-black border-gray-300">
                     <SelectValue placeholder="선택" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper" side="bottom" avoidCollisions={false}>
                     {categories.map((cat) => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
                   </SelectContent>
                 </Select>
@@ -299,7 +299,7 @@ export function ProductRegistrationPage() {
                   <SelectTrigger className="rounded-xl text-sm focus:ring-2 focus:ring-black border-gray-300">
                     <SelectValue placeholder="선택" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper" side="bottom" avoidCollisions={false}>
                     {conditions.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
