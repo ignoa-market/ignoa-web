@@ -66,10 +66,12 @@ export function MessagesPage() {
   const [isSending, setIsSending] = useState(false);
   const [actionMenuOpen, setActionMenuOpen] = useState(false);
   const [payableTrade, setPayableTrade] = useState<MyTradeResponse | null>(null);
+  const [canRequestPayment, setCanRequestPayment] = useState(false);
   const [draftItem, setDraftItem] = useState<ItemDetailResponse | null>(null);
   const [isDraftLoading, setIsDraftLoading] = useState(hasRequestedItem && !selectedChat);
   const [hasOlderMessages, setHasOlderMessages] = useState(false);
   const selectedChatRef = useRef<number | null>(selectedChat);
+  const sendingRef = useRef(false);
   const chatsRef = useRef<ChatRoomPreview[]>([]);
   const messagesRef = useRef<ChatMessageResponse[]>([]);
   const pendingRoomIdsRef = useRef(new Set<number>());
@@ -277,7 +279,9 @@ export function MessagesPage() {
 
   // 입력창 메시지와 메뉴 안내 메시지가 함께 쓰는 전송 로직
   const sendContent = async (content: string) => {
-    if ((!selectedChat && !draftItem) || !content || isSending) return false;
+    // state는 다음 렌더에야 바뀌므로 연타는 ref로 막는다
+    if ((!selectedChat && !draftItem) || !content || sendingRef.current) return false;
+    sendingRef.current = true;
     setIsSending(true);
     try {
       let chatRoomId = selectedChat;
@@ -298,6 +302,7 @@ export function MessagesPage() {
       toast.error(error.message ?? "메시지를 전송하지 못했습니다.");
       return false;
     } finally {
+      sendingRef.current = false;
       setIsSending(false);
     }
   };
@@ -310,6 +315,22 @@ export function MessagesPage() {
   const selectedChatData = chats.find((chat) => chat.chat_room_id === selectedChat);
   // 방이 생기기 전(상품에서 문의 시작)은 항상 구매자다
   const myRole = selectedChatData?.role ?? (draftItem ? "BUYER" : undefined);
+
+  // 판매자 결제 요청: 낙찰로 끝난 상품의 채팅방(낙찰자와의 방)에서만 보여준다
+  const sellerItemId = myRole === "SELLER" ? selectedChatData?.item_id : undefined;
+  useEffect(() => {
+    setCanRequestPayment(false);
+    if (!sellerItemId) return;
+    let stale = false;
+    itemApi.getItem(sellerItemId)
+      .then((item) => {
+        if (!stale) setCanRequestPayment(item.status === "BID_CLOSED");
+      })
+      .catch(() => {});
+    return () => {
+      stale = true;
+    };
+  }, [sellerItemId]);
 
   // 낙찰자 결제: 결제 대기 중인 경매 거래가 있을 때만 [결제하기]를 보여준다
   const payItemId = myRole === "BUYER" ? selectedChatData?.item_id : undefined;
@@ -471,11 +492,16 @@ export function MessagesPage() {
                           { label: "배송지 보내기", icon: MapPin, onSelect: undefined },
                           { label: "구매 확정", icon: CheckCircle2, onSelect: undefined },
                         ]
-                      : [
-                          { label: "결제 요청", icon: CreditCard, onSelect: handleRequestPayment },
-                          { label: "배송지 요청", icon: MapPin, onSelect: undefined },
-                          { label: "발송 완료", icon: CheckCircle2, onSelect: undefined },
-                        ]
+                      : myRole === "SELLER"
+                        ? [
+                            ...(canRequestPayment
+                              ? [{ label: "결제 요청", icon: CreditCard, onSelect: handleRequestPayment }]
+                              : []),
+                            { label: "배송지 요청", icon: MapPin, onSelect: undefined },
+                            { label: "발송 완료", icon: CheckCircle2, onSelect: undefined },
+                          ]
+                        // 역할을 아직 모르면(목록 로딩 중) 메뉴를 비워 둔다
+                        : []
                     ).map(({ label, icon: Icon, onSelect }) => (
                       <button
                         key={label}

@@ -8,6 +8,7 @@ import type { ApiError } from "@/types/api";
 type ViewState =
   | { kind: "confirming" }
   | { kind: "pending" }
+  | { kind: "delayed" }
   | { kind: "failed"; message: string };
 
 const POLL_INTERVAL_MS = 3_000;
@@ -51,9 +52,19 @@ export function PaymentSuccessPage() {
         } catch {
           // 조회 실패는 다음 시도에서 다시 확인한다
         }
-        if (count + 1 < POLL_LIMIT) pollTrade(count + 1);
+        if (count + 1 < POLL_LIMIT) {
+          pollTrade(count + 1);
+        } else {
+          // 한도까지 확인해도 결론이 없으면 멈추고 안내한다. 결제 결과는 서버가 이어서 반영한다
+          setView({ kind: "delayed" });
+        }
       }, POLL_INTERVAL_MS);
     };
+
+    if (!(tradeId > 0) || !(itemId > 0) || !paymentKey || !orderId || !(amount > 0)) {
+      setView({ kind: "failed", message: "잘못된 결제 요청입니다." });
+      return;
+    }
 
     (async () => {
       try {
@@ -82,7 +93,18 @@ export function PaymentSuccessPage() {
 
   return (
     <div className="min-h-screen bg-white pt-[280px] flex flex-col items-center gap-4 px-4 text-center">
-      {view.kind !== "failed" ? (
+      {view.kind === "delayed" ? (
+        <>
+          <p className="text-base font-semibold text-black">결제 확인이 지연되고 있어요</p>
+          <p className="text-sm text-stone-600">잠시 후 상품 페이지에서 결제 상태를 다시 확인해 주세요.</p>
+          <Button
+            onClick={() => navigate(`/app/products/${itemId}`, { replace: true })}
+            className="bg-black hover:bg-stone-900 text-white h-11 px-6 text-sm rounded"
+          >
+            상품으로 이동
+          </Button>
+        </>
+      ) : view.kind !== "failed" ? (
         <>
           <div className="w-8 h-8 border-2 border-black border-t-transparent rounded-full animate-spin" />
           <p className="text-sm text-stone-600">
