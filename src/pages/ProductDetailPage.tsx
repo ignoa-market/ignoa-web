@@ -13,6 +13,7 @@ import { chatApi } from "@/api/chat";
 import { createBidSocket } from "@/lib/bidSocket";
 import { wishStore } from "@/store/wishStore";
 import { useWishToggle } from "@/hooks/useWishToggle";
+import { useModalBehavior } from "@/hooks/useModalBehavior";
 import type { ItemDetailResponse, BidHistory } from "@/types/api";
 import {
   ACTION_MODAL_ACTION_CLASS,
@@ -75,6 +76,19 @@ export function ProductDetailPage() {
   const chartAreaRef = useRef<HTMLDivElement>(null);
   const [chartVisible, setChartVisible] = useState(false);
   const loadedItemIdRef = useRef<number | null>(null);
+  const closeBidModal = () => {
+    setBidModalOpen(false);
+    setBidStep("input");
+    setBidAmount("");
+  };
+  const closeBuyNowModal = () => {
+    setBuyNowModalOpen(false);
+    setBuyNowAgreed(false);
+  };
+  // 처리 중에는 Esc로 닫히지 않게 한다(배경 클릭과 같은 기준)
+  const bidModalRef = useModalBehavior<HTMLDivElement>(bidModalOpen, () => !actionPending && closeBidModal());
+  const buyNowModalRef = useModalBehavior<HTMLDivElement>(buyNowModalOpen, () => !actionPending && closeBuyNowModal());
+  const deleteModalRef = useModalBehavior<HTMLDivElement>(deleteModalOpen, () => !actionPending && setDeleteModalOpen(false));
 
   const handleOpenChat = async () => {
     if (!isAuthenticated) {
@@ -790,7 +804,11 @@ export function ProductDetailPage() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 16 }}
               transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
-              className={`${ACTION_MODAL_CONTENT_CLASS} overflow-hidden`}
+              ref={bidModalRef}
+              role="dialog"
+              aria-modal="true"
+              tabIndex={-1}
+              className={`${ACTION_MODAL_CONTENT_CLASS} overflow-hidden outline-none`}
               style={{ fontFamily: "Pretendard, sans-serif" }}
             >
               <AnimatePresence mode="wait" initial={false}>
@@ -907,7 +925,11 @@ export function ProductDetailPage() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 16 }}
               transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
-              className={ACTION_MODAL_CONTENT_CLASS}
+              ref={buyNowModalRef}
+              role="dialog"
+              aria-modal="true"
+              tabIndex={-1}
+              className={`${ACTION_MODAL_CONTENT_CLASS} outline-none`}
               style={{ fontFamily: "Pretendard, sans-serif" }}
             >
               <h2 className={ACTION_MODAL_TITLE_CLASS}>즉시 구매</h2>
@@ -971,7 +993,11 @@ export function ProductDetailPage() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 16 }}
               transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
-              className={ACTION_MODAL_CONTENT_CLASS}
+              ref={deleteModalRef}
+              role="dialog"
+              aria-modal="true"
+              tabIndex={-1}
+              className={`${ACTION_MODAL_CONTENT_CLASS} outline-none`}
               style={{ fontFamily: "Pretendard, sans-serif" }}
             >
               <h2 className={ACTION_MODAL_TITLE_CLASS}>상품 삭제</h2>
