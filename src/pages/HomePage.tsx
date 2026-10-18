@@ -8,7 +8,9 @@ import { itemApi } from "@/api/item";
 import { useAuth } from "@/context/AuthContext";
 import type { ItemSummary } from "@/types/api";
 import lightweightPufferBanner from "@/assets/banner-lightweight-puffer-optimized.jpg";
-import { toast } from "sonner";
+import shoesBanner from "@/assets/banner-shoes.jpg";
+import circleBanner from "@/assets/banner-circle.jpg";
+import posterBanner from "@/assets/banner-poster.jpg";
 
 const bannerSlides = [
   {
@@ -34,16 +36,26 @@ const bannerSlides = [
   },
 ];
 
-const popularBrands = [
-  "Stone Island",
-  "Chrome Hearts",
-  "Supreme",
-  "PLASTICPRODUCT",
-  "Levi's",
-  "Polo Ralph Lauren",
-  "C.P. Company",
-  "Bape",
+// 임시 문구: 실제 기획전 문구가 정해지면 교체한다
+const curationBanners = [
+  { image: shoesBanner, label: "Local Auction", title: "우리 동네 신발장, 경매로 새 주인 찾기" },
+  { image: circleBanner, label: "Meet the Neighbor", title: "가까운 사람과 주고받는 취향" },
+  { image: posterBanner, label: "Pop-up", title: "이번 주말, 동네 플리마켓 소식" },
 ];
+
+// 사진 아래쪽을 어둡게 깔고 라벨과 제목을 얹는다
+function CurationBanner({ image, label, title }: { image: string; label: string; title: string }) {
+  return (
+    <div className="relative h-[340px] overflow-hidden rounded-2xl">
+      <img src={image} alt="" className="absolute inset-0 h-full w-full object-cover" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 p-6">
+        <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-white/70">{label}</p>
+        <p className="mt-1.5 line-clamp-2 text-xl font-bold leading-snug text-white md:text-2xl">{title}</p>
+      </div>
+    </div>
+  );
+}
 
 function toProductCardProps(item: ItemSummary) {
   return {
@@ -316,36 +328,27 @@ export function HomePage() {
         </motion.div>
       </div>
 
-      {/* Section 3: Popular Brands */}
+      {/* Section 3: Curated Collections */}
       <motion.section
         initial={cached ? false : { opacity: 0, y: 24 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.25 }}
         transition={{ duration: 0.55, ease: "easeOut" }}
-        className="mt-12 bg-stone-100/80 py-16 md:py-20"
+        className="mt-12"
       >
-        <div className="max-w-[1400px] mx-auto px-8">
-          <p className="text-[13px] font-normal uppercase tracking-[0.2em] text-gray-400">
-            Popular Brands
-          </p>
-          <h2 className="mt-1 text-2xl font-bold text-black md:text-3xl">인기 브랜드</h2>
+        <div className="max-w-[1400px] mx-auto px-8 mb-8">
+          <p className="text-[13px] font-normal uppercase tracking-[0.2em] text-gray-400">Curated Collections</p>
+          <h2 className="mt-1 text-2xl font-bold text-black md:text-3xl">에디터 컬렉션</h2>
+        </div>
 
-          <div className="mt-12 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <div className="flex min-w-max items-center">
-              {popularBrands.map((brand, index) => (
-                <div key={brand} className="flex items-center">
-                  {index > 0 && <span className="mx-7 text-gray-300">•</span>}
-                  <button
-                    type="button"
-                    onClick={() => toast.info("아직 준비 중인 기능입니다.")}
-                    className="text-lg font-semibold text-gray-400 whitespace-nowrap transition-all duration-200 hover:-translate-y-0.5 hover:text-black active:translate-y-0"
-                  >
-                    {brand}
-                  </button>
-                </div>
-              ))}
-            </div>
+        <div className="max-w-[1400px] mx-auto grid gap-6 px-8 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          {/* 왼쪽 2/3는 사진 두 장, 오른쪽 1/3은 포스터. 모두 칸 크기에 맞춰 채운다 (넘치는 부분은 잘림) */}
+          <div className="grid grid-cols-2 gap-6">
+            {curationBanners.slice(0, 2).map((banner) => (
+              <CurationBanner key={banner.title} {...banner} />
+            ))}
           </div>
+          <CurationBanner {...curationBanners[2]} />
         </div>
       </motion.section>
 
