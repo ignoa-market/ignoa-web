@@ -102,11 +102,9 @@ export const bidApi = {
   placeBid: (itemId: number, price: number) =>
     api.post<BidResponse>(`/api/items/${itemId}/bids`, { price }),
 
-  getBids: async (itemId: number, beforeBidId?: number): Promise<CursorResponse<BidHistory>> => {
+  getBids: (itemId: number, beforeBidId?: number) => {
     const query = beforeBidId !== undefined ? `?beforeBidId=${beforeBidId}` : "";
-    const res = await api.get<BidHistory[] | CursorResponse<BidHistory>>(`/api/items/${itemId}/bids${query}`);
-    // 배포 전환 중 이전 서버는 전체 배열을 준다 — 백엔드 릴리스 후 제거
-    return Array.isArray(res) ? { content: res, next_cursor: null, has_next: false } : res;
+    return api.get<CursorResponse<BidHistory>>(`/api/items/${itemId}/bids${query}`);
   },
 };
 

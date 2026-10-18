@@ -3,7 +3,7 @@ import { getBrokerUrl } from "@/lib/chatSocket";
 
 export interface BidBroadcast {
   item_id: number;
-  bid_id?: number; // 이전 서버는 보내지 않는다 — 백엔드 릴리스 후 필수로 변경
+  bid_id: number;
   current_price: number;
   bidder_nickname: string;
   created_at: string;

@@ -182,12 +182,9 @@ export function ProductDetailPage() {
         setPriceAnimKey((key) => key + 1);
         // 알림에 담긴 값으로 목록을 바로 갱신한다(재조회 없음). 경매 중 입찰 상태는 항상 ACTIVE
         setBids((prev) => {
-          const duplicated = prev.some((item) => bid.bid_id !== undefined
-            ? item.bid_id === bid.bid_id
-            : item.price === bid.current_price);
-          if (duplicated) return prev;
+          if (prev.some((item) => item.bid_id === bid.bid_id)) return prev;
           const next: BidHistory = {
-            bid_id: bid.bid_id ?? -Date.now(),
+            bid_id: bid.bid_id,
             bidder_nickname: bid.bidder_nickname,
             price: bid.current_price,
             status: "ACTIVE",
@@ -627,10 +624,10 @@ export function ProductDetailPage() {
               <span>이그노아 안전결제로 걱정없이 거래하세요.</span>
             </div>
 
-            {/* Bid History — 4건 높이만 보여주고 그 안에서 스크롤한다 (한 줄 41px) */}
+            {/* Bid History — 5건 높이만 보여주고 그 안에서 스크롤한다 (한 줄 41px) */}
             <h2 className="text-base font-semibold text-black mt-12 mb-4">입찰 이력</h2>
             <div
-              className="max-h-[164px] overflow-y-auto overscroll-contain pr-2 [scrollbar-width:thin] [scrollbar-color:#e5e7eb_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200"
+              className="max-h-[205px] overflow-y-auto overscroll-contain pr-2 [scrollbar-width:thin] [scrollbar-color:#e5e7eb_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200"
               onScroll={(event) => {
                 const list = event.currentTarget;
                 // 끝에 닿기 전에 미리 불러와 스크롤이 멈추지 않게 한다
