@@ -90,14 +90,14 @@ export function Navbar() {
               ) : isAuthenticated ? (
                 <div className="flex items-center gap-3">
                   <Link to="/app/register-product">
-                    <button className="h-9 px-3 text-sm font-medium text-gray-700 rounded-full transition-all duration-200 hover:-translate-y-0.5 hover:text-black active:translate-y-0">
+                    <button className="h-9 px-3 text-sm font-medium text-black rounded-full transition-all duration-200 hover:-translate-y-0.5 hover:text-black active:translate-y-0">
                       상품 등록
                     </button>
                   </Link>
 
                   <button
                     onClick={() => navigate("/app/messages")}
-                    className="relative h-9 px-3 text-sm font-medium text-gray-700 rounded-full transition-all duration-200 hover:-translate-y-0.5 hover:text-black active:translate-y-0"
+                    className="relative h-9 px-3 text-sm font-medium text-black rounded-full transition-all duration-200 hover:-translate-y-0.5 hover:text-black active:translate-y-0"
                   >
                     메시지
                     {hasNewMessage && (
@@ -109,9 +109,7 @@ export function Navbar() {
                   <div className="relative" ref={profileMenuRef}>
                     <button
                       onClick={() => setProfileMenuOpen((v) => !v)}
-                      className={`h-9 px-3 text-sm font-medium rounded-full transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 ${
-                        profileMenuOpen ? "text-black" : "text-gray-700 hover:text-black"
-                      }`}
+                      className="h-9 px-3 text-sm font-medium text-black rounded-full transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0"
                     >
                       계정
                     </button>
@@ -160,7 +158,7 @@ export function Navbar() {
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => navigate("/login")}
-                    className="h-9 px-4 text-sm font-medium text-gray-600 hover:text-black transition-colors"
+                    className="h-9 px-4 text-sm font-medium text-black transition-colors"
                   >
                     로그인
                   </button>
@@ -185,7 +183,7 @@ export function Navbar() {
                   key={cat}
                   type="button"
                   onClick={() => toast.info("아직 준비 중인 기능입니다.")}
-                  className="my-1 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[15px] font-medium text-gray-700 whitespace-nowrap transition-all duration-200 hover:-translate-y-0.5 hover:bg-gray-100 hover:text-black active:translate-y-0"
+                  className="my-1 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[15px] font-medium text-gray-900 whitespace-nowrap transition-all duration-200 hover:-translate-y-0.5 hover:bg-gray-100 hover:text-black active:translate-y-0"
                 >
                   {cat === "카테고리" && <Menu className="h-4 w-4" />}
                   {cat}

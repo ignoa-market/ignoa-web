@@ -115,7 +115,7 @@ export const ProductCard = memo(function ProductCard({
     <div className="relative">
       <Link to={`/app/products/${id}`} className="group relative block cursor-pointer">
       {/* Image */}
-      <div className="relative aspect-square overflow-hidden bg-gray-100 rounded-lg mb-2.5">
+      <div className="relative aspect-[3/4] overflow-hidden bg-gray-100 rounded-xl mb-2.5">
         <ImageWithFallback
           src={imageUrl}
           alt={title}
