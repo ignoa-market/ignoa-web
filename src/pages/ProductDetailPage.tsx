@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router";
-import { ChevronDown, ChevronLeft, ChevronRight, Check, ShieldCheck, MessageCircle, Heart, Share2 } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Check, MessageCircle, Heart, Share2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -14,6 +14,7 @@ import { createBidSocket } from "@/lib/bidSocket";
 import { wishStore } from "@/store/wishStore";
 import { useWishToggle } from "@/hooks/useWishToggle";
 import { useModalBehavior } from "@/hooks/useModalBehavior";
+import tossPaymentsIcon from "@/assets/toss-payments-icon.png";
 import type { ItemDetailResponse, BidHistory } from "@/types/api";
 import {
   ACTION_MODAL_ACTION_CLASS,
@@ -32,10 +33,25 @@ function mergeBids(server: BidHistory[], local: BidHistory[]) {
 }
 
 // 입찰 시각 표시: 10.18 14:32
-function formatBidTime(createdAt: string) {
+function formatShortDateTime(createdAt: string) {
   const date = new Date(createdAt);
   const pad = (value: number) => String(value).padStart(2, "0");
   return `${pad(date.getMonth() + 1)}.${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+// 마감·등록 날짜 표시: 10월 25일, 올해가 아니면 2025년 10월 25일
+function formatKoreanDate(value: string) {
+  const date = new Date(value);
+  const year = date.getFullYear() === new Date().getFullYear() ? "" : `${date.getFullYear()}년 `;
+  return `${year}${date.getMonth() + 1}월 ${date.getDate()}일`;
+}
+
+// 마감 시각 표시: 10월 25일 (토) 21:27
+function formatEndDateTime(endAt: string) {
+  const date = new Date(endAt);
+  const weekday = ["일", "월", "화", "수", "목", "금", "토"][date.getDay()];
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${formatKoreanDate(endAt)} (${weekday}) ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 // 즉시구매 실패 메시지: 다른 구매자가 결제 중이면 그 사실을 알려준다
@@ -73,10 +89,10 @@ export function ProductDetailPage() {
   const [returnOpen, setReturnOpen] = useState(false);
   const [auctionExpired, setAuctionExpired] = useState(false);
   const numericId = Number(id);
-  const countdownSpanRef = useRef<HTMLSpanElement>(null);
   const endTimeRef = useRef<Date | null>(null);
   const bidRefreshRef = useRef(0);
   const loadingOlderBidsRef = useRef(false);
+  const [loadingOlderBids, setLoadingOlderBids] = useState(false);
   // 소켓으로 새로 들어온 입찰만 등장 애니메이션을 준다(처음 조회·이전 입찰 로드는 제외)
   const liveBidIdsRef = useRef(new Set<number>());
   const itemReconnectRef = useRef(0);
@@ -231,28 +247,10 @@ export function ProductDetailPage() {
     };
   }, [id, numericId]);
 
-  // 카운트다운 타이머 — state 대신 DOM ref 직접 업데이트로 매초 리렌더 방지
+  // 마감 감지 — 마감 시각이 지나면 입찰·즉시구매를 막는다(화면에는 마감 시각만 표시)
   useEffect(() => {
     const tick = () => {
-      if (!endTimeRef.current || !countdownSpanRef.current) return;
-      const diff = endTimeRef.current.getTime() - Date.now();
-      let text: string;
-      if (diff <= 0) {
-        text = "마감";
-        setAuctionExpired(true);
-      } else {
-        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-        const hh = String(hours).padStart(2, "0");
-        const mm = String(minutes).padStart(2, "0");
-        const ss = String(seconds).padStart(2, "0");
-        if (days > 0) text = `${days}일 ${hh}시간 ${mm}분 ${ss}초`;
-        else if (hours > 0) text = `${hh}시간 ${mm}분 ${ss}초`;
-        else text = `${mm}분 ${ss}초`;
-      }
-      countdownSpanRef.current.textContent = text;
+      if (endTimeRef.current && endTimeRef.current.getTime() <= Date.now()) setAuctionExpired(true);
     };
     tick();
     const timer = setInterval(tick, 1000);
@@ -355,6 +353,7 @@ export function ProductDetailPage() {
   const loadOlderBids = useCallback(() => {
     if (loadingOlderBidsRef.current || !bidsHasNext || bidCursor === null) return;
     loadingOlderBidsRef.current = true;
+    setLoadingOlderBids(true);
     const requestId = bidRefreshRef.current;
     bidApi.getBids(numericId, bidCursor)
       .then((res) => {
@@ -367,6 +366,7 @@ export function ProductDetailPage() {
       .catch(() => {})
       .finally(() => {
         loadingOlderBidsRef.current = false;
+        setLoadingOlderBids(false);
       });
   }, [bidCursor, bidsHasNext, numericId]);
 
@@ -605,13 +605,14 @@ export function ProductDetailPage() {
             <hr className="border-t border-stone-100 mb-5" />
 
             {/* Description */}
-            <p className="text-sm font-light text-black leading-relaxed whitespace-pre-line mb-5">
+            <p className="text-[15px] font-light text-black leading-relaxed whitespace-pre-line mb-5">
               {item.description}
             </p>
 
-            {/* Timer */}
+            {/* 마감·등록 시각 */}
             <div className="flex items-center flex-nowrap gap-1.5 mb-5">
-              <p className="text-xs text-stone-500 whitespace-nowrap">경매종료:{" "}<span ref={countdownSpanRef} className="text-stone-500 tabular-nums" /></p>
+              <p className="text-xs text-stone-500 whitespace-nowrap tabular-nums">{formatEndDateTime(item.end_at)} 마감</p>
+              <p className="ml-auto text-xs text-stone-500 whitespace-nowrap tabular-nums">{formatKoreanDate(item.created_at)} 등록</p>
             </div>
 
             {/* Buttons */}
@@ -667,15 +668,16 @@ export function ProductDetailPage() {
               </div>
             )}
 
+            {/* 결제 안내: 결제는 토스페이먼츠 결제위젯으로 진행한다(PaymentCheckoutPage) */}
             <div className="w-full flex items-center justify-center gap-2 text-xs text-stone-700 bg-gray-100 px-4 h-11 rounded mt-4">
-              <ShieldCheck className="w-4 h-4 flex-shrink-0 text-sky-400" />
-              <span>이그노아 안전결제로 걱정없이 거래하세요.</span>
+              <img src={tossPaymentsIcon} alt="" className="w-4 h-4 flex-shrink-0" />
+              <span>토스페이먼츠로 안전하게 결제할 수 있어요.</span>
             </div>
 
             {/* Bid History — 5건 높이만 보여주고 그 안에서 스크롤한다 (한 줄 41px) */}
             <h2 className="text-base font-semibold text-black mt-12 mb-4">입찰 이력</h2>
             <div
-              className="max-h-[205px] overflow-y-auto overscroll-contain pr-2 [scrollbar-width:thin] [scrollbar-color:#e5e7eb_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200"
+              className="max-h-[205px] overflow-y-auto pr-2 [scrollbar-width:thin] [scrollbar-color:#e5e7eb_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200"
               onScroll={(event) => {
                 const list = event.currentTarget;
                 // 끝에 닿기 전에 미리 불러와 스크롤이 멈추지 않게 한다
@@ -698,12 +700,15 @@ export function ProductDetailPage() {
                         <span className="text-sm font-medium text-stone-800">{bid.price.toLocaleString()}원</span>
                         {index === 0 && <span className="w-1.5 h-1.5 rounded-full bg-green-500" />}
                       </div>
-                      <span className="text-[11px] text-gray-500">
-                        {bid.bidder_nickname} · {formatBidTime(bid.created_at)}
+                      <span className="text-xs text-gray-500">
+                        {bid.bidder_nickname} · {formatShortDateTime(bid.created_at)}
                       </span>
                     </motion.div>
                   ))}
                 </AnimatePresence>
+              )}
+              {loadingOlderBids && (
+                <p className="py-2.5 text-center text-[11px] text-gray-400">이전 입찰을 불러오는 중…</p>
               )}
             </div>
           </div>
