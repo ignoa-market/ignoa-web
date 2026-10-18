@@ -11,3 +11,8 @@
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* 고정된 상단 영역도 모달이 스크롤을 잠근 동안 스크롤바 폭만큼 비켜 선다 (useModalBehavior가 값을 넣는다) */
+.width-before-scroll-bar {
+  margin-right: var(--modal-scrollbar-gap, 0px);
+}

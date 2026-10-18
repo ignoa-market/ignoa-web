@@ -12,7 +12,14 @@ export function useModalBehavior<T extends HTMLElement>(open: boolean, onClose: 
     if (!open) return;
     const previousFocus = document.activeElement as HTMLElement | null;
     const previousOverflow = document.body.style.overflow;
+    const previousPaddingRight = document.body.style.paddingRight;
+    // 스크롤을 잠그면 스크롤바가 사라져 화면이 그 폭만큼 밀린다. 같은 폭을 여백으로 채워 움직이지 않게 한다
+    const scrollbarGap = window.innerWidth - document.documentElement.clientWidth;
     document.body.style.overflow = "hidden";
+    if (scrollbarGap > 0) {
+      document.body.style.paddingRight = `${scrollbarGap}px`;
+      document.documentElement.style.setProperty("--modal-scrollbar-gap", `${scrollbarGap}px`);
+    }
 
     // 열리면 모달 안 첫 요소로 포커스를 옮긴다(애니메이션 렌더 이후)
     const focusTimer = window.setTimeout(() => {
@@ -44,6 +51,8 @@ export function useModalBehavior<T extends HTMLElement>(open: boolean, onClose: 
       window.clearTimeout(focusTimer);
       document.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = previousOverflow;
+      document.body.style.paddingRight = previousPaddingRight;
+      document.documentElement.style.removeProperty("--modal-scrollbar-gap");
       previousFocus?.focus?.();
     };
   }, [open]);
