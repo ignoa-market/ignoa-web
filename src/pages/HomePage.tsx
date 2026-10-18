@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { homeItemsCache } from "@/store/homeItemsCache";
 import { wishStore } from "@/store/wishStore";
 import { ProductCard } from "@/components/common/ProductCard";
@@ -76,6 +76,8 @@ function syncWishes(items: ItemSummary[]) {
   items.forEach((item) => wishStore.sync(item.item_id, item.is_wished, item.wish_count));
 }
 
+const LATEST_PAGE_SIZE = 20;
+
 export function HomePage() {
   const { isAuthenticated, isInitializing } = useAuth();
   const [ctaSlide, setCtaSlide] = useState(0);
@@ -83,18 +85,29 @@ export function HomePage() {
   // 뒤로가기로 돌아온 경우 캐시한 목록을 바로 그린다(로딩·등장 애니메이션 없이)
   const [cached] = useState(() => homeItemsCache.get(isAuthenticated));
   const [popularItems, setPopularItems] = useState<ItemSummary[]>(cached?.popular ?? []);
+  const [endingSoonItems, setEndingSoonItems] = useState<ItemSummary[]>(cached?.endingSoon ?? []);
   const [allItems, setAllItems] = useState<ItemSummary[]>(cached?.all ?? []);
   const [popularLoading, setPopularLoading] = useState(!cached?.popular);
+  const [endingSoonLoading, setEndingSoonLoading] = useState(!cached?.endingSoon);
   const [allLoading, setAllLoading] = useState(!cached?.all);
   const [popularError, setPopularError] = useState(false);
+  const [endingSoonError, setEndingSoonError] = useState(false);
   const [allError, setAllError] = useState(false);
   const [popularReload, setPopularReload] = useState(0);
+  const [endingSoonReload, setEndingSoonReload] = useState(0);
   const [allReload, setAllReload] = useState(0);
+  const [allNextCursor, setAllNextCursor] = useState<number | null>(cached?.allNextCursor ?? null);
+  const [allHasNext, setAllHasNext] = useState(cached?.allHasNext ?? false);
+  const [allLoadingMore, setAllLoadingMore] = useState(false);
+  const allLoadingMoreRef = useRef(false);
+  const allSentinelRef = useRef<HTMLDivElement>(null);
 
   const popularRef = useRef(null);
+  const endingSoonRef = useRef(null);
   const allProductsRef = useRef(null);
 
   const popularInView = useInView(popularRef, { once: true, amount: 0.1 });
+  const endingSoonInView = useInView(endingSoonRef, { once: true, amount: 0.1 });
   const allProductsInView = useInView(allProductsRef, { once: true, amount: 0.1 });
 
   useEffect(() => {
@@ -121,21 +134,80 @@ export function HomePage() {
   useEffect(() => {
     if (isInitializing) return;
     let stale = false;
-    const hasCache = Boolean(homeItemsCache.get(isAuthenticated)?.all);
+    const hasCache = Boolean(homeItemsCache.get(isAuthenticated)?.endingSoon);
+    if (!hasCache) setEndingSoonLoading(true);
+    setEndingSoonError(false);
+    itemApi
+      .getItems({ view: "ENDING_SOON", size: 5 }, { public: !isAuthenticated })
+      .then((res) => {
+        if (stale) return;
+        setEndingSoonItems(res.content);
+        homeItemsCache.set(isAuthenticated, { endingSoon: res.content });
+        syncWishes(res.content);
+      })
+      .catch(() => { if (!stale && !hasCache) setEndingSoonError(true); })
+      .finally(() => { if (!stale) setEndingSoonLoading(false); });
+    return () => { stale = true; };
+  }, [isAuthenticated, isInitializing, endingSoonReload]);
+
+  useEffect(() => {
+    if (isInitializing) return;
+    let stale = false;
+    const cachedAll = homeItemsCache.get(isAuthenticated)?.all;
+    const hasCache = Boolean(cachedAll);
+    // 이어 받은 페이지까지 캐시돼 있으면 뒤로가기 스크롤 위치를 지키려고 첫 페이지로 덮어쓰지 않는다
+    if (cachedAll && cachedAll.length > LATEST_PAGE_SIZE) return;
     if (!hasCache) setAllLoading(true);
     setAllError(false);
     itemApi
-      .getItems({ view: "ALL", size: 20 }, { public: !isAuthenticated })
+      .getItems({ view: "LATEST", size: LATEST_PAGE_SIZE }, { public: !isAuthenticated })
       .then((res) => {
         if (stale) return;
         setAllItems(res.content);
-        homeItemsCache.set(isAuthenticated, { all: res.content });
+        setAllNextCursor(res.next_cursor);
+        setAllHasNext(res.has_next);
+        homeItemsCache.set(isAuthenticated, { all: res.content, allNextCursor: res.next_cursor, allHasNext: res.has_next });
         syncWishes(res.content);
       })
       .catch(() => { if (!stale && !hasCache) setAllError(true); })
       .finally(() => { if (!stale) setAllLoading(false); });
     return () => { stale = true; };
   }, [isAuthenticated, isInitializing, allReload]);
+
+  // 최신순 목록 끝에 닿으면 next_cursor로 다음 페이지를 이어 받는다
+  const loadMoreLatest = useCallback(() => {
+    if (allLoadingMoreRef.current || !allHasNext || allNextCursor === null) return;
+    allLoadingMoreRef.current = true;
+    setAllLoadingMore(true);
+    itemApi
+      .getItems({ view: "LATEST", cursor: allNextCursor, size: LATEST_PAGE_SIZE }, { public: !isAuthenticated })
+      .then((res) => {
+        setAllItems((prev) => {
+          const known = new Set(prev.map((item) => item.item_id));
+          const next = [...prev, ...res.content.filter((item) => !known.has(item.item_id))];
+          homeItemsCache.set(isAuthenticated, { all: next, allNextCursor: res.next_cursor, allHasNext: res.has_next });
+          return next;
+        });
+        setAllNextCursor(res.next_cursor);
+        setAllHasNext(res.has_next);
+        syncWishes(res.content);
+      })
+      .catch(() => {})
+      .finally(() => {
+        allLoadingMoreRef.current = false;
+        setAllLoadingMore(false);
+      });
+  }, [allHasNext, allNextCursor, isAuthenticated]);
+
+  useEffect(() => {
+    const sentinel = allSentinelRef.current;
+    if (!sentinel || !allHasNext) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) loadMoreLatest();
+    }, { rootMargin: "400px" });
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [allHasNext, loadMoreLatest]);
 
   const goToSlide = (next: number) => {
     setSlideDir(next > ctaSlide ? 1 : -1);
@@ -352,7 +424,47 @@ export function HomePage() {
         </div>
       </motion.section>
 
-      {/* Section 4: All Products */}
+      {/* Section 4: Ending Soon */}
+      <div className="max-w-[1400px] mx-auto px-8 pt-24">
+        <motion.div
+          ref={endingSoonRef}
+          initial={cached ? false : { opacity: 0, y: 40 }}
+          animate={endingSoonInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+        >
+          <div className="mb-8">
+            <p className="text-[13px] font-normal uppercase tracking-[0.2em] text-gray-400">Last Chance</p>
+            <h2 className="mt-1 text-2xl font-bold text-black md:text-3xl">오늘이 지나면 만날 수 없는</h2>
+          </div>
+
+          {endingSoonLoading ? (
+            <div className="grid grid-cols-5 gap-3 md:gap-4">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="aspect-square bg-gray-100 rounded-lg animate-pulse" />
+              ))}
+            </div>
+          ) : endingSoonError ? (
+            <div className="flex flex-col items-center justify-center gap-3 py-16 text-sm text-gray-400">
+              <p>마감 임박 상품을 불러오지 못했습니다.</p>
+              <button type="button" onClick={() => setEndingSoonReload((value) => value + 1)} className="text-black underline underline-offset-4">
+                다시 시도
+              </button>
+            </div>
+          ) : endingSoonItems.length > 0 ? (
+            <div className="grid grid-cols-5 gap-3 md:gap-4">
+              {endingSoonItems.map((item) => (
+                <div key={item.item_id}>
+                  <ProductCard product={toProductCardProps(item)} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-16 text-center text-sm text-gray-300">마감이 다가오는 경매가 없습니다.</div>
+          )}
+        </motion.div>
+      </div>
+
+      {/* Section 5: All Products */}
       <div className="max-w-[1400px] mx-auto px-8 pt-24 pb-24">
         <motion.div
           ref={allProductsRef}
@@ -384,6 +496,16 @@ export function HomePage() {
                 <div key={item.item_id}>
                   <ProductCard product={toProductCardProps(item)} />
                 </div>
+              ))}
+            </div>
+          )}
+
+          {/* 무한 스크롤 감지 지점 */}
+          <div ref={allSentinelRef} />
+          {allLoadingMore && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4 mt-3 md:mt-4">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="aspect-square bg-gray-100 rounded-lg animate-pulse" />
               ))}
             </div>
           )}

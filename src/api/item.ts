@@ -20,8 +20,7 @@ import type {
 
 export interface ItemListParams {
   view?: ItemViewType;
-  category?: string;
-  page?: number;
+  cursor?: number;
   size?: number;
 }
 
@@ -50,13 +49,12 @@ export const itemApi = {
   getItems: (params: ItemListParams = {}, options?: { public?: boolean }) => {
     const query = new URLSearchParams();
     if (params.view) query.set("view", params.view);
-    if (params.category) query.set("category", params.category);
-    if (params.page !== undefined) query.set("page", String(params.page));
+    if (params.cursor !== undefined) query.set("cursor", String(params.cursor));
     if (params.size !== undefined) query.set("size", String(params.size));
     const path = `/api/items?${query}`;
     return options?.public
-      ? api.publicGet<SliceResponse<ItemSummary>>(path)
-      : api.get<SliceResponse<ItemSummary>>(path);
+      ? api.publicGet<CursorResponse<ItemSummary>>(path)
+      : api.get<CursorResponse<ItemSummary>>(path);
   },
 
   getItem: (itemId: number) =>
@@ -102,8 +100,8 @@ export const bidApi = {
   placeBid: (itemId: number, price: number) =>
     api.post<BidResponse>(`/api/items/${itemId}/bids`, { price }),
 
-  getBids: (itemId: number, beforeBidId?: number) => {
-    const query = beforeBidId !== undefined ? `?beforeBidId=${beforeBidId}` : "";
+  getBids: (itemId: number, cursor?: number) => {
+    const query = cursor !== undefined ? `?cursor=${cursor}` : "";
     return api.get<CursorResponse<BidHistory>>(`/api/items/${itemId}/bids${query}`);
   },
 };

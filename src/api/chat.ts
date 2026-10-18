@@ -20,9 +20,9 @@ export const chatApi = {
   getChatRoom: (chatRoomId: number) =>
     api.get<ChatRoomPreview>(`/api/chat-rooms/${chatRoomId}`),
 
-  getMessages: (chatRoomId: number, beforeMessageId?: number, size = 30) => {
+  getMessages: (chatRoomId: number, cursor?: number, size = 30) => {
     const query = new URLSearchParams({ size: String(size) });
-    if (beforeMessageId !== undefined) query.set("beforeMessageId", String(beforeMessageId));
+    if (cursor !== undefined) query.set("cursor", String(cursor));
     return api.get<CursorResponse<ChatMessageResponse>>(
       `/api/chat-rooms/${chatRoomId}/messages?${query}`
     );

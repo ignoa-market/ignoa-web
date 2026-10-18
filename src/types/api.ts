@@ -50,7 +50,7 @@ export interface UserMeResponse {
 // BUY_NOW_PENDING: 즉시구매 결제 중. 화면에서는 판매 중(ACTIVE)과 같게 보여준다
 export type ItemStatus = "ACTIVE" | "BUY_NOW_PENDING" | "BID_CLOSED" | "NO_BID_CLOSED" | "BUY_NOW_CLOSED";
 export type ItemCondition = "NEW" | "LIKE_NEW" | "GOOD" | "FAIR";
-export type ItemViewType = "ALL" | "POPULAR" | "ENDING_SOON" | "LATEST";
+export type ItemViewType = "POPULAR" | "ENDING_SOON" | "LATEST";
 export type ItemMediaType = "IMAGE" | "VIDEO";
 
 export interface ItemSummary {

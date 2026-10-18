@@ -5,7 +5,11 @@ import type { ItemSummary } from "@/types/api";
 interface HomeItemsCache {
   authenticated: boolean;
   popular?: ItemSummary[];
+  endingSoon?: ItemSummary[];
   all?: ItemSummary[];
+  // 최신순 무한 스크롤 위치: 이어 받을 커서와 다음 페이지 여부
+  allNextCursor?: number | null;
+  allHasNext?: boolean;
 }
 
 let cache: HomeItemsCache | null = null;
@@ -14,7 +18,7 @@ export const homeItemsCache = {
   get(authenticated: boolean) {
     return cache?.authenticated === authenticated ? cache : null;
   },
-  set(authenticated: boolean, values: Pick<HomeItemsCache, "popular" | "all">) {
+  set(authenticated: boolean, values: Partial<Omit<HomeItemsCache, "authenticated">>) {
     const base = cache?.authenticated === authenticated ? cache : { authenticated };
     cache = { ...base, ...values };
   },
