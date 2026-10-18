@@ -9,7 +9,7 @@ import { itemApi } from "@/api/item";
 import { tradeApi } from "@/api/trade";
 import { useAuth } from "@/context/AuthContext";
 import { useChat } from "@/context/ChatContext";
-import type { ApiError, ChatMessageResponse, ChatRoomPreview, ItemDetailResponse, MyTradeResponse } from "@/types/api";
+import type { ApiError, ChatMessageResponse, ChatRoomPreview, CursorResponse, ItemDetailResponse, MyTradeResponse } from "@/types/api";
 import { toast } from "sonner";
 
 const formatRoomTime = (value: string | null, fallback: string) =>
@@ -22,6 +22,12 @@ const mergeMessages = (...groups: ChatMessageResponse[][]) => {
   const merged = new Map<number, ChatMessageResponse>();
   groups.flat().forEach((message) => merged.set(message.message_id, message));
   return [...merged.values()].sort((a, b) => a.message_id - b.message_id);
+};
+
+// 다음 요청의 기준 메시지 ID. 이전 서버는 next_cursor를 보내지 않아 가장 오래된 메시지 ID로 대신한다 — 백엔드 릴리스 후 next_cursor만 사용
+const nextMessageCursor = (result: CursorResponse<ChatMessageResponse>) => {
+  if (result.next_cursor !== undefined) return result.next_cursor;
+  return result.has_next ? result.content[result.content.length - 1]?.message_id ?? null : null;
 };
 
 const roomActivityTime = (room: ChatRoomPreview) =>
@@ -70,6 +76,7 @@ export function MessagesPage() {
   const [draftItem, setDraftItem] = useState<ItemDetailResponse | null>(null);
   const [isDraftLoading, setIsDraftLoading] = useState(hasRequestedItem && !selectedChat);
   const [hasOlderMessages, setHasOlderMessages] = useState(false);
+  const [olderMessagesCursor, setOlderMessagesCursor] = useState<number | null>(null);
   const selectedChatRef = useRef<number | null>(selectedChat);
   const sendingRef = useRef(false);
   const chatsRef = useRef<ChatRoomPreview[]>([]);
@@ -218,6 +225,7 @@ export function MessagesPage() {
           )
         ));
         setHasOlderMessages(result.has_next);
+        setOlderMessagesCursor(nextMessageCursor(result));
         scrollToBottom();
       })
       .catch(() => {
@@ -237,6 +245,7 @@ export function MessagesPage() {
     messageLoadGenerationRef.current += 1;
     selectedChatRef.current = chatRoomId;
     setMessages([]);
+    setOlderMessagesCursor(null);
     setDraftItem(null);
     setSelectedChat(chatRoomId);
     if (chatRoomId) setSearchParams({ chatRoomId: String(chatRoomId) }, { replace: true, preventScrollReset: true });
@@ -244,18 +253,19 @@ export function MessagesPage() {
   };
 
   const loadOlderMessages = async () => {
-    if (!selectedChat || !messages[0] || isMessagesLoading) return;
+    if (!selectedChat || olderMessagesCursor === null || isMessagesLoading) return;
     const requestedChatRoomId = selectedChat;
     const loadGeneration = messageLoadGenerationRef.current;
     const scrollContainer = messageScrollRef.current;
     const previousScrollHeight = scrollContainer?.scrollHeight ?? 0;
     setIsMessagesLoading(true);
     try {
-      const result = await chatApi.getMessages(selectedChat, messages[0].message_id);
+      const result = await chatApi.getMessages(selectedChat, olderMessagesCursor);
       if (selectedChatRef.current !== requestedChatRoomId
         || loadGeneration !== messageLoadGenerationRef.current) return;
       setMessages((current) => mergeMessages([...result.content].reverse(), current));
       setHasOlderMessages(result.has_next);
+      setOlderMessagesCursor(nextMessageCursor(result));
       requestAnimationFrame(() => {
         if (scrollContainer) scrollContainer.scrollTop += scrollContainer.scrollHeight - previousScrollHeight;
       });
