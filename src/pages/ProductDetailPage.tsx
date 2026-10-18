@@ -26,12 +26,19 @@ import {
 // recharts는 그래프 영역이 화면에 보일 때만 불러온다
 const BidChart = lazy(() => import("@/components/product/BidChart"));
 
-// 서버 목록에 소켓으로 먼저 받은 입찰(임시 id < 0) 중 아직 반영되지 않은 것을 합친다
+// 입찰가는 오르기만 하므로, 서버 목록 최고가보다 높은 로컬 입찰은 조회 이후 소켓으로 받은 것이다
 function mergeBids(server: BidHistory[], local: BidHistory[]) {
-  const pending = local.filter((item) => item.bid_id < 0
-    && !server.some((s) => s.price === item.price && s.created_at === item.created_at));
+  const serverTop = server[0]?.price ?? 0;
+  const pending = local.filter((item) => item.price > serverTop);
   if (pending.length === 0) return server;
-  return [...pending, ...server].sort((a, b) => b.created_at.localeCompare(a.created_at));
+  return [...pending, ...server];
+}
+
+// 입찰 시각 표시: 10.18 14:32
+function formatBidTime(createdAt: string) {
+  const date = new Date(createdAt);
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${pad(date.getMonth() + 1)}.${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 // 즉시구매 실패 메시지: 다른 구매자가 결제 중이면 그 사실을 알려준다
@@ -165,7 +172,7 @@ export function ProductDetailPage() {
     bidApi
       .getBids(numericId)
       .then((res) => {
-        if (requestId === bidRefreshRef.current) setBids((prev) => mergeBids(res, prev));
+        if (requestId === bidRefreshRef.current) setBids((prev) => mergeBids(res.content, prev));
       })
       .catch(() => {
         if (requestId === bidRefreshRef.current) setBids([]);
@@ -182,21 +189,23 @@ export function ProductDetailPage() {
       (bid) => {
         if (!active) return;
         livePriceVersionRef.current += 1;
-        setDisplayPrice(bid.current_price);
+        // 입찰가는 오르기만 하므로 늦게 도착한 낮은 값으로 덮어쓰지 않는다
+        setDisplayPrice((prev) => Math.max(prev, bid.current_price));
         setPriceAnimKey((key) => key + 1);
         // 알림에 담긴 값으로 목록을 바로 갱신한다(재조회 없음). 경매 중 입찰 상태는 항상 ACTIVE
         setBids((prev) => {
-          const duplicated = prev.some((item) =>
-            item.price === bid.current_price && item.created_at === bid.created_at);
+          const duplicated = prev.some((item) => bid.bid_id !== undefined
+            ? item.bid_id === bid.bid_id
+            : item.price === bid.current_price);
           if (duplicated) return prev;
           const next: BidHistory = {
-            bid_id: -(prev.length + 1) - Date.now(),
+            bid_id: bid.bid_id ?? -Date.now(),
             bidder_nickname: bid.bidder_nickname,
             price: bid.current_price,
             status: "ACTIVE",
             created_at: bid.created_at,
           };
-          return [next, ...prev].sort((a, b) => b.created_at.localeCompare(a.created_at));
+          return [next, ...prev].sort((a, b) => b.price - a.price);
         });
       },
       (reconnected) => {
@@ -219,7 +228,7 @@ export function ProductDetailPage() {
         const bidRequestId = ++bidRefreshRef.current;
         bidApi.getBids(numericId)
           .then((nextBids) => {
-            if (active && bidRequestId === bidRefreshRef.current) setBids((prev) => mergeBids(nextBids, prev));
+            if (active && bidRequestId === bidRefreshRef.current) setBids((prev) => mergeBids(nextBids.content, prev));
           })
           .catch(() => {});
       }
@@ -337,15 +346,10 @@ export function ProductDetailPage() {
       } else {
         await bidApi.placeBid(numericId, amount);
         toast.success(`입찰 완료: ${amount.toLocaleString()}원`);
-        setDisplayPrice(amount);
+        // 다른 사람의 더 높은 입찰 알림이 응답보다 먼저 왔을 수 있다
+        setDisplayPrice((prev) => Math.max(prev, amount));
         setPriceAnimKey((k) => k + 1);
-        // 소켓이 끊긴 경우를 대비해 내 입찰 직후 한 번 맞춘다
-        const requestId = ++bidRefreshRef.current;
-        bidApi.getBids(numericId)
-          .then((res) => {
-            if (requestId === bidRefreshRef.current) setBids((prev) => mergeBids(res, prev));
-          })
-          .catch(() => {});
+        // 입찰 이력은 소켓 알림으로만 갱신한다(끊겨 있었다면 재연결 시 다시 조회)
       }
       setBidModalOpen(false);
       setBidStep("input");
@@ -359,10 +363,7 @@ export function ProductDetailPage() {
 
   // 입찰 내역을 차트용 데이터로 변환
   const chartData = [...bids].reverse().map((bid) => ({
-    time: new Date(bid.created_at).toLocaleTimeString("ko-KR", {
-      hour: "2-digit",
-      minute: "2-digit",
-    }),
+    time: formatBidTime(bid.created_at),
     price: bid.price,
   }));
 
@@ -633,17 +634,9 @@ export function ProductDetailPage() {
             </Avatar>
             <div className="flex flex-col gap-1">
               <p className="text-base font-semibold text-stone-800">{item.seller.nickname}</p>
-              <div className="flex items-center gap-2 text-xs text-gray-400">
-                <span>매너 <span className="font-semibold text-stone-600">4.5</span></span>
-                <span className="text-gray-200">·</span>
-                <span>팔로워 <span className="text-stone-600 font-semibold">0</span></span>
-                {item.seller.address && (
-                  <>
-                    <span className="text-gray-200">·</span>
-                    <span>{item.seller.address}</span>
-                  </>
-                )}
-              </div>
+              {item.seller.address && (
+                <p className="text-xs text-gray-400">{item.seller.address}</p>
+              )}
             </div>
             <div className="ml-6 flex items-center gap-3 self-center">
               <button
@@ -675,7 +668,7 @@ export function ProductDetailPage() {
         {/* Bid History Section */}
         <div className="mt-2 pt-2">
           <h2 className="text-lg font-semibold text-black mb-8">
-            입찰 이력 <span className="text-sm text-gray-400 font-normal">({bids.length}건)</span>
+            입찰 이력
           </h2>
 
           <div className="grid lg:grid-cols-5 gap-8">
@@ -700,21 +693,12 @@ export function ProductDetailPage() {
                       key={bid.bid_id}
                       className="flex items-center justify-between py-2.5 border-b border-gray-100 last:border-0"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="text-xs text-gray-400 font-medium w-8">
-                          #{bids.length - index}
+                      <div>
+                        <div className="text-sm font-semibold text-black">
+                          {bid.price.toLocaleString()}원
                         </div>
-                        <div>
-                          <div className="text-sm font-semibold text-black">
-                            {bid.price.toLocaleString()}원
-                          </div>
-                          <div className="text-[11px] text-gray-500">
-                            {bid.bidder_nickname} ·{" "}
-                            {new Date(bid.created_at).toLocaleTimeString("ko-KR", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </div>
+                        <div className="text-[11px] text-gray-500">
+                          {bid.bidder_nickname} · {formatBidTime(bid.created_at)}
                         </div>
                       </div>
                       {index === 0 && (

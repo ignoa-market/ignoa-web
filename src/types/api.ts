@@ -8,6 +8,12 @@ export interface SliceResponse<T> {
   has_next: boolean;
 }
 
+export interface CursorResponse<T> {
+  content: T[];
+  next_cursor: number | null;
+  has_next: boolean;
+}
+
 export interface ApiError {
   code: string;
   message: string;
