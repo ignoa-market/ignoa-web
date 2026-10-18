@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { useSearchParams } from "react-router";
-import { Mail, User, MapPin, Camera, Search, X, CheckCircle2, Trash2, Pencil } from "lucide-react";
+import { Link, useSearchParams } from "react-router";
+import { User, Camera, Search, CheckCircle2, Pencil } from "lucide-react";
 import { ProductCard } from "@/components/common/ProductCard";
 import { ImageWithFallback } from "@/components/common/ImageWithFallback";
 import { AddressModal } from "@/components/common/AddressModal";
@@ -11,11 +11,25 @@ import { motion, AnimatePresence } from "motion/react";
 import { userApi } from "@/api/auth";
 import { itemApi, wishApi } from "@/api/item";
 import { wishStore } from "@/store/wishStore";
-import type { ApiError, ItemStatus, ItemSummary, WishSummary } from "@/types/api";
+import type { ApiError, ItemStatus, ItemSummary, PurchaseSummary, WishSummary } from "@/types/api";
 import { MAX_AUCTION_EXTENSION_COUNT } from "@/constants/auction";
+import { useModalBehavior } from "@/hooks/useModalBehavior";
+import {
+  ACTION_MODAL_ACTION_CLASS,
+  ACTION_MODAL_CANCEL_CLASS,
+  ACTION_MODAL_CONTENT_CLASS,
+  ACTION_MODAL_FOOTER_CLASS,
+  ACTION_MODAL_TITLE_CLASS,
+} from "@/constants/actionModal";
 
+// 서버 검증(UpdateUserRequest)과 같은 값
+const BIO_MAX_LENGTH = 100;
 
-const TAB_IDS = ["products", "bidding", "wishlist"] as const;
+const TAB_IDS = ["products", "sold", "bidding", "won", "purchased", "wishlist"] as const;
+
+// 팔린 상품. 유찰(NO_BID_CLOSED)은 팔린 게 아니라 판매중 탭에 종료 표시로 남긴다
+const SOLD_STATUSES: ItemStatus[] = ["BID_CLOSED", "BUY_NOW_CLOSED"];
+const IN_PROGRESS_STATUSES: ItemStatus[] = ["ACTIVE", "BUY_NOW_PENDING"];
 type TabId = (typeof TAB_IDS)[number];
 
 export function ProfilePage() {
@@ -24,13 +38,14 @@ export function ProfilePage() {
   const activeTab: TabId = TAB_IDS.includes(tabParam as TabId) ? (tabParam as TabId) : "products";
   const setActiveTab = (tab: TabId) => setSearchParams({ tab }, { replace: true });
   const [isEditing, setIsEditing] = useState(false);
-  const [showFollowModal, setShowFollowModal] = useState<"followers" | "following" | null>(null);
 
   const [email, setEmail] = useState("");
   const [userName, setUserName] = useState("");
   const [address, setAddress] = useState("");
   const [savedName, setSavedName] = useState("");
   const [savedAddr, setSavedAddr] = useState("");
+  const [bio, setBio] = useState("");
+  const [savedBio, setSavedBio] = useState("");
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [isNicknameChecking, setIsNicknameChecking] = useState(false);
@@ -39,6 +54,7 @@ export function ProfilePage() {
 
   const [myItems, setMyItems] = useState<ItemSummary[]>([]);
   const [biddingItems, setBiddingItems] = useState<ItemSummary[]>([]);
+  const [purchases, setPurchases] = useState<PurchaseSummary[]>([]);
   const [wishItems, setWishItems] = useState<WishSummary[]>([]);
   const [tabLoading, setTabLoading] = useState(true);
 
@@ -57,6 +73,13 @@ export function ProfilePage() {
         );
       setMyItems(mirror);
       setBiddingItems(mirror);
+      setPurchases((prev) =>
+        prev.map((purchase) =>
+          purchase.item.item_id === id
+            ? { ...purchase, item: { ...purchase.item, is_wished: state.wished, wish_count: state.count } }
+            : purchase
+        )
+      );
 
       if (source === "toggle" && !state.wished) {
         setWishItems((prev) => prev.filter((item) => item.item_id !== id));
@@ -69,7 +92,7 @@ export function ProfilePage() {
   }, [fetchWishes]);
 
   const isNicknameDirty = userName !== savedName;
-  const isDirty = isNicknameDirty || address !== savedAddr;
+  const isDirty = isNicknameDirty || address !== savedAddr || bio !== savedBio;
   const canSave = isDirty && (!isNicknameDirty || isNicknameAvailable === true);
 
   useEffect(() => {
@@ -79,6 +102,8 @@ export function ProfilePage() {
       setSavedName(res.nickname);
       setAddress(res.address);
       setSavedAddr(res.address);
+      setBio(res.bio ?? "");
+      setSavedBio(res.bio ?? "");
       setProfileImage(res.profile_image_url);
     }).catch(() => {
       toast.error("유저 정보를 불러오지 못했습니다");
@@ -89,6 +114,7 @@ export function ProfilePage() {
     Promise.all([
       userApi.getMyItems().then(setMyItems),
       userApi.getMyBids().then(setBiddingItems),
+      userApi.getMyPurchases().then(setPurchases),
       fetchWishes(),
     ])
       .catch(() => toast.error("목록을 불러오지 못했습니다"))
@@ -112,11 +138,32 @@ export function ProfilePage() {
     }
   };
 
+  const closeEdit = () => {
+    setUserName(savedName);
+    setAddress(savedAddr);
+    setBio(savedBio);
+    setIsNicknameAvailable(null);
+    setNicknameError("");
+    setIsEditing(false);
+  };
+
+  // 주소 검색 창이 열려 있으면 Esc가 프로필 모달까지 닫지 않게 한다
+  const editModalRef = useModalBehavior<HTMLDivElement>(isEditing, () => {
+    if (!showAddressModal) closeEdit();
+  });
+
   const handleSaveProfile = async () => {
     try {
-      const res = await userApi.updateProfile(userName, address);
+      // 바뀌지 않은 닉네임을 보내면 서버가 내 닉네임을 중복으로 판단하므로 바뀐 항목만 보낸다
+      const res = await userApi.updateProfile({
+        nickname: isNicknameDirty ? userName : undefined,
+        address: address !== savedAddr ? address : undefined,
+        bio: bio !== savedBio ? bio.trim() : undefined,
+      });
       setSavedName(res.nickname);
       setSavedAddr(res.address);
+      setBio(res.bio ?? "");
+      setSavedBio(res.bio ?? "");
       setIsEditing(false);
       toast.success("프로필이 업데이트되었습니다!");
     } catch (err) {
@@ -208,21 +255,37 @@ export function ProfilePage() {
     isEnded: new Date(w.end_at) < new Date(),
   });
 
-  const followers: { id: string; name: string }[] = [];
-  const following: { id: string; name: string }[] = [];
 
-  const tabs: { id: TabId; label: string; count: number }[] = [
-    { id: "products", label: "판매중", count: myItems.length },
-    { id: "bidding",  label: "입찰중", count: biddingItems.length },
-    { id: "wishlist", label: "찜목록", count: wishItems.length },
+  const sellingItems = myItems.filter((item) => !SOLD_STATUSES.includes(item.status));
+  const soldItems = myItems.filter((item) => SOLD_STATUSES.includes(item.status));
+  const activeBidItems = biddingItems.filter((item) => IN_PROGRESS_STATUSES.includes(item.status));
+  const wonItems = purchases.filter((p) => p.trade_status !== "PAID").map((p) => p.item);
+  const purchasedItems = purchases.filter((p) => p.trade_status === "PAID").map((p) => p.item);
+
+  const tabs: { id: TabId; label: string; items: ProfileCard[] }[] = [
+    { id: "products",  label: "판매중",   items: sellingItems.map(itemToCard) },
+    { id: "sold",      label: "판매완료", items: soldItems.map(itemToCard) },
+    { id: "bidding",   label: "입찰중",   items: activeBidItems.map(itemToCard) },
+    { id: "won",       label: "낙찰",     items: wonItems.map(itemToCard) },
+    { id: "purchased", label: "구매완료", items: purchasedItems.map(itemToCard) },
+    { id: "wishlist",  label: "찜목록",   items: wishItems.map(wishToCard) },
   ];
 
-  const currentCards: ProfileCard[] =
-    activeTab === "products" ? myItems.map(itemToCard) :
-    activeTab === "bidding"  ? biddingItems.map(itemToCard) :
-    wishItems.map(wishToCard);
+  const tabById = (id: TabId) => tabs.find((tab) => tab.id === id)!;
 
-  const followList = showFollowModal === "followers" ? followers : following;
+  const currentCards: ProfileCard[] = tabById(activeTab).items;
+
+  const browseAction = { label: "경매 둘러보기", to: "/app" };
+  const emptyStates: Record<TabId, { message: string; action?: { label: string; to: string } }> = {
+    products: { message: "판매 중인 상품이 없어요", action: { label: "상품 등록하기", to: "/app/register-product" } },
+    sold: { message: "아직 판매된 상품이 없어요" },
+    bidding: { message: "진행 중인 입찰이 없어요", action: browseAction },
+    won: { message: "결제를 기다리는 낙찰이 없어요" },
+    purchased: { message: "구매를 완료한 상품이 없어요" },
+    wishlist: { message: "찜한 상품이 없어요", action: browseAction },
+  };
+  const emptyState = emptyStates[activeTab];
+
 
   return (
     <div className="min-h-screen bg-white pt-[170px] pb-28">
@@ -232,7 +295,8 @@ export function ProfilePage() {
 
           {/* Left: Avatar + Info */}
           <div className="flex items-center gap-5">
-            <div className="relative group flex-shrink-0">
+            <div className="relative flex-shrink-0">
+              {/* 사진 변경은 프로필 수정 모달의 카메라 버튼이 이 입력을 연다 */}
               <input type="file" id="profileImageInput" accept="image/*" onChange={handleImageChange} className="hidden" />
               <div className="w-24 h-24 rounded-full bg-gray-100 overflow-hidden relative">
                 {profileImage ? (
@@ -247,25 +311,6 @@ export function ProfilePage() {
                     <User className="w-8 h-8 text-gray-300" />
                   </div>
                 )}
-                <div className="absolute inset-0 bg-black/50 flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
-                  <label
-                    htmlFor="profileImageInput"
-                    className="cursor-pointer p-1.5 rounded-full hover:bg-white/20 transition-colors"
-                    title="사진 변경"
-                  >
-                    <Camera className="w-4 h-4 text-white" />
-                  </label>
-                  {profileImage && (
-                    <button
-                      type="button"
-                      onClick={handleImageDelete}
-                      className="p-1.5 rounded-full hover:bg-white/20 transition-colors"
-                      title="사진 삭제"
-                    >
-                      <Trash2 className="w-4 h-4 text-white" />
-                    </button>
-                  )}
-                </div>
               </div>
             </div>
 
@@ -274,139 +319,22 @@ export function ProfilePage() {
                 <h1 className="text-3xl font-black text-black leading-tight">{savedName}</h1>
                 <button
                   type="button"
-                  onClick={() => {
-                    if (isEditing) {
-                      setUserName(savedName);
-                      setAddress(savedAddr);
-                      setIsNicknameAvailable(null);
-                      setNicknameError("");
-                    }
-                    setIsEditing(!isEditing);
-                  }}
+                  onClick={() => setIsEditing(true)}
                   className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-black"
-                  title={isEditing ? "수정 취소" : "프로필 수정"}
-                  aria-label={isEditing ? "수정 취소" : "프로필 수정"}
+                  title="프로필 수정"
+                  aria-label="프로필 수정"
                 >
-                  {isEditing ? <X className="h-4 w-4" /> : <Pencil className="h-3.5 w-3.5" />}
+                  <Pencil className="h-3.5 w-3.5" />
                 </button>
               </div>
               <p className="text-sm text-gray-400 mt-1">{email}</p>
-              <div className="flex items-center gap-5 mt-3">
-                <button onClick={() => setShowFollowModal("followers")} className="flex items-center gap-1.5 hover:opacity-60 transition-opacity">
-                  <span className="text-sm text-gray-400">팔로워</span>
-                  <span className="text-sm font-bold text-black">{followers.length}</span>
-                </button>
-                <button onClick={() => setShowFollowModal("following")} className="flex items-center gap-1.5 hover:opacity-60 transition-opacity">
-                  <span className="text-sm text-gray-400">팔로잉</span>
-                  <span className="text-sm font-bold text-black">{following.length}</span>
-                </button>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-sm text-gray-400">판매수</span>
-                  <span className="text-sm font-bold text-black">0</span>
-                </div>
-              </div>
+              {savedBio && (
+                <p className="mt-3 max-w-md whitespace-pre-line break-words text-sm text-gray-600">{savedBio}</p>
+              )}
             </div>
           </div>
 
         </div>
-
-        {/* Edit Form */}
-        <AnimatePresence>
-          {isEditing && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.25 }}
-              className="overflow-hidden"
-            >
-              <div className="py-10 border-b border-gray-100">
-                <p className="text-[11px] font-semibold tracking-[0.3em] text-gray-400 uppercase mb-6">프로필 수정</p>
-                <div className="grid grid-cols-2 gap-5 max-w-2xl mb-6">
-                  <div>
-                    <Label htmlFor="userName" className="text-[11px] font-semibold tracking-[0.2em] text-gray-400 uppercase mb-2 flex items-center gap-1.5">
-                      <User className="w-3 h-3" /> 닉네임
-                    </Label>
-                    <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        <Input
-                          id="userName"
-                          value={userName}
-                          onChange={(e) => {
-                            setUserName(e.target.value);
-                            setIsNicknameAvailable(null);
-                            setNicknameError("");
-                          }}
-                          className={`h-11 pr-8 border focus-visible:ring-1 focus-visible:ring-black focus-visible:border-black rounded-xl ${
-                            nicknameError ? "border-red-400" :
-                            isNicknameAvailable ? "border-green-400" :
-                            "border-gray-200"
-                          }`}
-                        />
-                        {isNicknameAvailable && (
-                          <CheckCircle2 className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500 pointer-events-none" />
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={checkNickname}
-                        disabled={isNicknameChecking || !userName.trim() || !isNicknameDirty}
-                        className="h-11 px-3 rounded-xl border border-gray-200 text-xs font-medium text-gray-600 hover:border-black hover:text-black transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
-                      >
-                        {isNicknameChecking ? "확인중..." : "중복확인"}
-                      </button>
-                    </div>
-                    <AnimatePresence>
-                      {nicknameError && (
-                        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-red-500 text-xs mt-1.5">
-                          {nicknameError}
-                        </motion.p>
-                      )}
-                      {isNicknameAvailable && !nicknameError && (
-                        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-green-600 text-xs mt-1.5">
-                          ✓ 사용 가능한 닉네임입니다
-                        </motion.p>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                  <div>
-                    <Label className="text-[11px] font-semibold tracking-[0.2em] text-gray-400 uppercase mb-2 flex items-center gap-1.5">
-                      <MapPin className="w-3 h-3" /> 주소
-                    </Label>
-                    <button
-                      type="button"
-                      onClick={() => setShowAddressModal(true)}
-                      className="w-full h-11 px-3 border border-gray-200 flex items-center justify-between text-sm hover:border-black transition-colors group rounded-xl"
-                    >
-                      <span className={address ? "text-black" : "text-gray-400"}>
-                        {address || "주소를 검색해주세요"}
-                      </span>
-                      <Search className="w-4 h-4 text-gray-400 group-hover:text-black transition-colors flex-shrink-0" />
-                    </button>
-                  </div>
-                  <div>
-                    <Label className="text-[11px] font-semibold tracking-[0.2em] text-gray-400 uppercase mb-2 flex items-center gap-1.5">
-                      <Mail className="w-3 h-3" /> 이메일
-                    </Label>
-                    <div className="h-11 px-3 rounded-xl bg-gray-50 border border-gray-200 flex items-center text-sm text-gray-400">
-                      {email}
-                    </div>
-                  </div>
-                </div>
-                <button
-                  onClick={canSave ? handleSaveProfile : undefined}
-                  className={`h-10 px-8 rounded-full text-sm font-semibold transition-all ${
-                    canSave
-                      ? "bg-black text-white hover:bg-gray-800 cursor-pointer"
-                      : "bg-white border border-gray-200 text-gray-300 cursor-default"
-                  }`}
-                >
-                  저장
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* Tabs */}
         <div className="flex items-center gap-8 mt-16 mb-8 border-b border-gray-100">
@@ -414,14 +342,14 @@ export function ProfilePage() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`min-h-10 px-1 pb-5 text-[11px] font-normal transition-colors border-b-2 -mb-px cursor-pointer touch-manipulation ${
+              className={`min-h-10 px-1 pb-5 text-[13px] font-normal transition-colors border-b-2 -mb-px cursor-pointer touch-manipulation ${
                 activeTab === tab.id
                   ? "border-black text-black"
                   : "border-transparent text-gray-400 hover:text-black"
               }`}
             >
               {tab.label}
-              <span className="ml-2">{tab.count}</span>
+              <span className="ml-2">{tab.items.length}</span>
             </button>
           ))}
         </div>
@@ -438,7 +366,7 @@ export function ProfilePage() {
             {tabLoading ? (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 md:gap-4 lg:grid-cols-5">
                 {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="aspect-square bg-gray-100 rounded-lg animate-pulse" />
+                  <div key={i} className="aspect-[3/4] bg-gray-100 rounded-xl animate-pulse" />
                 ))}
               </div>
             ) : currentCards.length > 0 ? (
@@ -468,54 +396,167 @@ export function ProfilePage() {
                 ))}
               </div>
             ) : (
-              <div className="py-24 text-center">
-                <p className="text-[11px] font-normal text-gray-300">등록된 상품이 없습니다.</p>
+              <div className="flex flex-col items-center gap-2 py-24 text-center">
+                {/* 빈 화면도 탭과 같은 13px 글씨로, 다음 행동은 밑줄 글자 링크로 둔다 */}
+                <p className="text-[13px] font-normal text-gray-400">{emptyState.message}</p>
+                {emptyState.action && (
+                  <Link
+                    to={emptyState.action.to}
+                    className="text-[13px] font-normal text-black underline underline-offset-4 transition-colors hover:text-gray-500"
+                  >
+                    {emptyState.action.label}
+                  </Link>
+                )}
               </div>
             )}
           </motion.div>
         </AnimatePresence>
       </div>
 
-      {/* Follow Modal */}
+      {/* Profile Edit Modal: 다른 확인 모달과 같은 크기·버튼, 입력칸은 상품 등록·수정 화면과 같은 스타일. 이메일은 제목 아래, 사진·닉네임·소개·지역 순서 */}
       <AnimatePresence>
-        {showFollowModal && (
+        {isEditing && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
-            onClick={() => setShowFollowModal(null)}
+            onClick={closeEdit}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.96, y: 12 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 12 }}
-              transition={{ duration: 0.2 }}
-              className="w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-xl"
-              style={{ fontFamily: "Pretendard, sans-serif" }}
+              ref={editModalRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="profile-edit-title"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 16 }}
+              transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
+              className={`${ACTION_MODAL_CONTENT_CLASS} max-h-[90vh] overflow-y-auto`}
+              style={{ zoom: 0.9 }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
-                <p className="text-lg font-medium tracking-[-0.02em] text-black">
-                  {showFollowModal === "followers" ? "Followers" : "Following"}
-                </p>
-                <button
-                  onClick={() => setShowFollowModal(null)}
-                  className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors"
-                >
-                  <X className="w-4 h-4 text-gray-500" />
+              <h2 id="profile-edit-title" className={ACTION_MODAL_TITLE_CLASS}>프로필 수정</h2>
+
+              {/* 사진은 가운데, 카메라 버튼으로 변경 */}
+              <div className="mt-2 mb-6 flex flex-col items-center gap-2">
+                <div className="relative">
+                  <div className="h-20 w-20 overflow-hidden rounded-full bg-gray-100">
+                    {profileImage ? (
+                      <ImageWithFallback src={profileImage} alt="" className="h-full w-full object-cover" onError={() => setProfileImage(null)} />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center">
+                        <User className="h-7 w-7 text-gray-300" />
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => document.getElementById("profileImageInput")?.click()}
+                    aria-label="사진 변경"
+                    className="absolute -bottom-0.5 -right-0.5 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-black text-white outline-none transition-colors hover:bg-gray-800 focus-visible:bg-gray-800"
+                  >
+                    <Camera className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                {profileImage && (
+                  <button
+                    type="button"
+                    onClick={handleImageDelete}
+                    className="text-[12px] font-normal text-gray-400 outline-none transition-colors hover:text-black focus-visible:text-black"
+                  >
+                    사진 삭제
+                  </button>
+                )}
+              </div>
+
+              {/* 계정 정보(이메일) → 닉네임 → 주소 → 자기소개 */}
+              <div className="space-y-4">
+                <div>
+                  <Label className="mb-2 block text-sm font-semibold text-black">이메일</Label>
+                  <div className="flex h-11 items-center rounded-xl border border-gray-200 bg-gray-50 px-3 text-sm text-gray-400">{email}</div>
+                </div>
+
+                <div>
+                  <Label htmlFor="userName" className="mb-2 block text-sm font-semibold text-black">닉네임</Label>
+                  <div className="relative">
+                    <Input
+                      id="userName"
+                      value={userName}
+                      onChange={(e) => {
+                        setUserName(e.target.value);
+                        setIsNicknameAvailable(null);
+                        setNicknameError("");
+                      }}
+                      className={`h-11 rounded-xl border bg-white pr-20 text-sm focus-visible:ring-0 focus-visible:border-black ${
+                        nicknameError ? "border-red-400" :
+                        isNicknameAvailable ? "border-green-400" :
+                        "border-gray-300"
+                      }`}
+                    />
+                    {isNicknameDirty && (
+                      isNicknameAvailable ? (
+                        <CheckCircle2 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-green-500" />
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={checkNickname}
+                          disabled={isNicknameChecking || !userName.trim()}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2.5 py-1.5 text-[13px] font-medium text-black transition-colors hover:bg-gray-100 disabled:text-gray-300"
+                        >
+                          {isNicknameChecking ? "확인 중" : "중복확인"}
+                        </button>
+                      )
+                    )}
+                  </div>
+                  {nicknameError && <p className="mt-1.5 text-xs text-red-500">{nicknameError}</p>}
+                  {isNicknameAvailable && !nicknameError && (
+                    <p className="mt-1.5 text-xs text-green-600">사용 가능한 닉네임입니다</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label className="mb-2 block text-sm font-semibold text-black">주소</Label>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddressModal(true)}
+                    className="group flex h-11 w-full items-center justify-between rounded-xl border border-gray-300 bg-white px-3 text-sm transition-colors hover:border-black"
+                  >
+                    <span className={`truncate ${address ? "text-black" : "text-gray-400"}`}>
+                      {address || "주소를 검색해주세요"}
+                    </span>
+                    <Search className="h-4 w-4 flex-shrink-0 text-gray-400 transition-colors group-hover:text-black" />
+                  </button>
+                </div>
+
+                <div>
+                  <Label htmlFor="bio" className="mb-2 block text-sm font-semibold text-black">자기소개</Label>
+                  <div className="relative">
+                    <textarea
+                      id="bio"
+                      value={bio}
+                      onChange={(e) => setBio(e.target.value)}
+                      maxLength={BIO_MAX_LENGTH}
+                      rows={3}
+                      placeholder="나를 소개해 주세요"
+                      className="block w-full resize-none rounded-xl border border-gray-300 bg-white px-3 pt-2.5 pb-7 text-sm placeholder:text-gray-400 focus:border-black focus:outline-none"
+                    />
+                    <span className="pointer-events-none absolute bottom-2.5 right-3 text-xs text-gray-400">
+                      {bio.length}/{BIO_MAX_LENGTH}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className={ACTION_MODAL_FOOTER_CLASS}>
+                <button type="button" onClick={closeEdit} className={ACTION_MODAL_CANCEL_CLASS}>
+                  취소
+                </button>
+                <button type="button" onClick={handleSaveProfile} disabled={!canSave} className={ACTION_MODAL_ACTION_CLASS}>
+                  저장
                 </button>
               </div>
-              <ul className="max-h-80 overflow-y-auto divide-y divide-gray-50">
-                {followList.map((user) => (
-                  <li key={user.id} className="flex items-center gap-3 px-6 py-3.5 hover:bg-gray-50 transition-colors">
-                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-                      <User className="w-4 h-4 text-gray-400" />
-                    </div>
-                    <span className="text-sm font-medium text-black">{user.name}</span>
-                  </li>
-                ))}
-              </ul>
             </motion.div>
           </motion.div>
         )}

@@ -3,6 +3,7 @@ import type {
   EmailVerifyResponse,
   ItemSummary,
   LoginResponse,
+  PurchaseSummary,
   SignupResponse,
   UserMeResponse,
 } from "@/types/api";
@@ -47,8 +48,9 @@ export const userApi = {
   getMe: () =>
     api.get<UserMeResponse>("/api/users/me"),
 
-  updateProfile: (nickname: string, address: string) =>
-    api.patch<UserMeResponse>("/api/users/me", { nickname, address }),
+  // 바뀐 항목만 보낸다. 보내지 않은 항목은 서버가 그대로 둔다 (bio는 ""를 보내면 삭제)
+  updateProfile: (payload: { nickname?: string; address?: string; bio?: string }) =>
+    api.patch<UserMeResponse>("/api/users/me", payload),
 
   updateProfileImage: (image: File) => {
     const formData = new FormData();
@@ -67,4 +69,7 @@ export const userApi = {
 
   getMyBids: () =>
     api.get<ItemSummary[]>("/api/users/me/bids"),
+
+  getMyPurchases: () =>
+    api.get<PurchaseSummary[]>("/api/users/me/purchases"),
 };

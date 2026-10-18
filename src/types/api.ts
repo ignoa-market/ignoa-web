@@ -33,6 +33,7 @@ export interface UserMeResponse {
   email: string;
   nickname: string;
   address: string;
+  bio: string | null;
   profile_image_url: string | null;
 }
 
@@ -192,6 +193,14 @@ export interface ChatMessageResponse {
 
 export type TradeType = "AUCTION" | "BUY_NOW";
 export type TradeStatus = "PAYMENT_PENDING" | "CONFIRMING" | "PAID" | "CANCELED";
+
+// 내 구매 목록 (낙찰·즉시구매, 취소된 거래 제외)
+export interface PurchaseSummary {
+  trade_id: number;
+  trade_type: TradeType;
+  trade_status: TradeStatus;
+  item: ItemSummary;
+}
 export type PaymentResultStatus = "DONE" | "FAILED" | "UNKNOWN";
 
 export interface TradePrepareResponse {
