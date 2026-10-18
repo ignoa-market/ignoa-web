@@ -291,9 +291,9 @@ export function ProfilePage() {
     <div className="min-h-screen bg-white pt-[170px] pb-28">
       {/* Profile Hero */}
       <div className="max-w-[1120px] mx-auto px-8" style={{ zoom: 0.9 }}>
-        <div className="flex items-center justify-between py-8">
+        <div className="py-8">
 
-          {/* Left: Avatar + Info */}
+          {/* Avatar + 이름·이메일 */}
           <div className="flex items-center gap-5">
             <div className="relative flex-shrink-0">
               {/* 사진 변경은 프로필 수정 모달의 카메라 버튼이 이 입력을 연다 */}
@@ -328,21 +328,22 @@ export function ProfilePage() {
                 </button>
               </div>
               <p className="text-sm text-gray-400 mt-1">{email}</p>
-              {savedBio && (
-                <p className="mt-3 max-w-md whitespace-pre-line break-words text-sm text-gray-600">{savedBio}</p>
-              )}
             </div>
           </div>
 
+          {/* 자기소개: 프로필 사진 아래, 사진 왼쪽 끝에서 시작 */}
+          {savedBio && (
+            <p className="mt-5 max-w-md whitespace-pre-line break-words text-sm text-gray-600">{savedBio}</p>
+          )}
         </div>
 
         {/* Tabs */}
-        <div className="flex items-center gap-8 mt-16 mb-8 border-b border-gray-100">
+        <div className="flex items-center gap-8 mt-8 mb-8 border-b border-gray-100">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`min-h-10 px-1 pb-5 text-sm font-medium text-black transition-all duration-200 border-b-2 -mb-px cursor-pointer touch-manipulation hover:-translate-y-0.5 active:translate-y-0 ${
+              className={`min-h-10 px-1 pb-5 text-sm font-normal text-black transition-all duration-200 border-b-2 -mb-px cursor-pointer touch-manipulation hover:-translate-y-0.5 active:translate-y-0 ${
                 activeTab === tab.id ? "border-black" : "border-transparent"
               }`}
             >
