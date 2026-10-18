@@ -90,8 +90,6 @@ export interface ItemDetailResponse {
   start_price: number;
   current_price: number;
   buy_now_price: number | null;
-  is_top_bidder: boolean;
-  is_bidder: boolean;
   is_seller: boolean;
   status: ItemStatus;
   created_at: string;
