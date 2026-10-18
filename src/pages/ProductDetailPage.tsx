@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, lazy, Suspense } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router";
 import { ChevronDown, ChevronLeft, ChevronRight, Check, ShieldCheck, MessageCircle, Heart, Share2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -22,9 +22,6 @@ import {
   ACTION_MODAL_FOOTER_CLASS,
   ACTION_MODAL_TITLE_CLASS,
 } from "@/constants/actionModal";
-
-// recharts는 그래프 영역이 화면에 보일 때만 불러온다
-const BidChart = lazy(() => import("@/components/product/BidChart"));
 
 // 입찰가는 오르기만 하므로, 서버 목록 최고가보다 높은 로컬 입찰은 조회 이후 소켓으로 받은 것이다
 function mergeBids(server: BidHistory[], local: BidHistory[]) {
@@ -55,6 +52,8 @@ export function ProductDetailPage() {
 
   const [item, setItem] = useState<ItemDetailResponse | null>(null);
   const [bids, setBids] = useState<BidHistory[]>([]);
+  const [bidCursor, setBidCursor] = useState<number | null>(null);
+  const [bidsHasNext, setBidsHasNext] = useState(false);
   const [loading, setLoading] = useState(true);
   const [actionPending, setActionPending] = useState(false);
   const [chatOpening, setChatOpening] = useState(false);
@@ -77,11 +76,12 @@ export function ProductDetailPage() {
   const countdownSpanRef = useRef<HTMLSpanElement>(null);
   const endTimeRef = useRef<Date | null>(null);
   const bidRefreshRef = useRef(0);
+  const loadingOlderBidsRef = useRef(false);
+  // 소켓으로 새로 들어온 입찰만 등장 애니메이션을 준다(처음 조회·이전 입찰 로드는 제외)
+  const liveBidIdsRef = useRef(new Set<number>());
   const itemReconnectRef = useRef(0);
   const livePriceVersionRef = useRef(0);
   const { wished, wishCount, toggle: handleWishToggle } = useWishToggle(numericId);
-  const chartAreaRef = useRef<HTMLDivElement>(null);
-  const [chartVisible, setChartVisible] = useState(false);
   const loadedItemIdRef = useRef<number | null>(null);
   const closeBidModal = () => {
     setBidModalOpen(false);
@@ -118,21 +118,6 @@ export function ProductDetailPage() {
       setChatOpening(false);
     }
   };
-
-  // 그래프 영역이 화면 근처에 오면 차트 코드를 불러온다
-  useEffect(() => {
-    if (chartVisible) return;
-    const target = chartAreaRef.current;
-    if (!target) return;
-    const observer = new IntersectionObserver((entries) => {
-      if (entries.some((entry) => entry.isIntersecting)) {
-        setChartVisible(true);
-        observer.disconnect();
-      }
-    }, { rootMargin: "200px" });
-    observer.observe(target);
-    return () => observer.disconnect();
-  }, [chartVisible, loading]);
 
   // 상품 상세 조회
   useEffect(() => {
@@ -172,7 +157,10 @@ export function ProductDetailPage() {
     bidApi
       .getBids(numericId)
       .then((res) => {
-        if (requestId === bidRefreshRef.current) setBids((prev) => mergeBids(res.content, prev));
+        if (requestId !== bidRefreshRef.current) return;
+        setBids((prev) => mergeBids(res.content, prev));
+        setBidCursor(res.next_cursor);
+        setBidsHasNext(res.has_next);
       })
       .catch(() => {
         if (requestId === bidRefreshRef.current) setBids([]);
@@ -205,6 +193,7 @@ export function ProductDetailPage() {
             status: "ACTIVE",
             created_at: bid.created_at,
           };
+          liveBidIdsRef.current.add(next.bid_id);
           return [next, ...prev].sort((a, b) => b.price - a.price);
         });
       },
@@ -228,7 +217,11 @@ export function ProductDetailPage() {
         const bidRequestId = ++bidRefreshRef.current;
         bidApi.getBids(numericId)
           .then((nextBids) => {
-            if (active && bidRequestId === bidRefreshRef.current) setBids((prev) => mergeBids(nextBids.content, prev));
+            if (!active || bidRequestId !== bidRefreshRef.current) return;
+            // 불러온 과거 입찰은 버리고 첫 페이지로 교체한다
+            setBids((prev) => mergeBids(nextBids.content, prev));
+            setBidCursor(nextBids.next_cursor);
+            setBidsHasNext(nextBids.has_next);
           })
           .catch(() => {});
       }
@@ -361,11 +354,25 @@ export function ProductDetailPage() {
     }
   };
 
-  // 입찰 내역을 차트용 데이터로 변환
-  const chartData = [...bids].reverse().map((bid) => ({
-    time: formatBidTime(bid.created_at),
-    price: bid.price,
-  }));
+  // 입찰 목록 끝까지 내리면 이전 입찰을 이어서 불러온다
+  const loadOlderBids = useCallback(() => {
+    if (loadingOlderBidsRef.current || !bidsHasNext || bidCursor === null) return;
+    loadingOlderBidsRef.current = true;
+    const requestId = bidRefreshRef.current;
+    bidApi.getBids(numericId, bidCursor)
+      .then((res) => {
+        // 그 사이 재연결로 목록이 교체됐으면 버린다
+        if (requestId !== bidRefreshRef.current) return;
+        setBids((prev) => [...prev, ...res.content.filter((bid) => !prev.some((item) => item.bid_id === bid.bid_id))]);
+        setBidCursor(res.next_cursor);
+        setBidsHasNext(res.has_next);
+      })
+      .catch(() => {})
+      .finally(() => {
+        loadingOlderBidsRef.current = false;
+      });
+  }, [bidCursor, bidsHasNext, numericId]);
+
 
   if (loading) {
     return (
@@ -619,6 +626,41 @@ export function ProductDetailPage() {
               <ShieldCheck className="w-4 h-4 flex-shrink-0 text-sky-400" />
               <span>이그노아 안전결제로 걱정없이 거래하세요.</span>
             </div>
+
+            {/* Bid History — 4건 높이만 보여주고 그 안에서 스크롤한다 (한 줄 41px) */}
+            <h2 className="text-base font-semibold text-black mt-12 mb-4">입찰 이력</h2>
+            <div
+              className="max-h-[164px] overflow-y-auto overscroll-contain pr-2 [scrollbar-width:thin] [scrollbar-color:#e5e7eb_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200"
+              onScroll={(event) => {
+                const list = event.currentTarget;
+                // 끝에 닿기 전에 미리 불러와 스크롤이 멈추지 않게 한다
+                if (list.scrollHeight - list.scrollTop - list.clientHeight < 160) loadOlderBids();
+              }}
+            >
+              {bids.length === 0 ? (
+                <p className="py-6 text-center text-xs text-gray-400">아직 입찰이 없습니다</p>
+              ) : (
+                <AnimatePresence initial={false}>
+                  {bids.map((bid, index) => (
+                    <motion.div
+                      key={bid.bid_id}
+                      initial={liveBidIdsRef.current.has(bid.bid_id) ? { opacity: 0, y: -8 } : false}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
+                      className="flex items-center justify-between py-2.5 border-b border-gray-100 last:border-0"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-stone-800">{bid.price.toLocaleString()}원</span>
+                        {index === 0 && <span className="w-1.5 h-1.5 rounded-full bg-green-500" />}
+                      </div>
+                      <span className="text-[11px] text-gray-500">
+                        {bid.bidder_nickname} · {formatBidTime(bid.created_at)}
+                      </span>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              )}
+            </div>
           </div>
         </div>
 
@@ -663,52 +705,6 @@ export function ProductDetailPage() {
               )}
             </div>
           </div>
-        </div>
-
-        {/* Bid History Section */}
-        <div className="mt-2 pt-2">
-          <h2 className="text-lg font-semibold text-black mb-8">
-            입찰 이력
-          </h2>
-
-          <div className="grid lg:grid-cols-5 gap-8">
-              {/* Chart */}
-              <div className="lg:col-span-3 overflow-x-auto">
-                <div className="min-w-[600px]">
-                  <div ref={chartAreaRef} className="h-[280px]">
-                    {chartVisible && (
-                      <Suspense fallback={null}>
-                        <BidChart data={chartData} />
-                      </Suspense>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Recent Bids */}
-              <div className="lg:col-span-2">
-                <div className="overflow-y-auto max-h-[280px] space-y-3 pr-2">
-                  {bids.map((bid, index) => (
-                    <div
-                      key={bid.bid_id}
-                      className="flex items-center justify-between py-2.5 border-b border-gray-100 last:border-0"
-                    >
-                      <div>
-                        <div className="text-sm font-semibold text-black">
-                          {bid.price.toLocaleString()}원
-                        </div>
-                        <div className="text-[11px] text-gray-500">
-                          {bid.bidder_nickname} · {formatBidTime(bid.created_at)}
-                        </div>
-                      </div>
-                      {index === 0 && (
-                        <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
         </div>
 
         {/* Policy Sections */}
