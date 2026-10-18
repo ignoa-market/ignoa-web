@@ -403,6 +403,51 @@ export function ProductDetailPage() {
   const prevImage = () => goToImage(currentImageIndex === 0 ? media.length - 1 : currentImageIndex - 1);
   const nextImage = () => goToImage(currentImageIndex === media.length - 1 ? 0 : currentImageIndex + 1);
 
+  // 판매자 정보: 넓은 화면은 사진 아래, 좁은 화면은 상품 정보 아래에 둔다
+  const sellerSection = (
+    <div className="mt-12 pb-10">
+      <h2 className="text-lg font-semibold text-black mb-4">판매자 정보</h2>
+      <div className="flex items-center gap-5">
+        <Avatar className="w-16 h-16 transition-shadow duration-300 hover:shadow-lg cursor-pointer flex-shrink-0">
+          <AvatarImage src={item.seller.profile_image_url ?? undefined} alt={item.seller.nickname} />
+          <AvatarFallback className="bg-stone-100 text-stone-500 text-sm">
+            {item.seller.nickname.charAt(0)}
+          </AvatarFallback>
+        </Avatar>
+        <div className="flex flex-col gap-1">
+          <p className="text-base font-semibold text-stone-800">{item.seller.nickname}</p>
+          {item.seller.address && (
+            <p className="text-xs text-gray-400">{item.seller.address}</p>
+          )}
+        </div>
+        <div className="ml-6 flex items-center gap-3 self-center">
+          <button
+            onClick={() => {
+              if (!isAuthenticated) {
+                navigate("/login");
+                return;
+              }
+              toast.info("아직 준비 중인 기능입니다.");
+            }}
+            className="text-xs text-white bg-stone-800 hover:bg-stone-700 transition-colors px-4 h-8 rounded-full"
+          >
+            팔로우
+          </button>
+          {!item.is_seller && (
+            <button
+              onClick={handleOpenChat}
+              disabled={chatOpening}
+              className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-200 hover:bg-gray-50 transition-colors text-stone-500 disabled:cursor-wait disabled:opacity-50"
+              title="메시지 보내기"
+            >
+              <MessageCircle className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-white pt-[170px]">
       <div className="max-w-[1400px] mx-auto px-6 pt-0 pb-8 sm:pb-12" style={{ zoom: 0.8 }}>
@@ -410,83 +455,86 @@ export function ProductDetailPage() {
         {/* 2-column layout */}
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
 
-          {/* Column 1: Image */}
-          <div
-            className="group relative overflow-hidden w-full select-none mt-8"
-            style={{ aspectRatio: "1/1" }}
-          >
-            <AnimatePresence mode="wait" custom={slideDir} initial={false}>
-              <motion.div
-                key={currentImageIndex}
-                custom={slideDir}
-                variants={{
-                  enter: (d: number) => ({ x: d > 0 ? "40%" : "-40%", opacity: 0, scale: 0.96 }),
-                  center: { x: 0, opacity: 1, scale: 1 },
-                  exit: (d: number) => ({ x: d > 0 ? "-40%" : "40%", opacity: 0, scale: 0.96 }),
-                }}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                transition={{ duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] }}
-                onAnimationComplete={() => setIsSliding(false)}
-                className="absolute inset-0 w-full h-full object-cover"
-              >
-                {media[currentImageIndex]?.item_media_type === "VIDEO" ? (
-                  <VideoMedia
-                    src={media[currentImageIndex].url}
-                    controls
-                    className="w-full h-full object-contain bg-black"
-                  />
-                ) : (
-                  <ImageWithFallback
-                    src={media[currentImageIndex]?.url}
-                    alt={item.title}
-                    className="w-full h-full object-cover"
-                  />
-                )}
-              </motion.div>
-            </AnimatePresence>
-
-            {media.length > 1 && (
-              <>
-                {/* 화살표 버튼 */}
-                <button
-                  onClick={prevImage}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 backdrop-blur-sm shadow-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-white z-10"
+          {/* Column 1: Image + Seller(넓은 화면) — 오른쪽 칸 길이와 상관없이 사진 아래에 붙인다 */}
+          <div>
+            <div
+              className="group relative overflow-hidden w-full select-none mt-8"
+              style={{ aspectRatio: "1/1" }}
+            >
+              <AnimatePresence mode="wait" custom={slideDir} initial={false}>
+                <motion.div
+                  key={currentImageIndex}
+                  custom={slideDir}
+                  variants={{
+                    enter: (d: number) => ({ x: d > 0 ? "40%" : "-40%", opacity: 0, scale: 0.96 }),
+                    center: { x: 0, opacity: 1, scale: 1 },
+                    exit: (d: number) => ({ x: d > 0 ? "-40%" : "40%", opacity: 0, scale: 0.96 }),
+                  }}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{ duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] }}
+                  onAnimationComplete={() => setIsSliding(false)}
+                  className="absolute inset-0 w-full h-full object-cover"
                 >
-                  <ChevronLeft className="w-4 h-4 text-stone-600" />
-                </button>
-                <button
-                  onClick={nextImage}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 backdrop-blur-sm shadow-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-white z-10"
-                >
-                  <ChevronRight className="w-4 h-4 text-stone-600" />
-                </button>
+                  {media[currentImageIndex]?.item_media_type === "VIDEO" ? (
+                    <VideoMedia
+                      src={media[currentImageIndex].url}
+                      controls
+                      className="w-full h-full object-contain bg-black"
+                    />
+                  ) : (
+                    <ImageWithFallback
+                      src={media[currentImageIndex]?.url}
+                      alt={item.title}
+                      className="w-full h-full object-cover"
+                    />
+                  )}
+                </motion.div>
+              </AnimatePresence>
 
-                {/* 인디케이터 점 */}
-                <div className={`absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10 transition-opacity duration-150 ${isSliding ? "opacity-0" : "opacity-100"}`}>
-                  {media.map((_, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => goToImage(idx)}
-                      className="p-1.5 -m-1.5"
-                    >
-                      <motion.span
-                        animate={{ opacity: currentImageIndex === idx ? 1 : 0.35, scale: currentImageIndex === idx ? 1 : 0.8 }}
-                        transition={{ duration: 0.2 }}
-                        className="block w-1.5 h-1.5 rounded-full bg-white shadow-sm"
-                      />
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
+              {media.length > 1 && (
+                <>
+                  {/* 화살표 버튼 */}
+                  <button
+                    onClick={prevImage}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 backdrop-blur-sm shadow-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-white z-10"
+                  >
+                    <ChevronLeft className="w-4 h-4 text-stone-600" />
+                  </button>
+                  <button
+                    onClick={nextImage}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 backdrop-blur-sm shadow-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-white z-10"
+                  >
+                    <ChevronRight className="w-4 h-4 text-stone-600" />
+                  </button>
+
+                  {/* 인디케이터 점 */}
+                  <div className={`absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10 transition-opacity duration-150 ${isSliding ? "opacity-0" : "opacity-100"}`}>
+                    {media.map((_, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => goToImage(idx)}
+                        className="p-1.5 -m-1.5"
+                      >
+                        <motion.span
+                          animate={{ opacity: currentImageIndex === idx ? 1 : 0.35, scale: currentImageIndex === idx ? 1 : 0.8 }}
+                          transition={{ duration: 0.2 }}
+                          className="block w-1.5 h-1.5 rounded-full bg-white shadow-sm"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="hidden lg:block">{sellerSection}</div>
           </div>
 
           {/* Column 2: Info + Actions */}
           <div className="flex flex-col relative">
             {item.brand && (
-              <p className="text-base font-semibold uppercase tracking-widest text-black underline decoration-1 underline-offset-2 mb-2 mt-8">
+              <p className="text-lg font-semibold uppercase tracking-widest text-black underline decoration-1 underline-offset-2 mb-2 mt-8">
                 {item.brand}
               </p>
             )}
@@ -661,48 +709,8 @@ export function ProductDetailPage() {
           </div>
         </div>
 
-        {/* Seller Section */}
-        <div className="mt-12 pb-10">
-          <h2 className="text-lg font-semibold text-black mb-4">판매자 정보</h2>
-          <div className="flex items-center gap-5">
-            <Avatar className="w-16 h-16 transition-shadow duration-300 hover:shadow-lg cursor-pointer flex-shrink-0">
-              <AvatarImage src={item.seller.profile_image_url ?? undefined} alt={item.seller.nickname} />
-              <AvatarFallback className="bg-stone-100 text-stone-500 text-sm">
-                {item.seller.nickname.charAt(0)}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex flex-col gap-1">
-              <p className="text-base font-semibold text-stone-800">{item.seller.nickname}</p>
-              {item.seller.address && (
-                <p className="text-xs text-gray-400">{item.seller.address}</p>
-              )}
-            </div>
-            <div className="ml-6 flex items-center gap-3 self-center">
-              <button
-                onClick={() => {
-                  if (!isAuthenticated) {
-                    navigate("/login");
-                    return;
-                  }
-                  toast.info("아직 준비 중인 기능입니다.");
-                }}
-                className="text-xs text-white bg-stone-800 hover:bg-stone-700 transition-colors px-4 h-8 rounded-full"
-              >
-                팔로우
-              </button>
-              {!item.is_seller && (
-                <button
-                  onClick={handleOpenChat}
-                  disabled={chatOpening}
-                  className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-200 hover:bg-gray-50 transition-colors text-stone-500 disabled:cursor-wait disabled:opacity-50"
-                  title="메시지 보내기"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
+        {/* Seller Section — 좁은 화면에서는 상품 정보 아래 */}
+        <div className="lg:hidden">{sellerSection}</div>
 
         {/* Policy Sections */}
         <div className="mt-16">

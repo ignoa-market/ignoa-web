@@ -342,14 +342,12 @@ export function ProfilePage() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`min-h-10 px-1 pb-5 text-[13px] font-normal transition-colors border-b-2 -mb-px cursor-pointer touch-manipulation ${
-                activeTab === tab.id
-                  ? "border-black text-black"
-                  : "border-transparent text-gray-400 hover:text-black"
+              className={`min-h-10 px-1 pb-5 text-sm font-medium text-black transition-all duration-200 border-b-2 -mb-px cursor-pointer touch-manipulation hover:-translate-y-0.5 active:translate-y-0 ${
+                activeTab === tab.id ? "border-black" : "border-transparent"
               }`}
             >
               {tab.label}
-              <span className="ml-2">{tab.items.length}</span>
+              <span className="ml-1.5 text-stone-400">{tab.items.length}</span>
             </button>
           ))}
         </div>
