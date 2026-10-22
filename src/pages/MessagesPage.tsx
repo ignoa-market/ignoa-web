@@ -328,7 +328,7 @@ export function MessagesPage() {
     let stale = false;
     itemApi.getItem(sellerItemId)
       .then((item) => {
-        if (!stale) setCanRequestPayment(item.status === "BID_CLOSED");
+        if (!stale) setCanRequestPayment(item.status === "AUCTION_AWARDED");
       })
       .catch(() => {});
     return () => {

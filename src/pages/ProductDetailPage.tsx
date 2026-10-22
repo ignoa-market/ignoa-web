@@ -388,8 +388,8 @@ export function ProductDetailPage() {
   }
 
   const media = item.media_urls;
-  // 즉시구매 결제 중(BUY_NOW_PENDING)에도 입찰은 받으므로 판매 중과 같게 본다
-  const auctionActive = (item.status === "ACTIVE" || item.status === "BUY_NOW_PENDING") && !auctionExpired;
+  // 즉시구매 결제 중(BUY_NOW_RESERVED)에도 입찰은 받으므로 판매 중과 같게 본다
+  const auctionActive = (item.status === "ACTIVE" || item.status === "BUY_NOW_RESERVED") && !auctionExpired;
   // 결제 중인 상품은 판매자가 수정·삭제할 수 없다
   const sellerEditable = item.status === "ACTIVE" && !auctionExpired;
   const enteredBidAmount = Number(bidAmount.replace(/,/g, ""));

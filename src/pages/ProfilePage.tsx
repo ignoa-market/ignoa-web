@@ -27,9 +27,9 @@ const BIO_MAX_LENGTH = 100;
 
 const TAB_IDS = ["products", "sold", "bidding", "won", "purchased", "wishlist"] as const;
 
-// 팔린 상품. 유찰(NO_BID_CLOSED)은 팔린 게 아니라 판매중 탭에 종료 표시로 남긴다
-const SOLD_STATUSES: ItemStatus[] = ["BID_CLOSED", "BUY_NOW_CLOSED"];
-const IN_PROGRESS_STATUSES: ItemStatus[] = ["ACTIVE", "BUY_NOW_PENDING"];
+// 팔린 상품. 유찰(AUCTION_UNSOLD)은 팔린 게 아니라 판매중 탭에 종료 표시로 남긴다
+const SOLD_STATUSES: ItemStatus[] = ["AUCTION_AWARDED", "BUY_NOW_SOLD"];
+const IN_PROGRESS_STATUSES: ItemStatus[] = ["ACTIVE", "BUY_NOW_RESERVED"];
 type TabId = (typeof TAB_IDS)[number];
 
 export function ProfilePage() {

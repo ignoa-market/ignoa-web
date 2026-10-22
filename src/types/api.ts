@@ -47,8 +47,8 @@ export interface UserMeResponse {
 // Item
 // ────────────────────────────────────────────────
 
-// BUY_NOW_PENDING: 즉시구매 결제 중. 화면에서는 판매 중(ACTIVE)과 같게 보여준다
-export type ItemStatus = "ACTIVE" | "BUY_NOW_PENDING" | "BID_CLOSED" | "NO_BID_CLOSED" | "BUY_NOW_CLOSED";
+// BUY_NOW_RESERVED: 즉시구매 결제 중. 화면에서는 판매 중(ACTIVE)과 같게 보여준다
+export type ItemStatus = "ACTIVE" | "BUY_NOW_RESERVED" | "AUCTION_AWARDED" | "AUCTION_UNSOLD" | "BUY_NOW_SOLD";
 export type ItemCondition = "NEW" | "LIKE_NEW" | "GOOD" | "FAIR";
 export type ItemViewType = "POPULAR" | "ENDING_SOON" | "LATEST";
 export type ItemMediaType = "IMAGE" | "VIDEO";
@@ -196,7 +196,7 @@ export interface ChatMessageResponse {
 // ────────────────────────────────────────────────
 
 export type TradeType = "AUCTION" | "BUY_NOW";
-export type TradeStatus = "PAYMENT_PENDING" | "CONFIRMING" | "PAID" | "CANCELED";
+export type TradeStatus = "PAYMENT_PENDING" | "PAYMENT_CONFIRMING" | "PAID" | "CANCELED";
 
 // 내 구매 목록 (낙찰·즉시구매, 취소된 거래 제외)
 export interface PurchaseSummary {

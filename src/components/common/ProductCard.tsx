@@ -53,8 +53,8 @@ interface ProductCardProps {
 }
 
 function resolveOverlay(status?: ItemStatus, isEnded?: boolean): "SOLD" | "ENDED" | null {
-  if (status === "BID_CLOSED" || status === "BUY_NOW_CLOSED") return "SOLD";
-  if (status === "NO_BID_CLOSED") return "ENDED";
+  if (status === "AUCTION_AWARDED" || status === "BUY_NOW_SOLD") return "SOLD";
+  if (status === "AUCTION_UNSOLD") return "ENDED";
   if (isEnded) return "ENDED";
   return null;
 }
