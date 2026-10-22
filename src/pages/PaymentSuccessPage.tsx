@@ -39,7 +39,7 @@ export function PaymentSuccessPage() {
     const pollTrade = (count: number) => {
       timer = setTimeout(async () => {
         try {
-          const trade = await tradeApi.getMyTrade(itemId);
+          const trade = await tradeApi.getTrade(tradeId);
           if (trade.status === "PAID") {
             toast.success("결제가 완료되었습니다.");
             goToItem();

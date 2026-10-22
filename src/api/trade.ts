@@ -20,4 +20,7 @@ export const tradeApi = {
 
   getMyTrade: (itemId: number) =>
     api.get<MyTradeResponse>(`/api/items/${itemId}/trades/me`),
+
+  getTrade: (tradeId: number) =>
+    api.get<MyTradeResponse>(`/api/trades/${tradeId}`),
 };
