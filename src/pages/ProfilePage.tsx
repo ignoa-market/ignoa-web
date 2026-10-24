@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useSearchParams } from "react-router";
 import { User, Camera, Search, CheckCircle2, Pencil } from "lucide-react";
 import { ProductCard } from "@/components/common/ProductCard";
@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { userApi } from "@/api/auth";
 import { itemApi, wishApi } from "@/api/item";
 import { wishStore } from "@/store/wishStore";
-import type { ApiError, ItemStatus, ItemSummary, PurchaseSummary, WishSummary } from "@/types/api";
+import type { ApiError, CursorResponse, ItemStatus, ItemSummary, PurchaseSummary, TradeStatus, WishSummary } from "@/types/api";
 import { MAX_AUCTION_EXTENSION_COUNT } from "@/constants/auction";
 import { useModalBehavior } from "@/hooks/useModalBehavior";
 import {
@@ -25,17 +25,91 @@ import {
 // 서버 검증(UpdateUserRequest)과 같은 값
 const BIO_MAX_LENGTH = 100;
 
-const TAB_IDS = ["products", "sold", "bidding", "won", "purchased", "wishlist"] as const;
-
-// 팔린 상품. 유찰(AUCTION_UNSOLD)은 팔린 게 아니라 판매중 탭에 종료 표시로 남긴다
-const SOLD_STATUSES: ItemStatus[] = ["AUCTION_AWARDED", "BUY_NOW_SOLD"];
-const IN_PROGRESS_STATUSES: ItemStatus[] = ["ACTIVE", "BUY_NOW_RESERVED"];
+// 판매: 내가 등록한 모든 상품 / 입찰 중: 진행 중인 경매 / 거래: 낙찰·즉시구매 거래 / 찜
+const TAB_IDS = ["products", "bidding", "purchases", "wishlist"] as const;
 type TabId = (typeof TAB_IDS)[number];
+
+// 예전 탭 주소로 들어와도 같은 내용을 담은 새 탭을 연다
+const LEGACY_TABS: Record<string, TabId> = { sold: "products", won: "purchases", purchased: "purchases" };
+
+const TRADE_STATUS_LABELS: Record<Exclude<TradeStatus, "CANCELED">, string> = {
+  PAYMENT_PENDING: "결제 대기",
+  PAYMENT_CONFIRMING: "결제 확인 중",
+  PAID: "구매 완료",
+};
+
+// 서버가 20개씩 주는 커서 목록. 탭을 처음 열 때 첫 페이지를 받고, 끝에 닿으면 이어 받는다
+function useCursorList<T>(
+  fetchPage: (cursor: number | null) => Promise<CursorResponse<T>>,
+  getKey: (item: T) => number
+) {
+  const [items, setItems] = useState<T[]>([]);
+  const [nextCursor, setNextCursor] = useState<number | null>(null);
+  const [hasNext, setHasNext] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [loading, setLoading] = useState(false);
+  // 첫 페이지 요청이 실패하면 자동으로 다시 요청하지 않는다 (새로고침하면 다시 받음)
+  const [failed, setFailed] = useState(false);
+  const loadingMoreRef = useRef(false);
+  // 처음부터 다시 받을 때마다 올리는 번호. 이전 번호로 시작한 요청의 응답은 버린다
+  const generationRef = useRef(0);
+
+  const load = useCallback(() => {
+    const generation = ++generationRef.current;
+    loadingMoreRef.current = false;
+    setLoading(true);
+    setFailed(false);
+    return fetchPage(null)
+      .then((res) => {
+        if (generation !== generationRef.current) return;
+        setItems(res.content);
+        setNextCursor(res.next_cursor);
+        setHasNext(res.has_next);
+        setLoaded(true);
+      })
+      .catch(() => {
+        if (generation !== generationRef.current) return;
+        setFailed(true);
+        toast.error("목록을 불러오지 못했습니다");
+      })
+      .finally(() => {
+        if (generation === generationRef.current) setLoading(false);
+      });
+  }, [fetchPage]);
+
+  const loadMore = useCallback(() => {
+    if (loadingMoreRef.current || !hasNext || nextCursor === null) return;
+    loadingMoreRef.current = true;
+    const generation = generationRef.current;
+    fetchPage(nextCursor)
+      .then((res) => {
+        if (generation !== generationRef.current) return;
+        setItems((prev) => {
+          const known = new Set(prev.map(getKey));
+          return [...prev, ...res.content.filter((item) => !known.has(getKey(item)))];
+        });
+        setNextCursor(res.next_cursor);
+        setHasNext(res.has_next);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (generation === generationRef.current) loadingMoreRef.current = false;
+      });
+  }, [fetchPage, getKey, hasNext, nextCursor]);
+
+  return { items, setItems, hasNext, loaded, loading, failed, load, loadMore };
+}
+
+const itemKey = (item: ItemSummary) => item.item_id;
+const purchaseKey = (purchase: PurchaseSummary) => purchase.trade_id;
+const wishKey = (wish: WishSummary) => wish.wish_id;
 
 export function ProfilePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get("tab");
-  const activeTab: TabId = TAB_IDS.includes(tabParam as TabId) ? (tabParam as TabId) : "products";
+  const activeTab: TabId = TAB_IDS.includes(tabParam as TabId)
+    ? (tabParam as TabId)
+    : tabParam && Object.hasOwn(LEGACY_TABS, tabParam) ? LEGACY_TABS[tabParam] : "products";
   const setActiveTab = (tab: TabId) => setSearchParams({ tab }, { replace: true });
   const [isEditing, setIsEditing] = useState(false);
 
@@ -52,16 +126,36 @@ export function ProfilePage() {
   const [isNicknameAvailable, setIsNicknameAvailable] = useState<boolean | null>(null);
   const [nicknameError, setNicknameError] = useState("");
 
-  const [myItems, setMyItems] = useState<ItemSummary[]>([]);
-  const [biddingItems, setBiddingItems] = useState<ItemSummary[]>([]);
-  const [purchases, setPurchases] = useState<PurchaseSummary[]>([]);
-  const [wishItems, setWishItems] = useState<WishSummary[]>([]);
-  const [tabLoading, setTabLoading] = useState(true);
+  const myItems = useCursorList(userApi.getMyItems, itemKey);
+  const myBids = useCursorList(userApi.getMyBids, itemKey);
+  const myPurchases = useCursorList(userApi.getMyPurchases, purchaseKey);
+  const myWishes = useCursorList(wishApi.getWishes, wishKey);
+  const lists = { products: myItems, bidding: myBids, purchases: myPurchases, wishlist: myWishes };
+  const activeList = lists[activeTab];
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
-  const fetchWishes = useCallback(
-    () => wishApi.getWishes(0, 20).then((res) => setWishItems(res.content)),
-    []
-  );
+  // 탭을 처음 열 때만 첫 페이지를 받는다
+  const { loaded: activeLoaded, loading: activeLoading, failed: activeFailed, load: loadActive } = activeList;
+  useEffect(() => {
+    if (!activeLoaded && !activeLoading && !activeFailed) loadActive();
+  }, [activeLoaded, activeLoading, activeFailed, loadActive]);
+
+  // 목록 끝에 닿으면 다음 페이지를 이어 받는다
+  const { hasNext: activeHasNext, loadMore: loadMoreActive } = activeList;
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !activeHasNext) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) loadMoreActive();
+    }, { rootMargin: "400px" });
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [activeHasNext, loadMoreActive]);
+
+  const { setItems: setMyItems } = myItems;
+  const { setItems: setMyBidItems } = myBids;
+  const { setItems: setMyPurchaseItems } = myPurchases;
+  const { setItems: setMyWishItems, loaded: wishesLoaded, load: reloadWishes } = myWishes;
 
   useEffect(() => {
     return wishStore.subscribe((id, state, source) => {
@@ -72,8 +166,8 @@ export function ProfilePage() {
             : item
         );
       setMyItems(mirror);
-      setBiddingItems(mirror);
-      setPurchases((prev) =>
+      setMyBidItems(mirror);
+      setMyPurchaseItems((prev) =>
         prev.map((purchase) =>
           purchase.item.item_id === id
             ? { ...purchase, item: { ...purchase.item, is_wished: state.wished, wish_count: state.count } }
@@ -82,14 +176,15 @@ export function ProfilePage() {
       );
 
       if (source === "toggle" && !state.wished) {
-        setWishItems((prev) => prev.filter((item) => item.item_id !== id));
+        setMyWishItems((prev) => prev.filter((item) => item.item_id !== id));
         return;
       }
-      if ((source === "commit" || source === "rollback") && state.wished) {
-        fetchWishes().catch(() => {});
+      // 다른 탭에서 새로 찜한 상품은 찜 목록을 처음부터 다시 받아 맨 위에 보이게 한다
+      if ((source === "commit" || source === "rollback") && state.wished && wishesLoaded) {
+        reloadWishes();
       }
     });
-  }, [fetchWishes]);
+  }, [setMyItems, setMyBidItems, setMyPurchaseItems, setMyWishItems, wishesLoaded, reloadWishes]);
 
   const isNicknameDirty = userName !== savedName;
   const isDirty = isNicknameDirty || address !== savedAddr || bio !== savedBio;
@@ -109,17 +204,6 @@ export function ProfilePage() {
       toast.error("유저 정보를 불러오지 못했습니다");
     });
   }, []);
-
-  useEffect(() => {
-    Promise.all([
-      userApi.getMyItems().then(setMyItems),
-      userApi.getMyBids().then(setBiddingItems),
-      userApi.getMyPurchases().then(setPurchases),
-      fetchWishes(),
-    ])
-      .catch(() => toast.error("목록을 불러오지 못했습니다"))
-      .finally(() => setTabLoading(false));
-  }, [fetchWishes]);
 
   const checkNickname = async () => {
     if (!userName.trim()) { setNicknameError("닉네임을 입력해주세요"); return; }
@@ -213,7 +297,7 @@ export function ProfilePage() {
       const error = err as ApiError;
       toast.error(error.message ?? "경매 마감 연장에 실패했습니다.");
     }
-  }, []);
+  }, [setMyItems]);
 
   type ProfileCard = {
     id: string;
@@ -228,6 +312,9 @@ export function ProfilePage() {
     isEnded?: boolean;
     endAt?: string;
     extensionCount?: number;
+    tradeStatus?: TradeStatus;
+    // 같은 상품의 거래가 여러 건이어도 화면 키가 겹치지 않게 쓰는 값 (id는 상품 링크·찜에 쓰여 그대로 둔다)
+    cardKey?: string;
   };
 
   const itemToCard = (item: ItemSummary): ProfileCard => ({
@@ -256,32 +343,33 @@ export function ProfilePage() {
   });
 
 
-  const sellingItems = myItems.filter((item) => !SOLD_STATUSES.includes(item.status));
-  const soldItems = myItems.filter((item) => SOLD_STATUSES.includes(item.status));
-  const activeBidItems = biddingItems.filter((item) => IN_PROGRESS_STATUSES.includes(item.status));
-  const wonItems = purchases.filter((p) => p.trade_status !== "PAID").map((p) => p.item);
-  const purchasedItems = purchases.filter((p) => p.trade_status === "PAID").map((p) => p.item);
+  const purchaseToCard = (purchase: PurchaseSummary): ProfileCard => ({
+    ...itemToCard(purchase.item),
+    cardKey: `trade-${purchase.trade_id}`,
+    tradeStatus: purchase.trade_status,
+  });
 
-  const tabs: { id: TabId; label: string; items: ProfileCard[] }[] = [
-    { id: "products",  label: "판매중",   items: sellingItems.map(itemToCard) },
-    { id: "sold",      label: "판매완료", items: soldItems.map(itemToCard) },
-    { id: "bidding",   label: "입찰중",   items: activeBidItems.map(itemToCard) },
-    { id: "won",       label: "낙찰",     items: wonItems.map(itemToCard) },
-    { id: "purchased", label: "구매완료", items: purchasedItems.map(itemToCard) },
-    { id: "wishlist",  label: "찜목록",   items: wishItems.map(wishToCard) },
+  const tabs: { id: TabId; label: string }[] = [
+    { id: "products",  label: "판매" },
+    { id: "bidding",   label: "입찰 중" },
+    { id: "purchases", label: "거래" },
+    { id: "wishlist",  label: "찜" },
   ];
 
-  const tabById = (id: TabId) => tabs.find((tab) => tab.id === id)!;
-
-  const currentCards: ProfileCard[] = tabById(activeTab).items;
+  const cardsByTab: Record<TabId, ProfileCard[]> = {
+    products: myItems.items.map(itemToCard),
+    bidding: myBids.items.map(itemToCard),
+    purchases: myPurchases.items.map(purchaseToCard),
+    wishlist: myWishes.items.map(wishToCard),
+  };
+  const currentCards = cardsByTab[activeTab];
+  const tabLoading = !activeLoaded && !activeFailed;
 
   const browseAction = { label: "경매 둘러보기", to: "/app" };
   const emptyStates: Record<TabId, { message: string; action?: { label: string; to: string } }> = {
-    products: { message: "판매 중인 상품이 없어요", action: { label: "상품 등록하기", to: "/app/register-product" } },
-    sold: { message: "아직 판매된 상품이 없어요" },
+    products: { message: "등록한 상품이 없어요", action: { label: "상품 등록하기", to: "/app/register-product" } },
     bidding: { message: "진행 중인 입찰이 없어요", action: browseAction },
-    won: { message: "결제를 기다리는 낙찰이 없어요" },
-    purchased: { message: "구매를 완료한 상품이 없어요" },
+    purchases: { message: "낙찰받거나 구매한 상품이 없어요", action: browseAction },
     wishlist: { message: "찜한 상품이 없어요", action: browseAction },
   };
   const emptyState = emptyStates[activeTab];
@@ -348,7 +436,6 @@ export function ProfilePage() {
               }`}
             >
               {tab.label}
-              <span className="ml-1.5 text-stone-400">{tab.items.length}</span>
             </button>
           ))}
         </div>
@@ -372,7 +459,7 @@ export function ProfilePage() {
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 md:gap-4 lg:grid-cols-5">
                 {currentCards.map((card, index) => (
                   <motion.div
-                    key={card.id}
+                    key={card.cardKey ?? card.id}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ duration: 0.2, delay: index * 0.03 }}
@@ -391,6 +478,11 @@ export function ProfilePage() {
                           : undefined
                       }
                     />
+                    {card.tradeStatus && card.tradeStatus !== "CANCELED" && (
+                      <p className={`mt-1 text-[12px] ${card.tradeStatus === "PAID" ? "text-gray-400" : "font-medium text-black"}`}>
+                        {TRADE_STATUS_LABELS[card.tradeStatus]}
+                      </p>
+                    )}
                   </motion.div>
                 ))}
               </div>
@@ -410,6 +502,8 @@ export function ProfilePage() {
             )}
           </motion.div>
         </AnimatePresence>
+        {/* 목록 끝 표시. 화면에 가까워지면 다음 페이지를 받는다 */}
+        <div ref={sentinelRef} />
       </div>
 
       {/* Profile Edit Modal: 다른 확인 모달과 같은 크기·버튼, 입력칸은 상품 등록·수정 화면과 같은 스타일. 이메일은 제목 아래, 사진·닉네임·소개·지역 순서 */}

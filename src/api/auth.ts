@@ -1,5 +1,6 @@
 import { api } from "@/lib/api";
 import type {
+  CursorResponse,
   EmailVerifyResponse,
   ItemSummary,
   LoginResponse,
@@ -7,6 +8,8 @@ import type {
   SignupResponse,
   UserMeResponse,
 } from "@/types/api";
+
+const cursorQuery = (cursor?: number | null) => (cursor ? `?cursor=${cursor}` : "");
 
 export interface SignupPayload {
   email: string;
@@ -64,12 +67,13 @@ export const userApi = {
   deleteMe: () =>
     api.delete<void>("/api/users/me"),
 
-  getMyItems: () =>
-    api.get<ItemSummary[]>("/api/users/me/items"),
+  // 마이페이지 목록은 서버가 20개씩 고정으로 주고, 다음 페이지는 next_cursor로 이어 받는다
+  getMyItems: (cursor?: number | null) =>
+    api.get<CursorResponse<ItemSummary>>(`/api/users/me/items${cursorQuery(cursor)}`),
 
-  getMyBids: () =>
-    api.get<ItemSummary[]>("/api/users/me/bids"),
+  getMyBids: (cursor?: number | null) =>
+    api.get<CursorResponse<ItemSummary>>(`/api/users/me/bids${cursorQuery(cursor)}`),
 
-  getMyPurchases: () =>
-    api.get<PurchaseSummary[]>("/api/users/me/purchases"),
+  getMyPurchases: (cursor?: number | null) =>
+    api.get<CursorResponse<PurchaseSummary>>(`/api/users/me/purchases${cursorQuery(cursor)}`),
 };

@@ -1,6 +1,5 @@
 import { api } from "@/lib/api";
 import type {
-  SliceResponse,
   CursorResponse,
   ItemSummary,
   ItemDetailResponse,
@@ -117,6 +116,7 @@ export const wishApi = {
   removeWish: (itemId: number) =>
     api.delete<void>(`/api/wishes/${itemId}`),
 
-  getWishes: (page = 0, size = 10) =>
-    api.get<SliceResponse<WishSummary>>(`/api/wishes?page=${page}&size=${size}`),
+  // 서버가 20개씩 고정으로 주고, 다음 페이지는 next_cursor로 이어 받는다
+  getWishes: (cursor?: number | null) =>
+    api.get<CursorResponse<WishSummary>>(`/api/wishes${cursor ? `?cursor=${cursor}` : ""}`),
 };

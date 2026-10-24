@@ -3,11 +3,6 @@ export interface ApiResponse<T> {
   message: string;
 }
 
-export interface SliceResponse<T> {
-  content: T[];
-  has_next: boolean;
-}
-
 export interface CursorResponse<T> {
   content: T[];
   next_cursor: number | null;
