@@ -99,7 +99,6 @@ export function ProductDetailPage() {
   // 소켓으로 새로 들어온 입찰만 등장 애니메이션을 준다(처음 조회·이전 입찰 로드는 제외)
   const liveBidIdsRef = useRef(new Set<number>());
   const itemReconnectRef = useRef(0);
-  const livePriceVersionRef = useRef(0);
   const { wished, wishCount, toggle: handleWishToggle } = useWishToggle(numericId);
   const loadedItemIdRef = useRef<number | null>(null);
   // 구독을 건 뒤(또는 연결 대기 시간 초과 뒤)에 조회해야 그 사이 입찰을 놓치지 않는다
@@ -183,14 +182,13 @@ export function ProductDetailPage() {
 
     const refreshItem = () => {
       const itemRequestId = ++itemReconnectRef.current;
-      const priceVersion = livePriceVersionRef.current;
       itemApi.getItem(numericId)
         .then((nextItem) => {
           if (!active || itemRequestId !== itemReconnectRef.current) return;
+          const sameItem = loadedItemIdRef.current === nextItem.item_id;
           setItem(nextItem);
-          if (priceVersion === livePriceVersionRef.current) {
-            setDisplayPrice(nextItem.current_price);
-          }
+          // 같은 상품이면 소켓으로 먼저 받은 더 높은 값을 늦게 도착한 응답으로 덮어쓰지 않는다
+          setDisplayPrice((prev) => (sameItem ? Math.max(prev, nextItem.current_price) : nextItem.current_price));
           endTimeRef.current = new Date(nextItem.end_at);
           setAuctionExpired(new Date(nextItem.end_at).getTime() <= Date.now());
           wishStore.sync(nextItem.item_id, nextItem.is_wished, nextItem.wish_count);
@@ -232,7 +230,6 @@ export function ProductDetailPage() {
       numericId,
       (bid) => {
         if (!active) return;
-        livePriceVersionRef.current += 1;
         // 입찰가는 오르기만 하므로 늦게 도착한 낮은 값으로 덮어쓰지 않는다
         setDisplayPrice((prev) => Math.max(prev, bid.current_price));
         setPriceAnimKey((key) => key + 1);
@@ -266,6 +263,9 @@ export function ProductDetailPage() {
     return () => {
       active = false;
       clearTimeout(fallbackTimer);
+      // 다른 상품으로 갔다가 돌아왔을 때 이전 준비 상태로 구독 전에 조회하지 않게 한다
+      syncReadyRef.current = null;
+      setSyncReadyId(null);
       void client.deactivate();
     };
   }, [id, numericId]);
