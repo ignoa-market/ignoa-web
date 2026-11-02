@@ -24,6 +24,9 @@ import {
   ACTION_MODAL_TITLE_CLASS,
 } from "@/constants/actionModal";
 
+// 소켓 연결을 기다리는 시간. 넘기면 구독 전이라도 조회한다
+const SOCKET_WAIT_MS = 1000;
+
 // 입찰가는 오르기만 하므로, 서버 목록 최고가보다 높은 로컬 입찰은 조회 이후 소켓으로 받은 것이다
 function mergeBids(server: BidHistory[], local: BidHistory[]) {
   const serverTop = server[0]?.price ?? 0;
@@ -99,6 +102,9 @@ export function ProductDetailPage() {
   const livePriceVersionRef = useRef(0);
   const { wished, wishCount, toggle: handleWishToggle } = useWishToggle(numericId);
   const loadedItemIdRef = useRef<number | null>(null);
+  // 구독을 건 뒤(또는 연결 대기 시간 초과 뒤)에 조회해야 그 사이 입찰을 놓치지 않는다
+  const [syncReadyId, setSyncReadyId] = useState<number | null>(null);
+  const syncReadyRef = useRef<number | null>(null);
   const closeBidModal = () => {
     setBidModalOpen(false);
     setBidStep("input");
@@ -141,13 +147,17 @@ export function ProductDetailPage() {
     let stale = false;
     // 같은 상품을 다시 불러올 때(로그인 상태 갱신 등)는 로딩 화면으로 바꾸지 않는다
     if (loadedItemIdRef.current !== numericId) setLoading(true);
+    // 잘못된 상품 주소는 소켓을 열지 않으므로 기다리지 않고 바로 조회해 실패 화면을 보여준다
+    if (Number.isFinite(numericId) && syncReadyId !== numericId) return;
     itemApi
       .getItem(numericId)
       .then((data) => {
         if (stale) return;
+        const sameItem = loadedItemIdRef.current === data.item_id;
         loadedItemIdRef.current = data.item_id;
         setItem(data);
-        setDisplayPrice(data.current_price);
+        // 같은 상품이면 소켓으로 먼저 받은 더 높은 값을 늦게 도착한 응답으로 덮어쓰지 않는다
+        setDisplayPrice((prev) => (sameItem ? Math.max(prev, data.current_price) : data.current_price));
         endTimeRef.current = new Date(data.end_at);
         setAuctionExpired(new Date(data.end_at).getTime() <= Date.now());
         wishStore.sync(data.item_id, data.is_wished, data.wish_count);
@@ -164,29 +174,59 @@ export function ProductDetailPage() {
     return () => {
       stale = true;
     };
-  }, [id, isAuthenticated, isInitializing, numericId]);
-
-  // 입찰 내역 조회
-  useEffect(() => {
-    if (!id) return;
-    const requestId = ++bidRefreshRef.current;
-    bidApi
-      .getBids(numericId)
-      .then((res) => {
-        if (requestId !== bidRefreshRef.current) return;
-        setBids((prev) => mergeBids(res.content, prev));
-        setBidCursor(res.next_cursor);
-        setBidsHasNext(res.has_next);
-      })
-      .catch(() => {
-        if (requestId === bidRefreshRef.current) setBids([]);
-      });
-  }, [id]);
+  }, [id, isAuthenticated, isInitializing, numericId, syncReadyId]);
 
   // 공개 입찰 토픽 구독 — 로그인 여부와 관계없이 현재가와 입찰 내역을 실시간 갱신
   useEffect(() => {
     if (!id || !Number.isFinite(numericId)) return;
     let active = true;
+
+    const refreshItem = () => {
+      const itemRequestId = ++itemReconnectRef.current;
+      const priceVersion = livePriceVersionRef.current;
+      itemApi.getItem(numericId)
+        .then((nextItem) => {
+          if (!active || itemRequestId !== itemReconnectRef.current) return;
+          setItem(nextItem);
+          if (priceVersion === livePriceVersionRef.current) {
+            setDisplayPrice(nextItem.current_price);
+          }
+          endTimeRef.current = new Date(nextItem.end_at);
+          setAuctionExpired(new Date(nextItem.end_at).getTime() <= Date.now());
+          wishStore.sync(nextItem.item_id, nextItem.is_wished, nextItem.wish_count);
+        })
+        .catch(() => {});
+    };
+
+    const refreshBids = () => {
+      const bidRequestId = ++bidRefreshRef.current;
+      bidApi.getBids(numericId)
+        .then((nextBids) => {
+          if (!active || bidRequestId !== bidRefreshRef.current) return;
+          // 불러온 과거 입찰은 버리고 첫 페이지로 교체한다
+          setBids((prev) => mergeBids(nextBids.content, prev));
+          setBidCursor(nextBids.next_cursor);
+          setBidsHasNext(nextBids.has_next);
+        })
+        .catch(() => {});
+    };
+
+    // 첫 조회는 상품 상세 조회 effect가 맡고, 여기서는 입찰 내역만 불러온다
+    const markSyncReady = () => {
+      syncReadyRef.current = numericId;
+      setSyncReadyId(numericId);
+      refreshBids();
+    };
+
+    // 연결이 늦으면 구독을 기다리지 않고 조회한다
+    const fallbackTimer = setTimeout(() => {
+      if (active && syncReadyRef.current !== numericId) markSyncReady();
+    }, SOCKET_WAIT_MS);
+
+    const resync = () => {
+      refreshItem();
+      refreshBids();
+    };
 
     const client = createBidSocket(
       numericId,
@@ -210,39 +250,22 @@ export function ProductDetailPage() {
           return [next, ...prev].sort((a, b) => b.price - a.price);
         });
       },
-      (reconnected) => {
-        if (!reconnected) return;
-        const itemRequestId = ++itemReconnectRef.current;
-        const priceVersion = livePriceVersionRef.current;
-        itemApi.getItem(numericId)
-          .then((nextItem) => {
-            if (!active || itemRequestId !== itemReconnectRef.current) return;
-            setItem(nextItem);
-            if (priceVersion === livePriceVersionRef.current) {
-              setDisplayPrice(nextItem.current_price);
-            }
-            endTimeRef.current = new Date(nextItem.end_at);
-            setAuctionExpired(new Date(nextItem.end_at).getTime() <= Date.now());
-            wishStore.sync(nextItem.item_id, nextItem.is_wished, nextItem.wish_count);
-          })
-          .catch(() => {});
-
-        const bidRequestId = ++bidRefreshRef.current;
-        bidApi.getBids(numericId)
-          .then((nextBids) => {
-            if (!active || bidRequestId !== bidRefreshRef.current) return;
-            // 불러온 과거 입찰은 버리고 첫 페이지로 교체한다
-            setBids((prev) => mergeBids(nextBids.content, prev));
-            setBidCursor(nextBids.next_cursor);
-            setBidsHasNext(nextBids.has_next);
-          })
-          .catch(() => {});
+      () => {
+        if (!active) return;
+        if (syncReadyRef.current !== numericId) {
+          clearTimeout(fallbackTimer);
+          markSyncReady();
+          return;
+        }
+        // 재연결이거나 대기 시간 초과로 먼저 조회한 경우: 구독 이후 상태로 다시 맞춘다
+        resync();
       }
     );
 
     client.activate();
     return () => {
       active = false;
+      clearTimeout(fallbackTimer);
       void client.deactivate();
     };
   }, [id, numericId]);
